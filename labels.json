@@ -2,24 +2,9 @@
   "version": "1.0.0",
   "labels": [
     {
-      "name": "bug",
-      "color": "d73a4a",
-      "description": "バグ報告"
-    },
-    {
       "name": "feature",
       "color": "a2eeef",
       "description": "新機能の提案・実装"
-    },
-    {
-      "name": "enhancement",
-      "color": "84b6eb",
-      "description": "既存機能の改善"
-    },
-    {
-      "name": "documentation",
-      "color": "0075ca",
-      "description": "ドキュメントの追加・修正"
     },
     {
       "name": "security",
@@ -50,26 +35,6 @@
       "name": "ci",
       "color": "9ca3af",
       "description": "CI/CDの設定変更"
-    },
-    {
-      "name": "good first issue",
-      "color": "7057ff",
-      "description": "初めてのコントリビューションに適した課題"
-    },
-    {
-      "name": "help wanted",
-      "color": "008672",
-      "description": "協力者を募集中"
-    },
-    {
-      "name": "wontfix",
-      "color": "e4e669",
-      "description": "対応しない問題"
-    },
-    {
-      "name": "duplicate",
-      "color": "cfd3d7",
-      "description": "重複した報告"
     }
   ]
 }

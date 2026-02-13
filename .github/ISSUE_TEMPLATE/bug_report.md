@@ -2,7 +2,7 @@
 name: バグ報告
 about: 不具合の報告
 title: ''
-labels: bug
+labels: ''
 assignees: ''
 ---
 
