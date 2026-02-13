@@ -1,31 +1,38 @@
-# Security Policy / セキュリティポリシー
+# セキュリティポリシー / Security Policy
 
-## Reporting Vulnerabilities / 脆弱性の報告
-
-If you discover a security vulnerability, please open a GitHub issue
-with the label `security`. For sensitive issues, please contact the
-maintainer directly.
+## 脆弱性の報告 / Reporting Vulnerabilities
 
 脆弱性を発見された場合は、`security` ラベルを付けてGitHub Issueを作成してください。
 機密性の高い問題については、メンテナーに直接ご連絡ください。
 
+If you discover a security vulnerability, please open a GitHub issue with the label `security`.
+For sensitive issues, please contact the maintainer directly.
+
 ---
 
-## Security Architecture / セキュリティアーキテクチャ
+## セキュリティアーキテクチャ / Security Architecture
 
-### Zero Network Policy / ゼロネットワークポリシー
+### ネットワークポリシー / Network Policy
 
-SyncGrid makes **zero network requests**. It does not:
-- Send telemetry or analytics data
-- Connect to any external API
-- Load remote scripts, fonts, or assets
-- Use cookies or tracking pixels
+SyncGridは、テレメトリ・アナリティクス・トラッキング目的のネットワークリクエストを**一切送信しません**。
 
-SyncGridは**ネットワークリクエストを一切送信しません**。以下を行いません:
-- テレメトリやアナリティクスデータの送信
-- 外部APIへの接続
-- リモートスクリプト、フォント、アセットの読み込み
-- CookieやトラッキングPixelの使用
+ネットワーク通信が発生するのは、以下のケースのみです:
+
+- **AIタイトル生成（オプション・デフォルト無効）**: ユーザーが明示的にAIプロバイダを設定した場合のみ、以下のAPIにリクエストを送信します
+  - OpenAI API (`https://api.openai.com/`)
+  - Gemini API (`https://generativelanguage.googleapis.com/`)
+
+AI機能を使用しない場合、SyncGridは完全にオフラインで動作します。
+
+SyncGrid sends **no network requests** for telemetry, analytics, or tracking purposes.
+
+Network communication occurs only in the following case:
+
+- **AI title generation (optional, disabled by default)**: When the user explicitly configures an AI provider, requests are sent to:
+  - OpenAI API (`https://api.openai.com/`)
+  - Gemini API (`https://generativelanguage.googleapis.com/`)
+
+Without AI features enabled, SyncGrid operates fully offline.
 
 ### Content Security Policy (CSP)
 
@@ -36,51 +43,67 @@ base-uri 'none';
 form-action 'none';
 ```
 
-This ensures:
-- Only bundled scripts execute (no inline, no eval, no remote)
-- No plugin content (Flash, Java, etc.)
-- No base tag hijacking
-- No form submission to external endpoints
+これにより以下が保証されます:
+- バンドル済みスクリプトのみ実行可能（インライン・eval・リモート不可）
+- プラグインコンテンツ不可（Flash, Java等）
+- baseタグハイジャック不可
+- 外部エンドポイントへのフォーム送信不可
 
-### Data Storage
+### 権限（最小権限の原則） / Permissions (Minimum Privilege)
 
-| Storage | Data | Scope |
-|---------|------|-------|
-| Chrome Bookmarks API | Bookmark tree | Synced via Chrome Sync |
-| chrome.storage.local | Settings, metadata | Local only |
-| IndexedDB | File System handle | Local only (for folder sync) |
+| 権限 | 理由 |
+|------|------|
+| `bookmarks` | Chromeブックマークの読み書き |
+| `storage` | 設定のローカル保存 |
+| `favicon` | サイトファビコンの表示 |
 
-### Import Validation Pipeline
+| host_permissions | 理由 |
+|------------------|------|
+| `https://api.openai.com/*` | AIタイトル生成（オプション） |
+| `https://generativelanguage.googleapis.com/*` | AIタイトル生成（オプション） |
 
-All imported data passes through a multi-stage validation pipeline:
+`tabs`, `webRequest`, `activeTab`, `<all_urls>` 等の広範な権限は使用していません。
+
+### データ保存先 / Data Storage
+
+| 保存先 | データ | スコープ |
+|--------|--------|----------|
+| Chrome Bookmarks API | ブックマークツリー | Chrome Sync経由で同期可能 |
+| chrome.storage.local | 設定、AIキー、メタデータ | ローカルのみ |
+| IndexedDB | File Systemハンドル | ローカルのみ（フォルダ同期用） |
+
+### インポート検証パイプライン / Import Validation Pipeline
+
+インポートされるデータは、以下の多段階検証を通過します:
 
 ```
-File → Size check (≤10MB)
-     → JSON.parse (no eval)
-     → Schema validation (version, appName, structure)
-     → Recursive type checking (max depth: 10)
-     → URL protocol allowlist (http, https, ftp, chrome, file)
-     → SHA-256 checksum verification
-     → String sanitization (control chars stripped)
-     → Size limits (title: 512, URL: 2048)
-     → Import to Chrome Bookmarks
+ファイル → サイズチェック（10MB以下）
+        → JSON.parse（evalなし）
+        → スキーマ検証（version, appName, 構造）
+        → 再帰的型チェック（最大深度: 10）
+        → URLプロトコル許可リスト（http, https, ftp, chrome, file）
+        → SHA-256チェックサム検証
+        → 文字列サニタイズ（制御文字除去）
+        → サイズ制限（タイトル: 512文字, URL: 2048文字）
+        → Chrome Bookmarksにインポート
 ```
 
-If **any** step fails, the entire import is rejected.
+いずれかのステップで失敗した場合、インポート全体が拒否されます。
 
-### Local Folder Sync Security
+### ローカルフォルダ同期のセキュリティ / Local Folder Sync Security
 
-- Uses the **File System Access API** — requires explicit user permission
-- Permission is requested per-session via browser-native dialog
-- Directory handle stored in IndexedDB (browser-managed, not exportable)
-- Writes **only** `syncgrid-sync.json` to the selected directory
-- Never reads other files in the directory
-- Never traverses parent directories
-- Atomic write pattern (tmp → final) to prevent corruption
+- **File System Access API** を使用（ブラウザネイティブの許可ダイアログが必要）
+- セッションごとにユーザーの明示的な許可が必要
+- ディレクトリハンドルはIndexedDBに保存（ブラウザ管理、エクスポート不可）
+- 選択されたディレクトリに `syncgrid-sync.json` **のみ**書き込み
+- ディレクトリ内の他のファイルは読み取らない
+- 親ディレクトリへのトラバーサルは行わない
+- アトミック書き込みパターン（tmp → final）で破損を防止
 
-### URL Sanitization
+### URL サニタイズ / URL Sanitization
 
-Only the following URL protocols are permitted:
+以下のURLプロトコルのみ許可されます:
+
 - `http:`
 - `https:`
 - `ftp:`
@@ -88,35 +111,34 @@ Only the following URL protocols are permitted:
 - `chrome-extension:`
 - `file:`
 
-All others (including `javascript:`, `data:`, `blob:`, `vbscript:`) are rejected.
+その他（`javascript:`, `data:`, `blob:`, `vbscript:` 等）はすべて拒否されます。
 
-### String Sanitization
+### 文字列サニタイズ / String Sanitization
 
-All imported strings are:
-1. Type-checked (`typeof === 'string'`)
-2. Control characters stripped (U+0000–U+0008, U+000B, U+000C, U+000E–U+001F, U+007F)
-3. Truncated to maximum length
-4. No `eval()`, `innerHTML`, or `document.write()` anywhere in codebase
+インポートされる全文字列に対して:
+1. 型チェック（`typeof === 'string'`）
+2. 制御文字の除去（U+0000-U+0008, U+000B, U+000C, U+000E-U+001F, U+007F）
+3. 最大長での切り詰め
+4. コードベース内に `eval()`, `innerHTML`, `document.write()` は存在しない
 
-### Permissions (Minimum Privilege)
+### AI API通信のセキュリティ / AI API Communication Security
 
-| Permission | Reason |
-|-----------|--------|
-| `bookmarks` | Read/write Chrome bookmarks |
-| `storage` | Store settings locally |
-| `favicon` | Display site favicons |
-
-No `tabs`, `webRequest`, `activeTab`, `<all_urls>`, or host permissions.
+- AI機能はデフォルトで無効。ユーザーが明示的に設定した場合のみ有効化
+- APIキーは `chrome.storage.local` に保存（デバイスから外に出ない）
+- 送信データはURLのみ（ブックマークの全データは送信しない）
+- レスポンスはタイトル文字列としてのみ使用
+- AI APIのエンドポイントは `manifest.json` の `host_permissions` で限定
 
 ---
 
-## Threat Model / 脅威モデル
+## 脅威モデル / Threat Model
 
-| Threat | Mitigation |
-|--------|-----------|
-| Malicious import file | Schema validation + checksum + URL allowlist |
-| XSS via bookmark title/URL | No innerHTML; React's built-in escaping |
-| Directory traversal via sync | File System Access API is sandboxed by browser |
-| Supply chain attack | Zero runtime dependencies beyond React |
-| Data exfiltration | Zero network capability; CSP blocks all external requests |
-| Bookmark data tampering | SHA-256 integrity check on import |
+| 脅威 | 緩和策 |
+|------|--------|
+| 悪意あるインポートファイル | スキーマ検証 + チェックサム + URL許可リスト |
+| タイトル/URLによるXSS | innerHTML不使用; Reactの組み込みエスケープ |
+| 同期によるディレクトリトラバーサル | File System Access APIがブラウザサンドボックスで制限 |
+| サプライチェーン攻撃 | ランタイム依存はReactのみ |
+| データの外部流出 | テレメトリなし; CSPが外部リクエストをブロック |
+| ブックマークデータの改ざん | SHA-256完全性チェック |
+| AIキーの漏洩 | chrome.storage.localに保存（拡張機能スコープ内のみアクセス可能） |

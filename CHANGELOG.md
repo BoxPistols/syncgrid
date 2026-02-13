@@ -1,34 +1,38 @@
-# Changelog / 変更履歴
+# 変更履歴 / Changelog
 
-All notable changes to SyncGrid will be documented in this file.
+このファイルにはSyncGridの主要な変更を記録します。
 
 ## [1.1.0] - 2026-02-11
 
-### Added / 追加
-- **Speed Dial UI**: Complete redesign from tree structure to card grid layout
-- **Tab Navigation**: Top-level groups displayed as horizontal tabs
-- **Folder Drill-down**: Click folders to navigate deeper, breadcrumb to go back
-- **Local Folder Sync**: Auto-sync bookmarks to any local folder (Google Drive, OneDrive, iCloud, Dropbox, Box)
-- **Export / Import**: JSON backup with SHA-256 integrity verification
-- **Bilingual UI**: Japanese (default) and English language support
-- **Settings Panel**: Language, theme, data management, sync configuration
-- **Context Menus**: Right-click for edit, rename, delete operations
-- **Inline Rename**: Double-click tabs to rename groups
-- **Auto Sync**: 5-minute interval + debounced sync on bookmark changes
-- **Security Documentation**: SECURITY.md, PRIVACY.md with comprehensive security architecture
+### 追加 / Added
 
-### Security / セキュリティ
-- Zero network requests / ゼロネットワークリクエスト
-- SHA-256 checksum verification on import / インポート時SHA-256検証
-- URL protocol allowlist / URLプロトコル許可リスト
-- Content Security Policy (Manifest V3) / CSP対応
-- Import validation pipeline (schema, size, depth limits) / インポート検証パイプライン
+- **Speed Dial UI**: ツリー構造からカードグリッドレイアウトへ全面的にリデザイン
+- **タブナビゲーション**: トップレベルグループを水平タブで表示
+- **フォルダドリルダウン**: フォルダクリックで階層移動、パンくずリストで戻る
+- **ローカルフォルダ同期**: File System Access APIによるローカルフォルダへの自動同期（Google Drive, OneDrive, iCloud, Dropbox, Box対応）
+- **エクスポート / インポート**: SHA-256チェックサム検証付きJSONバックアップ
+- **AIタイトル生成**: OpenAI / Gemini APIによるURL→タイトル自動生成（オプション）
+- **バイリンガルUI**: 日本語（デフォルト）と英語
+- **設定パネル**: 言語、テーマ、データ管理、同期、AI設定
+- **コンテキストメニュー**: 右クリックで編集・名前変更・削除
+- **インラインリネーム**: タブダブルクリックでグループ名変更
+- **自動同期**: 5分間隔 + ブックマーク変更時のデバウンス同期
+
+### セキュリティ / Security
+
+- ゼロテレメトリ設計
+- SHA-256チェックサム検証
+- URLプロトコル許可リスト
+- Content Security Policy（Manifest V3準拠）
+- インポート検証パイプライン（スキーマ、サイズ、深度制限）
+- セキュリティドキュメント整備（SECURITY.md, PRIVACY.md）
 
 ## [1.0.0] - 2026-02-11
 
-### Added / 追加
-- Initial release / 初回リリース
-- Chrome Bookmarks API integration / Chrome Bookmarks API連携
-- Dark / Light / System theme / テーマ対応
-- Search across all bookmarks / ブックマーク全文検索
-- Keyboard navigation / キーボードナビゲーション
+### 追加 / Added
+
+- 初回リリース
+- Chrome Bookmarks API連携
+- ダーク / ライト / システム テーマ対応
+- ブックマーク全文検索
+- キーボードナビゲーション
