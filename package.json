@@ -1,0 +1,49 @@
+{
+  "name": "syncgrid",
+  "version": "1.1.0",
+  "description": "Secure, synced bookmark dashboard for Chrome new tabs — Speed Dial UI with zero telemetry",
+  "license": "MIT",
+  "keywords": [
+    "chrome-extension",
+    "bookmarks",
+    "speed-dial",
+    "new-tab",
+    "bookmark-manager",
+    "sync",
+    "privacy",
+    "zero-telemetry"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/syncgrid.git"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "zip": "npm run build && cd dist && zip -r ../syncgrid-extension.zip . && echo '✅ syncgrid-extension.zip created'",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/chrome": "^0.1.36",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "sharp": "^0.34.5",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vite": "^7.3.1",
+    "vite-plugin-static-copy": "^3.2.0"
+  }
+}
