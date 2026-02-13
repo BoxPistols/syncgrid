@@ -367,6 +367,23 @@ button { border: none; background: none; cursor: pointer; color: inherit; font: 
 }
 .sg-card:active { transform: translateY(0); }
 
+/* Drag & Drop */
+.sg-card--dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+  box-shadow: none;
+}
+.sg-card--dragging:hover {
+  transform: scale(0.95);
+  box-shadow: none;
+}
+.sg-card--drop-before {
+  box-shadow: -3px 0 0 0 var(--sg-accent), var(--sg-shadow);
+}
+.sg-card--drop-after {
+  box-shadow: 3px 0 0 0 var(--sg-accent), var(--sg-shadow);
+}
+
 .sg-card__icon {
   width: 48px;
   height: 48px;
@@ -439,6 +456,23 @@ button { border: none; background: none; cursor: pointer; color: inherit; font: 
   background: var(--sg-bg-card-hover);
 }
 .sg-folder-card:active { transform: translateY(0); }
+
+/* Drag & Drop */
+.sg-folder-card--dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+  box-shadow: none;
+}
+.sg-folder-card--dragging:hover {
+  transform: scale(0.95);
+  box-shadow: none;
+}
+.sg-folder-card--drop-before {
+  box-shadow: -3px 0 0 0 var(--sg-accent), var(--sg-shadow);
+}
+.sg-folder-card--drop-after {
+  box-shadow: 3px 0 0 0 var(--sg-accent), var(--sg-shadow);
+}
 
 .sg-folder-card__icon {
   width: 48px;

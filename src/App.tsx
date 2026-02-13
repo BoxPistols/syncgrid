@@ -4,6 +4,7 @@ import { useSettings } from './hooks/useSettings'
 import { useTheme } from './hooks/useTheme'
 import { useI18n } from './hooks/useI18n'
 import { useAutoSync } from './hooks/useAutoSync'
+import { useDragReorder } from './hooks/useDragReorder'
 import { TopBar } from './components/TopBar'
 import { BookmarkCard } from './components/BookmarkCard'
 import { FolderCard } from './components/FolderCard'
@@ -73,6 +74,9 @@ export default function App() {
     }
     return folder ?? activeGroup
   }, [activeGroup, path])
+
+  // --- Drag & Drop ---
+  const { dragState, getDragHandlers } = useDragReorder(currentFolder)
 
   // --- Breadcrumb ---
   const breadcrumb = useMemo(() => {
@@ -293,8 +297,22 @@ export default function App() {
             <div className="sg-empty"><div className="sg-empty__icon">📌</div><p className="sg-empty__text" style={{ whiteSpace: 'pre-line' }}>{t.emptyFolder}</p></div>
           ) : (
             <div className="sg-dial__grid">
-              {currentFolder.children.map(child => <FolderCard key={child.id} group={child} onClick={handleOpenFolder} onContextMenu={handleFolderContext} t={t} />)}
-              {currentFolder.items.map(item => <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} />)}
+              {currentFolder.children.map(child => (
+                <FolderCard key={child.id} group={child} onClick={handleOpenFolder} onContextMenu={handleFolderContext} t={t}
+                  dragHandlers={getDragHandlers(child.id, 'folder')}
+                  isDragging={dragState.draggingId === child.id}
+                  isDropTarget={dragState.dropTargetId === child.id}
+                  dropSide={dragState.dropTargetId === child.id ? dragState.dropSide : null}
+                />
+              ))}
+              {currentFolder.items.map(item => (
+                <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext}
+                  dragHandlers={getDragHandlers(item.id, 'bookmark')}
+                  isDragging={dragState.draggingId === item.id}
+                  isDropTarget={dragState.dropTargetId === item.id}
+                  dropSide={dragState.dropTargetId === item.id ? dragState.dropSide : null}
+                />
+              ))}
             </div>
           )}
         </div>
