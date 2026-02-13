@@ -44,7 +44,6 @@ export const OPENAI_MODELS = [
 ] as const
 
 export const GEMINI_MODELS = [
-  { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
 ] as const
@@ -54,7 +53,7 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
   openaiApiKey: '',
   openaiModel: 'gpt-4.1-nano',
   geminiApiKey: '',
-  geminiModel: 'gemini-2.0-flash',
+  geminiModel: 'gemini-2.5-flash',
 }
 
 /** アプリ設定 */

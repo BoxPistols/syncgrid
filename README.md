@@ -88,7 +88,7 @@ URLからブックマークのタイトルをAIで自動生成する機能です
 
 **対応プロバイダ:**
 - **OpenAI**: GPT-4.1 Nano / GPT-4.1 Mini / GPT-5 Nano / GPT-5 Mini
-- **Gemini**: Gemini 2.0 Flash / Gemini 2.5 Flash / Gemini 2.5 Pro
+- **Gemini**: Gemini 2.5 Flash / Gemini 2.5 Pro
 
 **設定手順:**
 1. 設定パネルでAIプロバイダを選択
@@ -322,7 +322,7 @@ Auto-generate bookmark titles from URLs using AI. Disabled by default.
 
 **Supported providers:**
 - **OpenAI**: GPT-4.1 Nano / GPT-4.1 Mini / GPT-5 Nano / GPT-5 Mini
-- **Gemini**: Gemini 2.0 Flash / Gemini 2.5 Flash / Gemini 2.5 Pro
+- **Gemini**: Gemini 2.5 Flash / Gemini 2.5 Pro
 
 **Setup:**
 1. Select an AI provider in the Settings panel

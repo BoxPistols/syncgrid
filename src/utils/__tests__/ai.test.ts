@@ -21,7 +21,7 @@ const geminiSettings: AISettings = {
   ...DEFAULT_AI_SETTINGS,
   provider: 'gemini',
   geminiApiKey: 'test-gemini-key',
-  geminiModel: 'gemini-2.0-flash',
+  geminiModel: 'gemini-2.5-flash',
 }
 
 describe('generateTitle', () => {
@@ -65,7 +65,7 @@ describe('generateTitle', () => {
     expect(mockFetch).toHaveBeenCalledOnce()
     const [url] = mockFetch.mock.calls[0]
     expect(url).toContain('generativelanguage.googleapis.com')
-    expect(url).toContain('gemini-2.0-flash')
+    expect(url).toContain('gemini-2.5-flash')
     expect(url).toContain('key=test-gemini-key')
   })
 
