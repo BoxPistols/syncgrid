@@ -36,30 +36,56 @@ SyncGridは、Chromeの新しいタブページをSpeed Dialスタイルのブ�
 | **ローカルフォルダ同期** | Google Drive, OneDrive, iCloud, Dropbox, Box等との自動同期 |
 | **AIタイトル生成** | OpenAI / Gemini APIでURLからブックマークタイトルを自動生成（オプション） |
 | **バイリンガルUI** | 日本語（デフォルト）と英語 |
+| **ドラッグ&ドロップ** | カードをドラッグして並べ替え（フォルダ・ブックマーク各タイプ内） |
+| **接続テスト** | AI API接続・ローカル同期フォルダの読み書きをワンクリックで検証 |
 | **コンテキストメニュー** | 右クリックで編集・名前変更・削除 |
 | **インラインリネーム** | タブのダブルクリックでグループ名を変更 |
 
+### 前提条件
+
+- **Node.js** 20以上（22推奨）
+- **npm** 10以上
+- **Chrome** 120以上（Manifest V3 + File System Access API対応）
+
 ### インストール
 
-1. このリポジトリをクローン
-2. 依存パッケージをインストールしてビルド
-   ```bash
-   npm install
-   npm run build
-   ```
-3. Chromeで `chrome://extensions/` を開く
-4. **デベロッパーモード** を有効化
-5. **パッケージ化されていない拡張機能を読み込む** をクリックし、`dist/` フォルダを選択
+```bash
+git clone https://github.com/BoxPistols/syncgrid.git
+cd syncgrid
+npm install
+npm run build
+```
+
+1. Chromeで `chrome://extensions/` を開く
+2. **デベロッパーモード** を有効化
+3. **パッケージ化されていない拡張機能を読み込む** をクリックし、`dist/` フォルダを選択
 
 ### 開発
 
 ```bash
-npm run dev        # 開発サーバー起動（ホットリロード）
-npm run build      # TypeScriptチェック + Viteビルド
+npm run dev        # 開発サーバー起動（localhost:5173）
+npm run build      # TypeScriptチェック + Viteビルド（dist/に出力）
+npm run preview    # ビルド成果物をローカルでプレビュー
 npm run zip        # ビルドしてzipパッケージを作成
 npm run lint       # ESLintによるコード品質チェック
 npm run test       # テスト実行（watchモード）
 npm run test:run   # テスト実行（1回のみ）
+```
+
+**開発サーバーについて:**
+`npm run dev` は localhost:5173 で開発サーバーを起動します。Chrome拡張APIはlocalhost環境では利用できないため、`src/utils/chromeMock.ts` がモックデータを提供します。UIの見た目やインタラクションの確認に使用し、実際のブックマーク操作の検証はChromeに拡張として読み込んで行ってください。
+
+**Chrome拡張としてのビルド・運用:**
+```bash
+npm run build      # dist/ にビルド出力
+# chrome://extensions/ → 「パッケージ化されていない拡張機能を読み込む」→ dist/ を選択
+# コード変更後は再度 npm run build → 拡張ページで「更新」ボタンをクリック
+```
+
+**配布用パッケージ作成:**
+```bash
+npm run zip        # dist/ をzip化 → syncgrid-extension.zip が生成
+# Chrome Web Storeへのアップロードや手動配布に使用
 ```
 
 ### クラウド同期の仕組み
@@ -201,6 +227,7 @@ Chrome Bookmarks API（信頼できる唯一のデータソース）
 | `useTheme` | テーマの切り替え（light / dark / system）とCSS変数の適用 |
 | `useI18n` | ロケールに応じた翻訳テキストの提供 |
 | `useAutoSync` | ローカルフォルダへの定期同期とブックマーク変更時の同期 |
+| `useDragReorder` | カードのドラッグ&ドロップ並べ替え（HTML5 DnD API） |
 
 #### テーマシステム
 
@@ -270,30 +297,56 @@ Zero telemetry. Zero analytics. Zero external tracking.
 | **Local Folder Sync** | Auto-sync to any local folder (Google Drive, OneDrive, iCloud, Dropbox, Box) |
 | **AI Title Generation** | Auto-generate bookmark titles from URLs via OpenAI / Gemini (optional) |
 | **Bilingual** | Japanese (default) and English UI |
+| **Drag & Drop** | Reorder cards by dragging (within folder or bookmark type) |
+| **Connection Test** | Verify AI API keys and local sync folder access with one click |
 | **Context Menus** | Right-click to edit, rename, delete |
 | **Inline Rename** | Double-click tabs to rename groups |
 
+### Prerequisites
+
+- **Node.js** 20+ (22 recommended)
+- **npm** 10+
+- **Chrome** 120+ (Manifest V3 + File System Access API)
+
 ### Installation
 
-1. Clone this repository
-2. Install dependencies and build:
-   ```bash
-   npm install
-   npm run build
-   ```
-3. Open `chrome://extensions/`
-4. Enable **Developer mode**
-5. Click **Load unpacked** and select the `dist/` folder
+```bash
+git clone https://github.com/BoxPistols/syncgrid.git
+cd syncgrid
+npm install
+npm run build
+```
+
+1. Open `chrome://extensions/`
+2. Enable **Developer mode**
+3. Click **Load unpacked** and select the `dist/` folder
 
 ### Development
 
 ```bash
-npm run dev        # Start dev server with hot reload
-npm run build      # TypeScript check + Vite build
+npm run dev        # Start dev server (localhost:5173)
+npm run build      # TypeScript check + Vite build (outputs to dist/)
+npm run preview    # Preview build output locally
 npm run zip        # Build and create zip package
 npm run lint       # ESLint code quality check
 npm run test       # Run tests (watch mode)
 npm run test:run   # Run tests once
+```
+
+**About the dev server:**
+`npm run dev` starts a dev server at localhost:5173. Since Chrome extension APIs are not available in localhost, `src/utils/chromeMock.ts` provides mock data. Use the dev server for visual and interaction checks. For testing actual bookmark operations, load the extension into Chrome.
+
+**Building and running as a Chrome extension:**
+```bash
+npm run build      # Output to dist/
+# chrome://extensions/ → "Load unpacked" → select dist/
+# After code changes: npm run build → click "Update" on the extensions page
+```
+
+**Creating a distribution package:**
+```bash
+npm run zip        # Zips dist/ → generates syncgrid-extension.zip
+# Use for Chrome Web Store upload or manual distribution
 ```
 
 ### Cloud Sync -- How It Works
