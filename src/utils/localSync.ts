@@ -143,6 +143,32 @@ export async function disconnectSync(): Promise<void> {
   await saveDirHandle(null)
 }
 
+/** Test sync folder connection: verify handle exists and is writable */
+export async function testSyncConnection(): Promise<{ ok: boolean; folderName?: string; error?: string }> {
+  try {
+    const handle = await loadDirHandle()
+    if (!handle) return { ok: false, error: 'No folder selected' }
+
+    const perm = await handle.queryPermission({ mode: 'readwrite' })
+    if (perm !== 'granted') {
+      const req = await handle.requestPermission({ mode: 'readwrite' })
+      if (req !== 'granted') return { ok: false, error: 'Permission denied' }
+    }
+
+    // Write and remove a test file to verify actual write access
+    const testName = '.syncgrid-test'
+    const testFile = await handle.getFileHandle(testName, { create: true })
+    const writable = await testFile.createWritable()
+    await writable.write('ok')
+    await writable.close()
+    await handle.removeEntry(testName)
+
+    return { ok: true, folderName: handle.name }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
 /** Get the folder name (for display) */
 export async function getSyncFolderName(): Promise<string | null> {
   const handle = await loadDirHandle()

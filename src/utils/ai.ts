@@ -11,6 +11,39 @@
 
 import type { AISettings } from '../types'
 
+/** Test AI API connection by calling a lightweight endpoint */
+export async function testAiConnection(settings: AISettings): Promise<{ ok: boolean; error?: string }> {
+  try {
+    if (settings.provider === 'openai') {
+      if (!settings.openaiApiKey) return { ok: false, error: 'API key not set' }
+      const res = await fetch('https://api.openai.com/v1/models', {
+        headers: { 'Authorization': `Bearer ${settings.openaiApiKey}` },
+      })
+      if (!res.ok) {
+        const err = await res.text()
+        return { ok: false, error: `${res.status}: ${err}` }
+      }
+      return { ok: true }
+    }
+
+    if (settings.provider === 'gemini') {
+      if (!settings.geminiApiKey) return { ok: false, error: 'API key not set' }
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${settings.geminiApiKey}`,
+      )
+      if (!res.ok) {
+        const err = await res.text()
+        return { ok: false, error: `${res.status}: ${err}` }
+      }
+      return { ok: true }
+    }
+
+    return { ok: false, error: 'No provider selected' }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Unknown error' }
+  }
+}
+
 /** Generate a bookmark title from a URL using the configured AI provider */
 export async function generateTitle(url: string, settings: AISettings): Promise<string> {
   if (settings.provider === 'none') {

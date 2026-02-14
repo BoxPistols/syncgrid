@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react'
-import { moveBookmark, moveGroup, toChromeIndex } from '../utils/bookmarks'
 import type { SyncGridGroup } from '../types'
 
 type DragItemType = 'bookmark' | 'folder'
@@ -101,28 +100,28 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
       const midX = rect.left + rect.width / 2
       const dropBefore = e.clientX < midX
 
-      const items = type === 'folder' ? currentFolder.children : currentFolder.items
-      const targetIdx = items.findIndex(item => item.id === id)
-      if (targetIdx < 0) return
+      // Chrome APIの実際の子ノード配列を取得（フォルダ/ブックマーク混在順）
+      const [parentTree] = await chrome.bookmarks.getSubTree(currentFolder.id)
+      const chromeChildren = parentTree.children ?? []
 
-      let targetVisualIdx = dropBefore ? targetIdx : targetIdx + 1
+      const targetChromeIdx = chromeChildren.findIndex(c => c.id === id)
+      if (targetChromeIdx < 0) return
 
-      const sourceIdx = items.findIndex(item => item.id === data.id)
-      if (sourceIdx >= 0 && sourceIdx < targetVisualIdx) {
-        targetVisualIdx -= 1
+      const sourceChromeIdx = chromeChildren.findIndex(c => c.id === data.id)
+      if (sourceChromeIdx < 0) return
+
+      // ドロップ位置のChrome indexを計算
+      let moveIdx = dropBefore ? targetChromeIdx : targetChromeIdx + 1
+
+      // Chrome move APIはソースを先に除去してからインデックスを適用する
+      if (sourceChromeIdx < moveIdx) {
+        moveIdx -= 1
       }
 
-      const chromeIdx = toChromeIndex(
-        targetVisualIdx,
-        type,
-        currentFolder.children.length,
-      )
-
-      if (type === 'bookmark') {
-        await moveBookmark(data.id, currentFolder.id, chromeIdx)
-      } else {
-        await moveGroup(data.id, currentFolder.id, chromeIdx)
-      }
+      await chrome.bookmarks.move(data.id, {
+        parentId: currentFolder.id,
+        index: moveIdx,
+      })
 
       dragDataRef.current = null
       setDragState(INITIAL_STATE)

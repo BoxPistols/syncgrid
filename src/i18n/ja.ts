@@ -77,6 +77,13 @@ export const ja = {
   aiGenerating: '生成中…',
   aiError: 'AI生成に失敗しました',
   aiNotConfigured: 'AI設定が未構成です。設定画面からAPIキーを設定してください。',
+  // Connection test
+  connectionTest: '接続テスト',
+  testing: 'テスト中…',
+  connectionOk: '接続成功',
+  connectionFailed: '接続失敗',
+  syncTestOk: 'フォルダへの読み書きを確認しました',
+  syncTestFailed: 'フォルダへのアクセスに失敗しました',
   // Security
   security: 'セキュリティ',
   securityDesc: '• データはChrome Bookmarks APIにのみ保存されます\n• 外部サーバーへの送信は一切ありません\n• ローカル同期はユーザーが明示的に選択したフォルダのみに書き込みます\n• エクスポートファイルは暗号化されていません — 安全な場所に保管してください\n• AI APIキーはローカルにのみ保存され、選択したプロバイダにのみ送信されます',

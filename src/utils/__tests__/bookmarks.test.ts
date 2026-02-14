@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { findGroupById, findGroupForItem, flattenGroups, toChromeIndex } from '../bookmarks'
+import { findGroupById, findGroupForItem, flattenGroups } from '../bookmarks'
 import type { SyncGridGroup } from '../../types'
 
 const nested: SyncGridGroup[] = [
@@ -78,29 +78,6 @@ describe('findGroupForItem', () => {
 
   it('returns undefined for non-existent item', () => {
     expect(findGroupForItem(nested, 'nonexistent')).toBeUndefined()
-  })
-})
-
-describe('toChromeIndex', () => {
-  it('returns visualIndex directly for folders', () => {
-    expect(toChromeIndex(0, 'folder', 3)).toBe(0)
-    expect(toChromeIndex(2, 'folder', 3)).toBe(2)
-  })
-
-  it('adds folderCount offset for bookmarks', () => {
-    // 2 folders + bookmark visual index 0 → Chrome index 2
-    expect(toChromeIndex(0, 'bookmark', 2)).toBe(2)
-    // 2 folders + bookmark visual index 3 → Chrome index 5
-    expect(toChromeIndex(3, 'bookmark', 2)).toBe(5)
-  })
-
-  it('works with zero folders', () => {
-    expect(toChromeIndex(0, 'bookmark', 0)).toBe(0)
-    expect(toChromeIndex(1, 'bookmark', 0)).toBe(1)
-  })
-
-  it('works with zero bookmarks (folder-only parent)', () => {
-    expect(toChromeIndex(0, 'folder', 5)).toBe(0)
   })
 })
 

@@ -9,8 +9,9 @@ import {
 } from '../utils/dataTransfer'
 import {
   isSyncSupported, pickSyncFolder, getSyncHandle,
-  syncToFolder, disconnectSync, getSyncFolderName,
+  syncToFolder, disconnectSync, getSyncFolderName, testSyncConnection,
 } from '../utils/localSync'
+import { testAiConnection } from '../utils/ai'
 
 interface Props {
   settings: SyncGridSettings
@@ -26,6 +27,9 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
   const [syncFolderName, setSyncFolderName] = useState<string | null>(null)
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [aiTestStatus, setAiTestStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
+  const [aiTestError, setAiTestError] = useState('')
+  const [syncTestStatus, setSyncTestStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
 
   useEffect(() => {
     getSyncFolderName().then(setSyncFolderName)
@@ -102,6 +106,28 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
     setSyncFolderName(null)
     onUpdateSettings({ lastSyncedAt: '' })
   }, [onUpdateSettings])
+
+  // --- AI Connection Test ---
+  const handleAiTest = useCallback(async () => {
+    setAiTestStatus('testing')
+    setAiTestError('')
+    const result = await testAiConnection(settings.ai)
+    if (result.ok) {
+      setAiTestStatus('ok')
+    } else {
+      setAiTestStatus('error')
+      setAiTestError(result.error ?? '')
+    }
+    setTimeout(() => setAiTestStatus('idle'), 4000)
+  }, [settings.ai])
+
+  // --- Sync Connection Test ---
+  const handleSyncTest = useCallback(async () => {
+    setSyncTestStatus('testing')
+    const result = await testSyncConnection()
+    setSyncTestStatus(result.ok ? 'ok' : 'error')
+    setTimeout(() => setSyncTestStatus('idle'), 4000)
+  }, [])
 
   const formatDate = (iso: string) => {
     if (!iso) return '—'
@@ -194,12 +220,21 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
                     >
                       {syncStatus === 'syncing' ? '⏳' : '🔄'} {t.syncNow}
                     </button>
+                    <button
+                      className="sg-btn sg-btn--sm sg-btn--ghost"
+                      onClick={handleSyncTest}
+                      disabled={syncTestStatus === 'testing'}
+                    >
+                      {syncTestStatus === 'testing' ? '⏳' : '🔗'} {t.connectionTest}
+                    </button>
                     <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleDisconnect}>
                       {t.disconnectSync}
                     </button>
                   </div>
                   {syncStatus === 'done' && <p className="sg-settings__status sg-settings__status--ok">✅ Synced!</p>}
                   {syncStatus === 'error' && <p className="sg-settings__status sg-settings__status--err">❌ Sync failed</p>}
+                  {syncTestStatus === 'ok' && <p className="sg-settings__status sg-settings__status--ok">✅ {t.syncTestOk}</p>}
+                  {syncTestStatus === 'error' && <p className="sg-settings__status sg-settings__status--err">❌ {t.syncTestFailed}</p>}
                 </div>
               ) : (
                 <button className="sg-btn sg-btn--sm sg-btn--primary" onClick={handlePickFolder}>
@@ -256,6 +291,17 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
                     <option key={m.id} value={m.id}>{m.label}</option>
                   ))}
                 </select>
+                <div className="sg-settings__row" style={{ marginTop: 8 }}>
+                  <button
+                    className="sg-btn sg-btn--sm sg-btn--ghost"
+                    onClick={handleAiTest}
+                    disabled={aiTestStatus === 'testing' || !settings.ai.openaiApiKey}
+                  >
+                    {aiTestStatus === 'testing' ? '⏳' : '🔗'} {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
+                  </button>
+                </div>
+                {aiTestStatus === 'ok' && <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>}
+                {aiTestStatus === 'error' && <p className="sg-settings__status sg-settings__status--err">❌ {t.connectionFailed}{aiTestError ? `: ${aiTestError}` : ''}</p>}
               </>
             )}
 
@@ -281,6 +327,17 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
                     <option key={m.id} value={m.id}>{m.label}</option>
                   ))}
                 </select>
+                <div className="sg-settings__row" style={{ marginTop: 8 }}>
+                  <button
+                    className="sg-btn sg-btn--sm sg-btn--ghost"
+                    onClick={handleAiTest}
+                    disabled={aiTestStatus === 'testing' || !settings.ai.geminiApiKey}
+                  >
+                    {aiTestStatus === 'testing' ? '⏳' : '🔗'} {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
+                  </button>
+                </div>
+                {aiTestStatus === 'ok' && <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>}
+                {aiTestStatus === 'error' && <p className="sg-settings__status sg-settings__status--err">❌ {t.connectionFailed}{aiTestError ? `: ${aiTestError}` : ''}</p>}
               </>
             )}
           </div>

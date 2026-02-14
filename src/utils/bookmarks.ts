@@ -166,19 +166,6 @@ export async function moveGroup(
 }
 
 /**
- * 視覚的なグリッドインデックスをChrome Bookmarks APIのインデックスに変換。
- * Chrome APIではフォルダとブックマークが1つの配列に混在しているため、
- * フォルダ数をオフセットとしてブックマークのインデックスに加算する。
- */
-export function toChromeIndex(
-  visualIndex: number,
-  type: 'folder' | 'bookmark',
-  folderCount: number,
-): number {
-  return type === 'folder' ? visualIndex : folderCount + visualIndex
-}
-
-/**
  * ツリーからグループを再帰検索
  */
 export function findGroupById(
