@@ -76,7 +76,7 @@ export default function App() {
   }, [activeGroup, path])
 
   // --- Drag & Drop ---
-  const { dragState, getDragHandlers } = useDragReorder(currentFolder)
+  const { dragState, getDragHandlers, getTabDropHandlers, getBreadcrumbDropHandlers } = useDragReorder(currentFolder)
 
   // --- Breadcrumb ---
   const breadcrumb = useMemo(() => {
@@ -217,10 +217,11 @@ export default function App() {
       <div className="sg-tabbar">
         {groups.map((g) => (
           <button key={g.id}
-            className={`sg-tab ${g.id === activeTabId ? 'sg-tab--active' : ''}`}
+            className={`sg-tab ${g.id === activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id ? 'sg-tab--drop-target' : ''}`}
             onClick={() => handleSelectTab(g.id)}
             onContextMenu={(e) => handleTabContext(g, e)}
             onDoubleClick={() => { setRenamingTabId(g.id); setRenameValue(g.title) }}
+            {...getTabDropHandlers(g.id)}
           >
             {renamingTabId === g.id ? (
               <input className="sg-tab__rename" value={renameValue}
@@ -265,19 +266,34 @@ export default function App() {
         <div className="sg-dial">
           {path.length > 0 && (
             <div className="sg-breadcrumb">
-              {breadcrumb.map((crumb, i) => (
-                <span key={crumb.id || 'root'}>
-                  {i > 0 && <span className="sg-breadcrumb__sep"> › </span>}
-                  {i < breadcrumb.length - 1
-                    ? <button className="sg-breadcrumb__item" onClick={() => handleBreadcrumbClick(i)}>{crumb.title}</button>
-                    : <span className="sg-breadcrumb__current">{crumb.title}</span>}
-                </span>
-              ))}
+              {breadcrumb.map((crumb, i) => {
+                const crumbParentId = i === 0 ? activeGroup?.id : breadcrumb[i]?.id
+                return (
+                  <span key={crumb.id || 'root'}>
+                    {i > 0 && <span className="sg-breadcrumb__sep"> › </span>}
+                    {i < breadcrumb.length - 1 && crumbParentId
+                      ? <button
+                          className={`sg-breadcrumb__item ${dragState.dropBreadcrumbId === crumbParentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
+                          onClick={() => handleBreadcrumbClick(i)}
+                          {...getBreadcrumbDropHandlers(crumbParentId)}
+                        >{crumb.title}</button>
+                      : <span className="sg-breadcrumb__current">{crumb.title}</span>}
+                  </span>
+                )
+              })}
             </div>
           )}
 
           <div className="sg-toolbar">
-            {path.length > 0 && <button className="sg-btn--icon" onClick={() => setPath(p => p.slice(0, -1))} title={t.back}>←</button>}
+            {path.length > 0 && (() => {
+              const parentId = path.length >= 2 ? path[path.length - 2] : activeGroup?.id
+              return parentId ? (
+                <button className="sg-btn--icon" onClick={() => setPath(p => p.slice(0, -1))} title={t.back}
+                  {...getBreadcrumbDropHandlers(parentId)}>←</button>
+              ) : (
+                <button className="sg-btn--icon" onClick={() => setPath(p => p.slice(0, -1))} title={t.back}>←</button>
+              )
+            })()}
             <span className="sg-toolbar__title">{path.length === 0 ? '' : currentFolder.title}</span>
             <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>
               {showAddForm ? t.cancel : t.addBookmark}
@@ -302,7 +318,7 @@ export default function App() {
                   dragHandlers={getDragHandlers(child.id, 'folder')}
                   isDragging={dragState.draggingId === child.id}
                   isDropTarget={dragState.dropTargetId === child.id}
-                  dropSide={dragState.dropTargetId === child.id ? dragState.dropSide : null}
+                  dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null}
                 />
               ))}
               {currentFolder.items.map(item => (
@@ -310,7 +326,7 @@ export default function App() {
                   dragHandlers={getDragHandlers(item.id, 'bookmark')}
                   isDragging={dragState.draggingId === item.id}
                   isDropTarget={dragState.dropTargetId === item.id}
-                  dropSide={dragState.dropTargetId === item.id ? dragState.dropSide : null}
+                  dropMode={dragState.dropTargetId === item.id ? dragState.dropMode : null}
                 />
               ))}
             </div>

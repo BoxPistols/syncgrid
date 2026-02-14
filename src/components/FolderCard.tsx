@@ -10,17 +10,18 @@ interface Props {
   dragHandlers?: DragHandlers
   isDragging?: boolean
   isDropTarget?: boolean
-  dropSide?: 'before' | 'after' | null
+  dropMode?: 'before' | 'after' | 'into' | null
 }
 
-export function FolderCard({ group, onClick, onContextMenu, t, dragHandlers, isDragging, isDropTarget, dropSide }: Props) {
+export function FolderCard({ group, onClick, onContextMenu, t, dragHandlers, isDragging, isDropTarget, dropMode }: Props) {
   const totalItems = countAll(group)
 
   const className = [
     'sg-folder-card',
     isDragging && 'sg-folder-card--dragging',
-    isDropTarget && dropSide === 'before' && 'sg-folder-card--drop-before',
-    isDropTarget && dropSide === 'after' && 'sg-folder-card--drop-after',
+    isDropTarget && dropMode === 'before' && 'sg-folder-card--drop-before',
+    isDropTarget && dropMode === 'after' && 'sg-folder-card--drop-after',
+    isDropTarget && dropMode === 'into' && 'sg-folder-card--drop-into',
   ].filter(Boolean).join(' ')
 
   return (

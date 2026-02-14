@@ -9,10 +9,10 @@ interface Props {
   dragHandlers?: DragHandlers
   isDragging?: boolean
   isDropTarget?: boolean
-  dropSide?: 'before' | 'after' | null
+  dropMode?: 'before' | 'after' | 'into' | null
 }
 
-export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropSide }: Props) {
+export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode }: Props) {
   const [imgFailed, setImgFailed] = useState(false)
   const domain = getDomain(item.url)
   const initial = domain.charAt(0).toUpperCase()
@@ -20,8 +20,8 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
   const className = [
     'sg-card',
     isDragging && 'sg-card--dragging',
-    isDropTarget && dropSide === 'before' && 'sg-card--drop-before',
-    isDropTarget && dropSide === 'after' && 'sg-card--drop-after',
+    isDropTarget && dropMode === 'before' && 'sg-card--drop-before',
+    isDropTarget && dropMode === 'after' && 'sg-card--drop-after',
   ].filter(Boolean).join(' ')
 
   return (
