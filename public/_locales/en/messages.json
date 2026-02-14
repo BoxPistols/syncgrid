@@ -1,0 +1,10 @@
+{
+  "appName": {
+    "message": "SyncGrid",
+    "description": "Extension name displayed in Chrome Web Store and browser UI"
+  },
+  "appDescription": {
+    "message": "Speed Dial bookmark manager for new tabs — organize, search & sync your bookmarks with a clean dashboard UI",
+    "description": "Extension description displayed in Chrome Web Store (max 132 chars)"
+  }
+}

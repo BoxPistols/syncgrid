@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "SyncGrid",
+  "name": "__MSG_appName__",
   "version": "1.1.0",
-  "description": "Secure, synced bookmark dashboard for new tabs — Speed Dial UI with cloud backup via local folder sync",
+  "description": "__MSG_appDescription__",
+  "default_locale": "en",
   "chrome_url_overrides": {
     "newtab": "index.html"
   },

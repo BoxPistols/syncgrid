@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SyncGrid — Privacy Policy</title>
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --card: #ffffff;
+      --text: #1a1a2e;
+      --text-sub: #6b7280;
+      --accent: #4361ee;
+      --border: #e0e2e8;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f0f12;
+        --card: #1a1a22;
+        --text: #e8e8ed;
+        --text-sub: #8b8b96;
+        --accent: #6c8eff;
+        --border: #2a2a34;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 40px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: var(--accent);
+    }
+    .updated {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-bottom: 32px;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 28px 0 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    h2:first-of-type { border-top: none; padding-top: 0; }
+    p, ul { margin-bottom: 12px; font-size: 14px; }
+    ul { padding-left: 20px; }
+    li { margin-bottom: 6px; }
+    strong { font-weight: 600; }
+    a { color: var(--accent); }
+    .footer {
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SyncGrid — Privacy Policy</h1>
+    <p class="updated">Last updated: February 15, 2026</p>
+
+    <h2>Overview</h2>
+    <p>SyncGrid is a Chrome extension that replaces your new tab page with a Speed Dial bookmark manager. We are committed to protecting your privacy. This policy explains what data SyncGrid accesses, how it is used, and what is never collected.</p>
+
+    <h2>Data We Access</h2>
+    <ul>
+      <li><strong>Chrome Bookmarks API</strong> — SyncGrid reads and writes bookmarks within a dedicated <code>__SyncGrid__</code> folder in your browser's bookmark tree. This is the sole data source for the extension.</li>
+      <li><strong>Chrome Storage API</strong> — User preferences (theme, language, active tab) are stored locally via <code>chrome.storage.local</code>. This data never leaves your device.</li>
+      <li><strong>Favicon API</strong> — SyncGrid uses Chrome's built-in favicon service to display website icons. No external favicon service is contacted.</li>
+    </ul>
+
+    <h2>Optional Features</h2>
+    <ul>
+      <li><strong>AI Title Generation</strong> — If you choose to configure an AI provider (OpenAI or Google Gemini), SyncGrid sends only the bookmark URL to the provider's API to generate a title. Your API key is stored locally and is only transmitted to the provider you selected. No data is sent unless you explicitly configure an API key and trigger the feature.</li>
+      <li><strong>Local Folder Sync</strong> — If you select a local folder for backup, SyncGrid writes a JSON file to that folder using the File System Access API. The folder path and data stay entirely on your device. If that folder is synced to a cloud drive (Google Drive, OneDrive, etc.), that synchronization is handled by your operating system — not by SyncGrid.</li>
+      <li><strong>Export / Import</strong> — You can export your bookmarks as a JSON file and import from one. These files are created and read locally on your device.</li>
+    </ul>
+
+    <h2>Data We Never Collect</h2>
+    <ul>
+      <li>No analytics, telemetry, or tracking of any kind</li>
+      <li>No browsing history or page content</li>
+      <li>No personal information (name, email, location)</li>
+      <li>No cookies or fingerprinting</li>
+      <li>No data is sent to our servers — we do not operate any servers</li>
+      <li>No third-party scripts, SDKs, or advertising frameworks</li>
+    </ul>
+
+    <h2>Permissions Explained</h2>
+    <ul>
+      <li><strong><code>bookmarks</code></strong> — Read and organize your bookmarks within the SyncGrid folder</li>
+      <li><strong><code>storage</code></strong> — Save your preferences (theme, language) locally</li>
+      <li><strong><code>favicon</code></strong> — Display website favicons for your bookmarks</li>
+      <li><strong><code>host_permissions</code></strong> — Limited to <code>api.openai.com</code> and <code>generativelanguage.googleapis.com</code> only. Used exclusively for the optional AI title generation feature when you provide your own API key.</li>
+    </ul>
+
+    <h2>Data Storage</h2>
+    <p>All data is stored locally in your browser:</p>
+    <ul>
+      <li>Bookmarks: Chrome's built-in bookmark storage (synced by Chrome Sync if enabled)</li>
+      <li>Settings: <code>chrome.storage.local</code> (device-only)</li>
+      <li>AI API keys: <code>chrome.storage.local</code> (device-only, never synced)</li>
+    </ul>
+
+    <h2>Third-Party Services</h2>
+    <p>SyncGrid contacts external services <strong>only</strong> when you explicitly configure and use the AI title generation feature:</p>
+    <ul>
+      <li><strong>OpenAI API</strong> (<code>api.openai.com</code>) — if you select OpenAI as your AI provider</li>
+      <li><strong>Google Gemini API</strong> (<code>generativelanguage.googleapis.com</code>) — if you select Gemini as your AI provider</li>
+    </ul>
+    <p>No other external communication occurs.</p>
+
+    <h2>Children's Privacy</h2>
+    <p>SyncGrid does not knowingly collect any data from children or any other users.</p>
+
+    <h2>Changes to This Policy</h2>
+    <p>We may update this privacy policy from time to time. Changes will be posted on this page with an updated date. As SyncGrid collects no user data, changes are unlikely to affect your privacy.</p>
+
+    <h2>Contact</h2>
+    <p>If you have questions about this privacy policy, please open an issue at:<br>
+    <a href="https://github.com/BoxPistols/syncgrid/issues">github.com/BoxPistols/syncgrid/issues</a></p>
+
+    <div class="footer">
+      &copy; 2026 SyncGrid. Open source under MIT License.
+    </div>
+  </div>
+</body>
+</html>

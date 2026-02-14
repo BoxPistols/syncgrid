@@ -1,0 +1,10 @@
+{
+  "appName": {
+    "message": "SyncGrid",
+    "description": "Chrome Web Storeおよびブラウザに表示される拡張機能名"
+  },
+  "appDescription": {
+    "message": "新規タブをSpeed Dialブックマークマネージャーに — 整理・検索・同期を美しいダッシュボードUIで",
+    "description": "Chrome Web Storeに表示される説明文（132文字以内）"
+  }
+}

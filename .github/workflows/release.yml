@@ -59,3 +59,17 @@ jobs:
         with:
           files: syncgrid-${{ github.ref_name }}.zip
           generate_release_notes: true
+
+      # --- Chrome Web Store publish (optional — runs only when secrets are configured) ---
+      - name: Upload to Chrome Web Store
+        if: env.CHROME_EXTENSION_ID != ''
+        uses: mnao305/chrome-extension-upload@v5.0.0
+        with:
+          file-path: syncgrid-${{ github.ref_name }}.zip
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          publish: true
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
