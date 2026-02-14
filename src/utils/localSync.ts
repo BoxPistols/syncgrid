@@ -161,7 +161,11 @@ export async function testSyncConnection(): Promise<{ ok: boolean; folderName?: 
     const writable = await testFile.createWritable()
     await writable.write('ok')
     await writable.close()
-    await handle.removeEntry(testName)
+    try {
+      await handle.removeEntry(testName)
+    } catch {
+      // Cleanup failed but write access was confirmed
+    }
 
     return { ok: true, folderName: handle.name }
   } catch (e) {

@@ -24,6 +24,8 @@ interface Props {
 
 export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const aiTestTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const syncTestTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [syncFolderName, setSyncFolderName] = useState<string | null>(null)
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -33,6 +35,10 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
 
   useEffect(() => {
     getSyncFolderName().then(setSyncFolderName)
+    return () => {
+      clearTimeout(aiTestTimerRef.current)
+      clearTimeout(syncTestTimerRef.current)
+    }
   }, [])
 
   // --- Export ---
@@ -118,7 +124,8 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
       setAiTestStatus('error')
       setAiTestError(result.error ?? '')
     }
-    setTimeout(() => setAiTestStatus('idle'), 4000)
+    clearTimeout(aiTestTimerRef.current)
+    aiTestTimerRef.current = setTimeout(() => setAiTestStatus('idle'), 4000)
   }, [settings.ai])
 
   // --- Sync Connection Test ---
@@ -126,7 +133,8 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
     setSyncTestStatus('testing')
     const result = await testSyncConnection()
     setSyncTestStatus(result.ok ? 'ok' : 'error')
-    setTimeout(() => setSyncTestStatus('idle'), 4000)
+    clearTimeout(syncTestTimerRef.current)
+    syncTestTimerRef.current = setTimeout(() => setSyncTestStatus('idle'), 4000)
   }, [])
 
   const formatDate = (iso: string) => {

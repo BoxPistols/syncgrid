@@ -96,35 +96,39 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
       const data = dragDataRef.current
       if (!data || !currentFolder || data.type !== type || data.id === id) return
 
-      const rect = e.currentTarget.getBoundingClientRect()
-      const midX = rect.left + rect.width / 2
-      const dropBefore = e.clientX < midX
+      try {
+        const rect = e.currentTarget.getBoundingClientRect()
+        const midX = rect.left + rect.width / 2
+        const dropBefore = e.clientX < midX
 
-      // Chrome APIの実際の子ノード配列を取得（フォルダ/ブックマーク混在順）
-      const [parentTree] = await chrome.bookmarks.getSubTree(currentFolder.id)
-      const chromeChildren = parentTree.children ?? []
+        // Chrome APIの実際の子ノード配列を取得（フォルダ/ブックマーク混在順）
+        const [parentTree] = await chrome.bookmarks.getSubTree(currentFolder.id)
+        const chromeChildren = parentTree.children ?? []
 
-      const targetChromeIdx = chromeChildren.findIndex(c => c.id === id)
-      if (targetChromeIdx < 0) return
+        const targetChromeIdx = chromeChildren.findIndex(c => c.id === id)
+        if (targetChromeIdx < 0) return
 
-      const sourceChromeIdx = chromeChildren.findIndex(c => c.id === data.id)
-      if (sourceChromeIdx < 0) return
+        const sourceChromeIdx = chromeChildren.findIndex(c => c.id === data.id)
+        if (sourceChromeIdx < 0) return
 
-      // ドロップ位置のChrome indexを計算
-      let moveIdx = dropBefore ? targetChromeIdx : targetChromeIdx + 1
+        // ドロップ位置のChrome indexを計算
+        let moveIdx = dropBefore ? targetChromeIdx : targetChromeIdx + 1
 
-      // Chrome move APIはソースを先に除去してからインデックスを適用する
-      if (sourceChromeIdx < moveIdx) {
-        moveIdx -= 1
+        // Chrome move APIはソースを先に除去してからインデックスを適用する
+        if (sourceChromeIdx < moveIdx) {
+          moveIdx -= 1
+        }
+
+        await chrome.bookmarks.move(data.id, {
+          parentId: currentFolder.id,
+          index: moveIdx,
+        })
+      } catch (err) {
+        console.error('[SyncGrid] Drop failed:', err)
+      } finally {
+        dragDataRef.current = null
+        setDragState(INITIAL_STATE)
       }
-
-      await chrome.bookmarks.move(data.id, {
-        parentId: currentFolder.id,
-        index: moveIdx,
-      })
-
-      dragDataRef.current = null
-      setDragState(INITIAL_STATE)
     },
   }), [currentFolder])
 
