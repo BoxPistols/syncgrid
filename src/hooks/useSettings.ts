@@ -23,20 +23,13 @@ export function useSettings() {
   }, [])
 
   const updateSettings = useCallback(
-    async (
-      patchOrFn:
-        | Partial<SyncGridSettings>
-        | ((prev: SyncGridSettings) => Partial<SyncGridSettings>)
-    ) => {
-      const patch =
-        typeof patchOrFn === 'function'
-          ? patchOrFn(settingsRef.current)
-          : patchOrFn
+    async (patchOrFn: Partial<SyncGridSettings> | ((prev: SyncGridSettings) => Partial<SyncGridSettings>)) => {
+      const patch = typeof patchOrFn === 'function' ? patchOrFn(settingsRef.current) : patchOrFn
       const next = { ...settingsRef.current, ...patch }
       setSettings(next)
       await saveSettings(patch)
     },
-    []
+    [],
   )
 
   return { settings, updateSettings, loaded }

@@ -17,7 +17,9 @@ export function AddBookmarkForm({ onAdd, onCancel, t, aiSettings }: Props) {
   const [aiError, setAiError] = useState('')
   const urlRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { urlRef.current?.focus() }, [])
+  useEffect(() => {
+    urlRef.current?.focus()
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,7 +28,8 @@ export function AddBookmarkForm({ onAdd, onCancel, t, aiSettings }: Props) {
     let finalUrl = trimmedUrl
     if (!/^https?:\/\//i.test(finalUrl)) finalUrl = 'https://' + finalUrl
     onAdd(finalUrl, title.trim() || finalUrl)
-    setUrl(''); setTitle('')
+    setUrl('')
+    setTitle('')
     urlRef.current?.focus()
   }
 
@@ -58,12 +61,33 @@ export function AddBookmarkForm({ onAdd, onCancel, t, aiSettings }: Props) {
   const showAiBtn = url.trim().length > 0
 
   return (
-    <form className="sg-add-form" onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === 'Escape') onCancel() }}>
-      <input ref={urlRef} type="text" className="sg-add-form__input" placeholder={t.urlPlaceholder}
-        value={url} onChange={(e) => setUrl(e.target.value)} autoComplete="off" spellCheck={false} />
+    <form
+      className="sg-add-form"
+      onSubmit={handleSubmit}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onCancel()
+      }}
+    >
+      <input
+        ref={urlRef}
+        type="text"
+        className="sg-add-form__input"
+        placeholder={t.urlPlaceholder}
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        autoComplete="off"
+        spellCheck={false}
+      />
       <div className="sg-add-form__title-row">
-        <input type="text" className="sg-add-form__input" placeholder={t.titlePlaceholder}
-          value={title} onChange={(e) => setTitle(e.target.value)} autoComplete="off" spellCheck={false} />
+        <input
+          type="text"
+          className="sg-add-form__input"
+          placeholder={t.titlePlaceholder}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+        />
         {showAiBtn && (
           <button
             type="button"
@@ -78,8 +102,12 @@ export function AddBookmarkForm({ onAdd, onCancel, t, aiSettings }: Props) {
       </div>
       {aiError && <span className="sg-add-form__error">{aiError}</span>}
       <div className="sg-add-form__actions">
-        <button type="submit" className="sg-btn sg-btn--primary" disabled={!url.trim()}>{t.add}</button>
-        <button type="button" className="sg-btn sg-btn--ghost" onClick={onCancel}>{t.cancel}</button>
+        <button type="submit" className="sg-btn sg-btn--primary" disabled={!url.trim()}>
+          {t.add}
+        </button>
+        <button type="button" className="sg-btn sg-btn--ghost" onClick={onCancel}>
+          {t.cancel}
+        </button>
       </div>
     </form>
   )

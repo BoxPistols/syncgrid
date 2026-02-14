@@ -56,7 +56,8 @@ export const ja = {
   importConfirm: 'インポートすると現在のデータが上書きされます。続行しますか？',
   // Sync
   localSync: 'ローカルフォルダ同期',
-  syncDesc: 'クラウドドライブ（Google Drive, OneDrive, iCloud, Dropbox等）と同期されたローカルフォルダを指定すると、ブックマークデータが自動的にバックアップされます。',
+  syncDesc:
+    'クラウドドライブ（Google Drive, OneDrive, iCloud, Dropbox等）と同期されたローカルフォルダを指定すると、ブックマークデータが自動的にバックアップされます。',
   selectFolder: 'フォルダを選択',
   syncActive: '同期中',
   syncFolder: '同期先フォルダ',
@@ -86,6 +87,7 @@ export const ja = {
   syncTestFailed: 'フォルダへのアクセスに失敗しました',
   // Security
   security: 'セキュリティ',
-  securityDesc: '• データはChrome Bookmarks APIにのみ保存されます\n• 外部サーバーへの送信は一切ありません\n• ローカル同期はユーザーが明示的に選択したフォルダのみに書き込みます\n• エクスポートファイルは暗号化されていません — 安全な場所に保管してください\n• AI APIキーはローカルにのみ保存され、選択したプロバイダにのみ送信されます',
+  securityDesc:
+    '• データはChrome Bookmarks APIにのみ保存されます\n• 外部サーバーへの送信は一切ありません\n• ローカル同期はユーザーが明示的に選択したフォルダのみに書き込みます\n• エクスポートファイルは暗号化されていません — 安全な場所に保管してください\n• AI APIキーはローカルにのみ保存され、選択したプロバイダにのみ送信されます',
   close: '閉じる',
 } as const

@@ -3,13 +3,15 @@ import type { SyncGridSettings, SyncGridGroup, AIProvider } from '../types'
 import { OPENAI_MODELS, GEMINI_MODELS } from '../types'
 import type { Messages } from '../i18n'
 import type { Locale } from '../i18n'
+import { exportData, downloadExport, readFileAsText, validateImport, importToBookmarks } from '../utils/dataTransfer'
 import {
-  exportData, downloadExport,
-  readFileAsText, validateImport, importToBookmarks,
-} from '../utils/dataTransfer'
-import {
-  isSyncSupported, pickSyncFolder, getSyncHandle,
-  syncToFolder, disconnectSync, getSyncFolderName, testSyncConnection,
+  isSyncSupported,
+  pickSyncFolder,
+  getSyncHandle,
+  syncToFolder,
+  disconnectSync,
+  getSyncFolderName,
+  testSyncConnection,
 } from '../utils/localSync'
 import { testAiConnection } from '../utils/ai'
 
@@ -50,27 +52,30 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
   // --- Import ---
   const handleImportClick = () => fileRef.current?.click()
 
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ''
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      e.target.value = ''
 
-    if (!confirm(t.importConfirm)) return
+      if (!confirm(t.importConfirm)) return
 
-    try {
-      const text = await readFileAsText(file)
-      const validated = await validateImport(text)
-      if (!validated) {
+      try {
+        const text = await readFileAsText(file)
+        const validated = await validateImport(text)
+        if (!validated) {
+          setImportStatus('error')
+          return
+        }
+        await importToBookmarks(validated.data)
+        setImportStatus('success')
+        setTimeout(() => location.reload(), 1500)
+      } catch {
         setImportStatus('error')
-        return
       }
-      await importToBookmarks(validated.data)
-      setImportStatus('success')
-      setTimeout(() => location.reload(), 1500)
-    } catch {
-      setImportStatus('error')
-    }
-  }, [t])
+    },
+    [t],
+  )
 
   // --- Sync ---
   const handlePickFolder = useCallback(async () => {
@@ -141,7 +146,9 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
     if (!iso) return '—'
     try {
       return new Date(iso).toLocaleString(settings.locale === 'ja' ? 'ja-JP' : 'en-US')
-    } catch { return iso }
+    } catch {
+      return iso
+    }
   }
 
   return (
@@ -149,7 +156,9 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
       <div className="sg-modal sg-modal--wide" onClick={(e) => e.stopPropagation()}>
         <div className="sg-modal__header">
           <span className="sg-modal__title">{t.settingsTitle}</span>
-          <button className="sg-modal__close" onClick={onClose}>✕</button>
+          <button className="sg-modal__close" onClick={onClose}>
+            ✕
+          </button>
         </div>
 
         <div className="sg-modal__body sg-settings">
@@ -199,8 +208,12 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
             </div>
             <p className="sg-settings__desc">{t.exportDesc}</p>
             <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileChange} />
-            {importStatus === 'success' && <p className="sg-settings__status sg-settings__status--ok">✅ {t.importSuccess}</p>}
-            {importStatus === 'error' && <p className="sg-settings__status sg-settings__status--err">❌ {t.importError}</p>}
+            {importStatus === 'success' && (
+              <p className="sg-settings__status sg-settings__status--ok">✅ {t.importSuccess}</p>
+            )}
+            {importStatus === 'error' && (
+              <p className="sg-settings__status sg-settings__status--err">❌ {t.importError}</p>
+            )}
           </div>
 
           <hr className="sg-settings__divider" />
@@ -217,9 +230,7 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
                     <span className="sg-settings__sync-badge">✅ {t.syncActive}</span>
                     <span className="sg-settings__sync-folder">📁 {syncFolderName}</span>
                   </div>
-                  <p className="sg-settings__desc">
-                    {t.lastSynced(formatDate(settings.lastSyncedAt))}
-                  </p>
+                  <p className="sg-settings__desc">{t.lastSynced(formatDate(settings.lastSyncedAt))}</p>
                   <div className="sg-settings__row sg-settings__row--btns">
                     <button
                       className="sg-btn sg-btn--sm sg-btn--primary"
@@ -240,9 +251,15 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
                     </button>
                   </div>
                   {syncStatus === 'done' && <p className="sg-settings__status sg-settings__status--ok">✅ Synced!</p>}
-                  {syncStatus === 'error' && <p className="sg-settings__status sg-settings__status--err">❌ Sync failed</p>}
-                  {syncTestStatus === 'ok' && <p className="sg-settings__status sg-settings__status--ok">✅ {t.syncTestOk}</p>}
-                  {syncTestStatus === 'error' && <p className="sg-settings__status sg-settings__status--err">❌ {t.syncTestFailed}</p>}
+                  {syncStatus === 'error' && (
+                    <p className="sg-settings__status sg-settings__status--err">❌ Sync failed</p>
+                  )}
+                  {syncTestStatus === 'ok' && (
+                    <p className="sg-settings__status sg-settings__status--ok">✅ {t.syncTestOk}</p>
+                  )}
+                  {syncTestStatus === 'error' && (
+                    <p className="sg-settings__status sg-settings__status--err">❌ {t.syncTestFailed}</p>
+                  )}
                 </div>
               ) : (
                 <button className="sg-btn sg-btn--sm sg-btn--primary" onClick={handlePickFolder}>
@@ -296,7 +313,9 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
                   onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, openaiModel: e.target.value } })}
                 >
                   {OPENAI_MODELS.map((m) => (
-                    <option key={m.id} value={m.id}>{m.label}</option>
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
                   ))}
                 </select>
                 <div className="sg-settings__row" style={{ marginTop: 8 }}>
@@ -305,11 +324,19 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
                     onClick={handleAiTest}
                     disabled={aiTestStatus === 'testing' || !settings.ai.openaiApiKey}
                   >
-                    {aiTestStatus === 'testing' ? '⏳' : '🔗'} {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
+                    {aiTestStatus === 'testing' ? '⏳' : '🔗'}{' '}
+                    {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
                   </button>
                 </div>
-                {aiTestStatus === 'ok' && <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>}
-                {aiTestStatus === 'error' && <p className="sg-settings__status sg-settings__status--err">❌ {t.connectionFailed}{aiTestError ? `: ${aiTestError}` : ''}</p>}
+                {aiTestStatus === 'ok' && (
+                  <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>
+                )}
+                {aiTestStatus === 'error' && (
+                  <p className="sg-settings__status sg-settings__status--err">
+                    ❌ {t.connectionFailed}
+                    {aiTestError ? `: ${aiTestError}` : ''}
+                  </p>
+                )}
               </>
             )}
 
@@ -332,7 +359,9 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
                   onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, geminiModel: e.target.value } })}
                 >
                   {GEMINI_MODELS.map((m) => (
-                    <option key={m.id} value={m.id}>{m.label}</option>
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
                   ))}
                 </select>
                 <div className="sg-settings__row" style={{ marginTop: 8 }}>
@@ -341,11 +370,19 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
                     onClick={handleAiTest}
                     disabled={aiTestStatus === 'testing' || !settings.ai.geminiApiKey}
                   >
-                    {aiTestStatus === 'testing' ? '⏳' : '🔗'} {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
+                    {aiTestStatus === 'testing' ? '⏳' : '🔗'}{' '}
+                    {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
                   </button>
                 </div>
-                {aiTestStatus === 'ok' && <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>}
-                {aiTestStatus === 'error' && <p className="sg-settings__status sg-settings__status--err">❌ {t.connectionFailed}{aiTestError ? `: ${aiTestError}` : ''}</p>}
+                {aiTestStatus === 'ok' && (
+                  <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>
+                )}
+                {aiTestStatus === 'error' && (
+                  <p className="sg-settings__status sg-settings__status--err">
+                    ❌ {t.connectionFailed}
+                    {aiTestError ? `: ${aiTestError}` : ''}
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -361,7 +398,9 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
 
         <div className="sg-modal__footer">
           <div style={{ flex: 1 }} />
-          <button className="sg-btn sg-btn--ghost" onClick={onClose}>{t.close}</button>
+          <button className="sg-btn sg-btn--ghost" onClick={onClose}>
+            {t.close}
+          </button>
         </div>
       </div>
     </div>

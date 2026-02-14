@@ -22,7 +22,9 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
     isDragging && 'sg-card--dragging',
     isDropTarget && dropMode === 'before' && 'sg-card--drop-before',
     isDropTarget && dropMode === 'after' && 'sg-card--drop-after',
-  ].filter(Boolean).join(' ')
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <div
@@ -30,8 +32,13 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
       role="link"
       tabIndex={0}
       onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
-      onKeyDown={(e) => { if (e.key === 'Enter') window.open(item.url, '_blank') }}
-      onContextMenu={(e) => { e.preventDefault(); onContextMenu(item, e.clientX, e.clientY) }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') window.open(item.url, '_blank')
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        onContextMenu(item, e.clientX, e.clientY)
+      }}
       {...dragHandlers}
     >
       <div className="sg-card__icon">
@@ -40,7 +47,11 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
         ) : (
           <img
             src={getFaviconUrl(item.url, 64)}
-            alt="" width={48} height={48} loading="lazy" draggable={false}
+            alt=""
+            width={48}
+            height={48}
+            loading="lazy"
+            draggable={false}
             onError={() => setImgFailed(true)}
           />
         )}
@@ -49,9 +60,14 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
       <span className="sg-card__domain">{domain}</span>
       <button
         className="sg-card__menu"
-        onClick={(e) => { e.stopPropagation(); onContextMenu(item, e.clientX, e.clientY) }}
+        onClick={(e) => {
+          e.stopPropagation()
+          onContextMenu(item, e.clientX, e.clientY)
+        }}
         title="メニュー"
-      >⋯</button>
+      >
+        ⋯
+      </button>
     </div>
   )
 }

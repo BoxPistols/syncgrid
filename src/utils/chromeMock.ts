@@ -23,34 +23,66 @@ if (!IS_EXTENSION) {
   }
 
   const root: MockNode = {
-    id: '0', title: '', children: [
+    id: '0',
+    title: '',
+    children: [
       { id: '1', parentId: '0', title: 'Bookmarks Bar', children: [] },
       {
-        id: '2', parentId: '0', title: 'Other Bookmarks', children: [
+        id: '2',
+        parentId: '0',
+        title: 'Other Bookmarks',
+        children: [
           {
-            id: '10', parentId: '2', title: '__SyncGrid__', children: [
+            id: '10',
+            parentId: '2',
+            title: '__SyncGrid__',
+            children: [
               {
-                id: '20', parentId: '10', title: '仕事', children: [
+                id: '20',
+                parentId: '10',
+                title: '仕事',
+                children: [
                   { id: '30', parentId: '20', title: 'GitHub', url: 'https://github.com', dateAdded: Date.now() },
                   { id: '31', parentId: '20', title: 'Slack', url: 'https://slack.com', dateAdded: Date.now() },
                   { id: '32', parentId: '20', title: 'Jira', url: 'https://jira.atlassian.com', dateAdded: Date.now() },
                   {
-                    id: '40', parentId: '20', title: 'フロントエンド', children: [
-                      { id: '50', parentId: '40', title: 'React Docs', url: 'https://react.dev', dateAdded: Date.now() },
+                    id: '40',
+                    parentId: '20',
+                    title: 'フロントエンド',
+                    children: [
+                      {
+                        id: '50',
+                        parentId: '40',
+                        title: 'React Docs',
+                        url: 'https://react.dev',
+                        dateAdded: Date.now(),
+                      },
                       { id: '51', parentId: '40', title: 'Vite', url: 'https://vite.dev', dateAdded: Date.now() },
-                      { id: '52', parentId: '40', title: 'TypeScript', url: 'https://typescriptlang.org', dateAdded: Date.now() },
+                      {
+                        id: '52',
+                        parentId: '40',
+                        title: 'TypeScript',
+                        url: 'https://typescriptlang.org',
+                        dateAdded: Date.now(),
+                      },
                     ],
                   },
                 ],
               },
               {
-                id: '21', parentId: '10', title: 'デザイン', children: [
+                id: '21',
+                parentId: '10',
+                title: 'デザイン',
+                children: [
                   { id: '33', parentId: '21', title: 'Figma', url: 'https://figma.com', dateAdded: Date.now() },
                   { id: '34', parentId: '21', title: 'Dribbble', url: 'https://dribbble.com', dateAdded: Date.now() },
                 ],
               },
               {
-                id: '22', parentId: '10', title: 'ツール', children: [
+                id: '22',
+                parentId: '10',
+                title: 'ツール',
+                children: [
                   { id: '35', parentId: '22', title: 'Notion', url: 'https://notion.so', dateAdded: Date.now() },
                   { id: '36', parentId: '22', title: 'Claude', url: 'https://claude.ai', dateAdded: Date.now() },
                   { id: '37', parentId: '22', title: 'Vercel', url: 'https://vercel.com', dateAdded: Date.now() },
@@ -111,12 +143,16 @@ if (!IS_EXTENSION) {
   function mockEvent() {
     const listeners: Listener[] = []
     return {
-      addListener: (fn: Listener) => { listeners.push(fn) },
+      addListener: (fn: Listener) => {
+        listeners.push(fn)
+      },
       removeListener: (fn: Listener) => {
         const idx = listeners.indexOf(fn)
         if (idx >= 0) listeners.splice(idx, 1)
       },
-      fire: (...args: unknown[]) => { listeners.forEach(fn => fn(...args)) },
+      fire: (...args: unknown[]) => {
+        listeners.forEach((fn) => fn(...args))
+      },
     }
   }
 
@@ -136,7 +172,7 @@ if (!IS_EXTENSION) {
     bookmarks: {
       search: (query: { title?: string }) => {
         const all = flattenAll(root)
-        const results = all.filter(n => {
+        const results = all.filter((n) => {
           if (query.title && n.title === query.title) return true
           return false
         })
@@ -172,7 +208,7 @@ if (!IS_EXTENSION) {
       remove: (id: string) => {
         const parent = findParent(root, id)
         if (parent?.children) {
-          const idx = parent.children.findIndex(c => c.id === id)
+          const idx = parent.children.findIndex((c) => c.id === id)
           if (idx >= 0) parent.children.splice(idx, 1)
         }
         onRemoved.fire(id, {})
@@ -181,7 +217,7 @@ if (!IS_EXTENSION) {
       removeTree: (id: string) => {
         const parent = findParent(root, id)
         if (parent?.children) {
-          const idx = parent.children.findIndex(c => c.id === id)
+          const idx = parent.children.findIndex((c) => c.id === id)
           if (idx >= 0) parent.children.splice(idx, 1)
         }
         onRemoved.fire(id, {})
@@ -191,7 +227,7 @@ if (!IS_EXTENSION) {
         const parent = findParent(root, id)
         const node = findNode(root, id)
         if (parent?.children && node) {
-          const idx = parent.children.findIndex(c => c.id === id)
+          const idx = parent.children.findIndex((c) => c.id === id)
           if (idx >= 0) parent.children.splice(idx, 1)
           const newParent = findNode(root, dest.parentId)
           if (newParent?.children) {

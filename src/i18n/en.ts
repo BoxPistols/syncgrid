@@ -43,7 +43,8 @@ export const en = {
   importError: 'Import failed. Please check the file format.',
   importConfirm: 'Importing will overwrite your current data. Continue?',
   localSync: 'Local Folder Sync',
-  syncDesc: 'Select a local folder synced with a cloud drive (Google Drive, OneDrive, iCloud, Dropbox, etc.) to automatically back up your bookmark data.',
+  syncDesc:
+    'Select a local folder synced with a cloud drive (Google Drive, OneDrive, iCloud, Dropbox, etc.) to automatically back up your bookmark data.',
   selectFolder: 'Select folder',
   syncActive: 'Syncing',
   syncFolder: 'Sync folder',
@@ -70,6 +71,7 @@ export const en = {
   syncTestOk: 'Read/write access confirmed',
   syncTestFailed: 'Failed to access folder',
   security: 'Security',
-  securityDesc: '• Data is stored only via Chrome Bookmarks API\n• No data is ever sent to external servers\n• Local sync writes only to the folder you explicitly select\n• Export files are not encrypted — store them securely\n• AI API keys are stored locally and only sent to your chosen provider',
+  securityDesc:
+    '• Data is stored only via Chrome Bookmarks API\n• No data is ever sent to external servers\n• Local sync writes only to the folder you explicitly select\n• Export files are not encrypted — store them securely\n• AI API keys are stored locally and only sent to your chosen provider',
   close: 'Close',
 } as const
