@@ -17,7 +17,7 @@ export async function testAiConnection(settings: AISettings): Promise<{ ok: bool
     if (settings.provider === 'openai') {
       if (!settings.openaiApiKey) return { ok: false, error: 'API key not set' }
       const res = await fetch('https://api.openai.com/v1/models', {
-        headers: { 'Authorization': `Bearer ${settings.openaiApiKey}` },
+        headers: { Authorization: `Bearer ${settings.openaiApiKey}` },
       })
       if (!res.ok) {
         const err = await res.text()
@@ -28,9 +28,7 @@ export async function testAiConnection(settings: AISettings): Promise<{ ok: bool
 
     if (settings.provider === 'gemini') {
       if (!settings.geminiApiKey) return { ok: false, error: 'API key not set' }
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${settings.geminiApiKey}`,
-      )
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${settings.geminiApiKey}`)
       if (!res.ok) {
         const err = await res.text()
         return { ok: false, error: `${res.status}: ${err}` }
@@ -71,7 +69,7 @@ async function callOpenAI(prompt: string, apiKey: string, model: string): Promis
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model,

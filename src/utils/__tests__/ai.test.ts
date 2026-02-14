@@ -26,17 +26,18 @@ const geminiSettings: AISettings = {
 
 describe('generateTitle', () => {
   it('throws when provider is none', async () => {
-    await expect(
-      generateTitle('https://example.com', DEFAULT_AI_SETTINGS)
-    ).rejects.toThrow('AI provider not configured')
+    await expect(generateTitle('https://example.com', DEFAULT_AI_SETTINGS)).rejects.toThrow(
+      'AI provider not configured',
+    )
   })
 
   it('calls OpenAI API correctly', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
-        choices: [{ message: { content: 'Example Site' } }],
-      }),
+      json: () =>
+        Promise.resolve({
+          choices: [{ message: { content: 'Example Site' } }],
+        }),
     })
 
     const result = await generateTitle('https://example.com', openaiSettings)
@@ -54,9 +55,10 @@ describe('generateTitle', () => {
   it('calls Gemini API correctly', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
-        candidates: [{ content: { parts: [{ text: 'Example Page' }] } }],
-      }),
+      json: () =>
+        Promise.resolve({
+          candidates: [{ content: { parts: [{ text: 'Example Page' }] } }],
+        }),
     })
 
     const result = await generateTitle('https://example.com', geminiSettings)
@@ -76,9 +78,7 @@ describe('generateTitle', () => {
       text: () => Promise.resolve('Unauthorized'),
     })
 
-    await expect(
-      generateTitle('https://example.com', openaiSettings)
-    ).rejects.toThrow('OpenAI API error (401)')
+    await expect(generateTitle('https://example.com', openaiSettings)).rejects.toThrow('OpenAI API error (401)')
   })
 
   it('throws on Gemini API error', async () => {
@@ -88,9 +88,7 @@ describe('generateTitle', () => {
       text: () => Promise.resolve('Forbidden'),
     })
 
-    await expect(
-      generateTitle('https://example.com', geminiSettings)
-    ).rejects.toThrow('Gemini API error (403)')
+    await expect(generateTitle('https://example.com', geminiSettings)).rejects.toThrow('Gemini API error (403)')
   })
 
   it('throws on empty OpenAI response', async () => {
@@ -99,9 +97,7 @@ describe('generateTitle', () => {
       json: () => Promise.resolve({ choices: [] }),
     })
 
-    await expect(
-      generateTitle('https://example.com', openaiSettings)
-    ).rejects.toThrow('Empty response from OpenAI')
+    await expect(generateTitle('https://example.com', openaiSettings)).rejects.toThrow('Empty response from OpenAI')
   })
 
   it('throws on empty Gemini response', async () => {
@@ -110,22 +106,16 @@ describe('generateTitle', () => {
       json: () => Promise.resolve({ candidates: [] }),
     })
 
-    await expect(
-      generateTitle('https://example.com', geminiSettings)
-    ).rejects.toThrow('Empty response from Gemini')
+    await expect(generateTitle('https://example.com', geminiSettings)).rejects.toThrow('Empty response from Gemini')
   })
 
   it('throws when OpenAI API key is empty', async () => {
     const noKey = { ...openaiSettings, openaiApiKey: '' }
-    await expect(
-      generateTitle('https://example.com', noKey)
-    ).rejects.toThrow('OpenAI API key not set')
+    await expect(generateTitle('https://example.com', noKey)).rejects.toThrow('OpenAI API key not set')
   })
 
   it('throws when Gemini API key is empty', async () => {
     const noKey = { ...geminiSettings, geminiApiKey: '' }
-    await expect(
-      generateTitle('https://example.com', noKey)
-    ).rejects.toThrow('Gemini API key not set')
+    await expect(generateTitle('https://example.com', noKey)).rejects.toThrow('Gemini API key not set')
   })
 })

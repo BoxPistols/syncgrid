@@ -7,17 +7,11 @@ Object.defineProperty(globalThis, 'chrome', {
     bookmarks: {
       search: vi.fn(() => Promise.resolve([])),
       getSubTree: vi.fn(() => Promise.resolve([{ children: [] }])),
-      create: vi.fn((props: Record<string, unknown>) =>
-        Promise.resolve({ id: String(Date.now()), ...props })
-      ),
-      update: vi.fn((_id: string, changes: Record<string, unknown>) =>
-        Promise.resolve(changes)
-      ),
+      create: vi.fn((props: Record<string, unknown>) => Promise.resolve({ id: String(Date.now()), ...props })),
+      update: vi.fn((_id: string, changes: Record<string, unknown>) => Promise.resolve(changes)),
       remove: vi.fn(() => Promise.resolve()),
       removeTree: vi.fn(() => Promise.resolve()),
-      move: vi.fn((_id: string, dest: Record<string, unknown>) =>
-        Promise.resolve(dest)
-      ),
+      move: vi.fn((_id: string, dest: Record<string, unknown>) => Promise.resolve(dest)),
       onCreated: { addListener: vi.fn() },
       onRemoved: { addListener: vi.fn() },
       onChanged: { addListener: vi.fn() },

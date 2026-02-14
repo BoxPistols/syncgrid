@@ -14,9 +14,7 @@ const nested: SyncGridGroup[] = [
       {
         id: 'g2',
         title: 'Docs',
-        items: [
-          { id: 'i3', title: 'Wiki', url: 'https://wiki.com', parentId: 'g2' },
-        ],
+        items: [{ id: 'i3', title: 'Wiki', url: 'https://wiki.com', parentId: 'g2' }],
         children: [
           {
             id: 'g3',
@@ -37,9 +35,7 @@ const nested: SyncGridGroup[] = [
   {
     id: 'g4',
     title: 'Personal',
-    items: [
-      { id: 'i4', title: 'Blog', url: 'https://blog.com', parentId: 'g4' },
-    ],
+    items: [{ id: 'i4', title: 'Blog', url: 'https://blog.com', parentId: 'g4' }],
     children: [],
     parentId: 'root',
     depth: 0,
@@ -84,7 +80,7 @@ describe('findGroupForItem', () => {
 describe('flattenGroups', () => {
   it('flattens nested tree', () => {
     const flat = flattenGroups(nested)
-    const ids = flat.map(g => g.id)
+    const ids = flat.map((g) => g.id)
 
     expect(ids).toEqual(['g1', 'g2', 'g3', 'g4'])
   })

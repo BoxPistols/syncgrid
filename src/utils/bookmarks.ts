@@ -5,9 +5,7 @@ import { SYNCGRID_ROOT, type SyncGridGroup, type SyncGridItem } from '../types'
  */
 export async function getOrCreateRoot(): Promise<chrome.bookmarks.BookmarkTreeNode> {
   const results = await chrome.bookmarks.search({ title: SYNCGRID_ROOT })
-  const root = results.find(
-    (node) => !node.url && node.title === SYNCGRID_ROOT
-  )
+  const root = results.find((node) => !node.url && node.title === SYNCGRID_ROOT)
   if (root) return root
 
   return chrome.bookmarks.create({
@@ -19,10 +17,7 @@ export async function getOrCreateRoot(): Promise<chrome.bookmarks.BookmarkTreeNo
 /**
  * BookmarkTreeNode → SyncGridGroup に再帰変換
  */
-function parseGroup(
-  node: chrome.bookmarks.BookmarkTreeNode,
-  depth: number
-): SyncGridGroup {
+function parseGroup(node: chrome.bookmarks.BookmarkTreeNode, depth: number): SyncGridGroup {
   const items: SyncGridItem[] = []
   const children: SyncGridGroup[] = []
 
@@ -104,10 +99,7 @@ export async function getRootId(): Promise<string> {
 /**
  * 新しいグループ（フォルダ）を作成 — parentId指定でネスト可能
  */
-export async function createGroup(
-  title: string,
-  parentId?: string
-): Promise<chrome.bookmarks.BookmarkTreeNode> {
+export async function createGroup(title: string, parentId?: string): Promise<chrome.bookmarks.BookmarkTreeNode> {
   const effectiveParentId = parentId ?? (await getOrCreateRoot()).id
   return chrome.bookmarks.create({
     parentId: effectiveParentId,
@@ -129,7 +121,7 @@ export async function deleteGroup(id: string): Promise<void> {
 export async function addBookmark(
   parentId: string,
   title: string,
-  url: string
+  url: string,
 ): Promise<chrome.bookmarks.BookmarkTreeNode> {
   return chrome.bookmarks.create({ parentId, title, url })
 }
@@ -142,7 +134,7 @@ export async function removeBookmark(id: string): Promise<void> {
 /** ブックマークのタイトル/URLを更新 */
 export async function updateBookmark(
   id: string,
-  changes: { title?: string; url?: string }
+  changes: { title?: string; url?: string },
 ): Promise<chrome.bookmarks.BookmarkTreeNode> {
   return chrome.bookmarks.update(id, changes)
 }
@@ -151,27 +143,20 @@ export async function updateBookmark(
 export async function moveBookmark(
   id: string,
   newParentId: string,
-  index?: number
+  index?: number,
 ): Promise<chrome.bookmarks.BookmarkTreeNode> {
   return chrome.bookmarks.move(id, { parentId: newParentId, index })
 }
 
 /** グループ（フォルダ）を並べ替え / 別の親に移動 */
-export async function moveGroup(
-  id: string,
-  newParentId: string,
-  index?: number
-): Promise<void> {
+export async function moveGroup(id: string, newParentId: string, index?: number): Promise<void> {
   await chrome.bookmarks.move(id, { parentId: newParentId, index })
 }
 
 /**
  * ツリーからグループを再帰検索
  */
-export function findGroupById(
-  groups: SyncGridGroup[],
-  id: string
-): SyncGridGroup | undefined {
+export function findGroupById(groups: SyncGridGroup[], id: string): SyncGridGroup | undefined {
   for (const group of groups) {
     if (group.id === id) return group
     const found = findGroupById(group.children, id)
@@ -183,10 +168,7 @@ export function findGroupById(
 /**
  * ツリーからアイテムが属するグループIDを再帰検索
  */
-export function findGroupForItem(
-  groups: SyncGridGroup[],
-  itemId: string
-): string | undefined {
+export function findGroupForItem(groups: SyncGridGroup[], itemId: string): string | undefined {
   for (const group of groups) {
     if (group.items.some((item) => item.id === itemId)) return group.id
     const found = findGroupForItem(group.children, itemId)

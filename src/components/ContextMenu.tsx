@@ -47,12 +47,15 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
           <button
             key={i}
             className={`sg-context-menu__item ${item.danger ? 'sg-context-menu__item--danger' : ''}`}
-            onClick={() => { item.action(); onClose() }}
+            onClick={() => {
+              item.action()
+              onClose()
+            }}
           >
             {item.icon && <span>{item.icon}</span>}
             {item.label}
           </button>
-        )
+        ),
       )}
     </div>
   )

@@ -42,8 +42,18 @@ async function saveDirHandle(handle: FileSystemDirectoryHandle | null): Promise<
     store.delete(IDB_KEY)
   }
   return new Promise((resolve, reject) => {
-    tx.oncomplete = () => { db.close(); resolve() }
-    tx.onerror = () => { db.close(); reject(tx.error) }
+    tx.oncomplete = () => {
+      db.close()
+      resolve()
+    }
+    tx.onerror = () => {
+      db.close()
+      reject(tx.error)
+    }
+    tx.onabort = () => {
+      db.close()
+      reject(tx.error ?? new Error('IDB transaction aborted'))
+    }
   })
 }
 
@@ -54,8 +64,14 @@ async function loadDirHandle(): Promise<FileSystemDirectoryHandle | null> {
     const store = tx.objectStore(IDB_STORE)
     const req = store.get(IDB_KEY)
     return new Promise((resolve) => {
-      req.onsuccess = () => { db.close(); resolve(req.result ?? null) }
-      req.onerror = () => { db.close(); resolve(null) }
+      req.onsuccess = () => {
+        db.close()
+        resolve(req.result ?? null)
+      }
+      req.onerror = () => {
+        db.close()
+        resolve(null)
+      }
     })
   } catch {
     return null
@@ -105,9 +121,9 @@ export async function getSyncHandle(): Promise<FileSystemDirectoryHandle | null>
 /** Write sync file to the directory */
 export async function syncToFolder(
   groups: SyncGridGroup[],
-  handle?: FileSystemDirectoryHandle | null
+  handle?: FileSystemDirectoryHandle | null,
 ): Promise<{ success: boolean; syncedAt: string }> {
-  const dir = handle ?? await getSyncHandle()
+  const dir = handle ?? (await getSyncHandle())
   if (!dir) return { success: false, syncedAt: '' }
 
   try {
@@ -122,13 +138,21 @@ export async function syncToFolder(
     await writable.close()
 
     // Rename: remove old, rename tmp (File System Access API doesn't have rename)
-    try { await dir.removeEntry(SYNC_FILENAME) } catch { /* not found — OK */ }
+    try {
+      await dir.removeEntry(SYNC_FILENAME)
+    } catch {
+      /* not found — OK */
+    }
     // Copy approach: write final, remove tmp
     const finalFile = await dir.getFileHandle(SYNC_FILENAME, { create: true })
     const finalWritable = await finalFile.createWritable()
     await finalWritable.write(json)
     await finalWritable.close()
-    try { await dir.removeEntry(tmpName) } catch { /* cleanup */ }
+    try {
+      await dir.removeEntry(tmpName)
+    } catch {
+      /* cleanup */
+    }
 
     const syncedAt = new Date().toISOString()
     return { success: true, syncedAt }

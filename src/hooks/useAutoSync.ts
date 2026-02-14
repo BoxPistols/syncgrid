@@ -10,10 +10,7 @@ const SYNC_INTERVAL = 5 * 60 * 1000 // 5 minutes
  * 1. On bookmark data change (debounced)
  * 2. Every 5 minutes while active
  */
-export function useAutoSync(
-  groups: SyncGridGroup[],
-  onSynced: (syncedAt: string) => void,
-) {
+export function useAutoSync(groups: SyncGridGroup[], onSynced: (syncedAt: string) => void) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const groupsRef = useRef(groups)
 

@@ -15,7 +15,7 @@ import { SYNCGRID_ROOT } from '../types'
 function groupToExport(group: SyncGridGroup): SyncGridExportGroup {
   return {
     title: group.title,
-    items: group.items.map(i => ({ title: i.title, url: i.url })),
+    items: group.items.map((i) => ({ title: i.title, url: i.url })),
     children: group.children.map(groupToExport),
   }
 }
@@ -23,7 +23,9 @@ function groupToExport(group: SyncGridGroup): SyncGridExportGroup {
 async function sha256(data: string): Promise<string> {
   const buf = new TextEncoder().encode(data)
   const hash = await crypto.subtle.digest('SHA-256', buf)
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 export async function exportData(groups: SyncGridGroup[]): Promise<SyncGridExport> {
@@ -145,11 +147,11 @@ export async function validateImport(text: string): Promise<SyncGridExport | nul
 }
 
 function sanitizeExportData(groups: SyncGridExportGroup[]): SyncGridExportGroup[] {
-  return groups.map(g => ({
+  return groups.map((g) => ({
     title: sanitizeString(g.title, MAX_TITLE_LENGTH),
     items: g.items
-      .filter(i => validateUrl(i.url))
-      .map(i => ({
+      .filter((i) => validateUrl(i.url))
+      .map((i) => ({
         title: sanitizeString(i.title, MAX_TITLE_LENGTH),
         url: sanitizeString(i.url, MAX_URL_LENGTH),
       })),
@@ -160,7 +162,7 @@ function sanitizeExportData(groups: SyncGridExportGroup[]): SyncGridExportGroup[
 export async function importToBookmarks(data: SyncGridExportGroup[]): Promise<void> {
   // Find or create root
   const results = await chrome.bookmarks.search({ title: SYNCGRID_ROOT })
-  const root = results.find(n => !n.url && n.title === SYNCGRID_ROOT)
+  const root = results.find((n) => !n.url && n.title === SYNCGRID_ROOT)
 
   if (root) {
     // Clear existing children
