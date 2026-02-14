@@ -21,6 +21,7 @@ import {
   deleteGroup,
   getRootId,
   flattenGroups,
+  countAll,
 } from './utils/bookmarks'
 import type { SyncGridItem, SyncGridGroup } from './types'
 
@@ -491,7 +492,9 @@ export default function App() {
                   dragHandlers={getDragHandlers(item.id, 'bookmark')}
                   isDragging={dragState.draggingId === item.id}
                   isDropTarget={dragState.dropTargetId === item.id}
-                  dropMode={dragState.dropTargetId === item.id ? dragState.dropMode : null}
+                  dropMode={
+                    dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null
+                  }
                 />
               ))}
             </div>
@@ -520,8 +523,4 @@ export default function App() {
       )}
     </>
   )
-}
-
-function countAll(g: SyncGridGroup): number {
-  return g.items.length + g.children.reduce((sum, c) => sum + countAll(c), 0)
 }

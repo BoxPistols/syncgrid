@@ -31,6 +31,13 @@ export interface ZoneDropHandlers {
   onDrop: (e: React.DragEvent) => void
 }
 
+function calcDropMode(relX: number, targetType: DragItemType, dragId: string, targetId: string): DropMode {
+  if (targetType === 'folder' && dragId !== targetId) {
+    return relX < 0.3 ? 'before' : relX > 0.7 ? 'after' : 'into'
+  }
+  return relX < 0.5 ? 'before' : 'after'
+}
+
 const INITIAL_STATE: DragState = {
   draggingId: null,
   draggingType: null,
@@ -79,15 +86,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
 
         const rect = e.currentTarget.getBoundingClientRect()
         const relX = (e.clientX - rect.left) / rect.width
-
-        let mode: DropMode
-        if (type === 'folder' && data.id !== id) {
-          // フォルダカード: 左30% = before, 中央40% = into, 右30% = after
-          mode = relX < 0.3 ? 'before' : relX > 0.7 ? 'after' : 'into'
-        } else {
-          // ブックマークカード: 左50% = before, 右50% = after
-          mode = relX < 0.5 ? 'before' : 'after'
-        }
+        const mode = calcDropMode(relX, type, data.id, id)
 
         setDragState((prev) => {
           if (prev.dropTargetId === id && prev.dropMode === mode) return prev
@@ -118,13 +117,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
         try {
           const rect = e.currentTarget.getBoundingClientRect()
           const relX = (e.clientX - rect.left) / rect.width
-
-          let mode: DropMode
-          if (type === 'folder') {
-            mode = relX < 0.3 ? 'before' : relX > 0.7 ? 'after' : 'into'
-          } else {
-            mode = relX < 0.5 ? 'before' : 'after'
-          }
+          const mode = calcDropMode(relX, type, data.id, id)
 
           if (mode === 'into') {
             // フォルダの中に移動（末尾に追加）

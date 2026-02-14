@@ -1,6 +1,7 @@
 import type { SyncGridGroup } from '../types'
 import type { Messages } from '../i18n'
 import type { DragHandlers } from '../hooks/useDragReorder'
+import { countAll } from '../utils/bookmarks'
 
 interface Props {
   group: SyncGridGroup
@@ -65,8 +66,4 @@ export function FolderCard({
       </button>
     </div>
   )
-}
-
-function countAll(g: SyncGridGroup): number {
-  return g.items.length + g.children.reduce((sum, c) => sum + countAll(c), 0)
 }

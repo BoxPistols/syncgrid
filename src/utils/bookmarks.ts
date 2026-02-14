@@ -178,6 +178,13 @@ export function findGroupForItem(groups: SyncGridGroup[], itemId: string): strin
 }
 
 /**
+ * グループ内の全アイテム数を再帰的にカウント
+ */
+export function countAll(g: SyncGridGroup): number {
+  return g.items.length + g.children.reduce((sum, c) => sum + countAll(c), 0)
+}
+
+/**
  * ツリー全体をフラット化（全グループを1次元配列に）
  */
 export function flattenGroups(groups: SyncGridGroup[]): SyncGridGroup[] {

@@ -9,7 +9,7 @@ interface Props {
   dragHandlers?: DragHandlers
   isDragging?: boolean
   isDropTarget?: boolean
-  dropMode?: 'before' | 'after' | 'into' | null
+  dropMode?: 'before' | 'after' | null
 }
 
 export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode }: Props) {
