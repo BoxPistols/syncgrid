@@ -21,7 +21,6 @@ interface Props {
   t: Messages
   onUpdateSettings: (patch: Partial<SyncGridSettings>) => void
   onClose: () => void
-  onRefresh: () => void
 }
 
 export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }: Props) {

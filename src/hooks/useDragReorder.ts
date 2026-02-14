@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { getRootId } from '../utils/bookmarks'
 import type { SyncGridGroup } from '../types'
 
 type DragItemType = 'bookmark' | 'folder'
@@ -129,8 +130,9 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
             // フォルダの中に移動（末尾に追加）
             await chrome.bookmarks.move(data.id, { parentId: id })
           } else {
-            // 同一フォルダ内の並べ替え
-            const [parentTree] = await chrome.bookmarks.getSubTree(currentFolder.id)
+            // 同一フォルダ内の並べ替え（__ungrouped__ は実際の親IDに解決）
+            const folderId = currentFolder.id === '__ungrouped__' ? await getRootId() : currentFolder.id
+            const [parentTree] = await chrome.bookmarks.getSubTree(folderId)
             const chromeChildren = parentTree.children ?? []
 
             const targetChromeIdx = chromeChildren.findIndex((c) => c.id === id)
@@ -145,7 +147,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
             }
 
             await chrome.bookmarks.move(data.id, {
-              parentId: currentFolder.id,
+              parentId: folderId,
               index: moveIdx,
             })
           }
@@ -194,7 +196,8 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
         if (!data) return
 
         try {
-          await chrome.bookmarks.move(data.id, { parentId: tabId })
+          const targetId = tabId === '__ungrouped__' ? await getRootId() : tabId
+          await chrome.bookmarks.move(data.id, { parentId: targetId })
         } catch (err) {
           console.error('[SyncGrid] Tab drop failed:', err)
         } finally {
@@ -240,7 +243,8 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
         if (!data) return
 
         try {
-          await chrome.bookmarks.move(data.id, { parentId })
+          const targetId = parentId === '__ungrouped__' ? await getRootId() : parentId
+          await chrome.bookmarks.move(data.id, { parentId: targetId })
         } catch (err) {
           console.error('[SyncGrid] Breadcrumb drop failed:', err)
         } finally {

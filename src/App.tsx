@@ -422,7 +422,7 @@ export default function App() {
                 const parentId = path.length >= 2 ? path[path.length - 2] : activeGroup?.id
                 return parentId ? (
                   <button
-                    className="sg-btn--icon"
+                    className={`sg-btn--icon ${dragState.dropBreadcrumbId === parentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
                     onClick={() => setPath((p) => p.slice(0, -1))}
                     title={t.back}
                     {...getBreadcrumbDropHandlers(parentId)}
@@ -516,7 +516,6 @@ export default function App() {
           t={t}
           onUpdateSettings={updateSettings}
           onClose={() => setShowSettings(false)}
-          onRefresh={refresh}
         />
       )}
     </>

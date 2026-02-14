@@ -50,6 +50,10 @@ async function saveDirHandle(handle: FileSystemDirectoryHandle | null): Promise<
       db.close()
       reject(tx.error)
     }
+    tx.onabort = () => {
+      db.close()
+      reject(tx.error ?? new Error('IDB transaction aborted'))
+    }
   })
 }
 
