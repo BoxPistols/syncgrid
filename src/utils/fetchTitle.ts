@@ -45,16 +45,19 @@ async function fetchHead(url: string): Promise<string | null> {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(8000),
       headers: { Accept: 'text/html' },
+      cache: 'no-store', // ブラウザのpreload処理を抑制
     })
     if (!res.ok) return null
     const contentType = res.headers.get('content-type')
+    // HTML以外のレスポンスは無視
+    if (contentType && !contentType.includes('text/html')) return null
 
     const reader = res.body?.getReader()
     if (!reader) return null
 
     const chunks: Uint8Array[] = []
     let totalLength = 0
-    const MAX_HEAD_SIZE = 262144 // 256KB
+    const MAX_HEAD_SIZE = 32768 // 32KB — <head>内のOGPタグには十分
 
     while (totalLength < MAX_HEAD_SIZE) {
       const { done, value } = await reader.read()
