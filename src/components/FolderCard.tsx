@@ -1,3 +1,4 @@
+import { Icon } from './Icon'
 import type { SyncGridGroup } from '../types'
 import type { Messages } from '../i18n'
 import type { DragHandlers } from '../hooks/useDragReorder'
@@ -62,7 +63,7 @@ export function FolderCard({
       }}
       {...dragHandlers}
     >
-      <div className="sg-folder-card__icon">📁</div>
+      <div className="sg-folder-card__icon"><Icon name="folder" size={24} /></div>
       <span className="sg-folder-card__title">{group.title}</span>
       <span className="sg-folder-card__count">{t.items(totalItems)}</span>
       <button
@@ -73,7 +74,7 @@ export function FolderCard({
         }}
         aria-label={t.menu}
       >
-        ⋯
+        <Icon name="more" size={14} />
       </button>
     </div>
   )

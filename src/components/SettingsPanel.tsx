@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Icon } from './Icon'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { ConfirmDialog } from './ConfirmDialog'
 import { BookmarkImport } from './BookmarkImport'
@@ -182,7 +183,7 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
           <div className="sg-modal__header">
             <span className="sg-modal__title">{t.settingsTitle}</span>
             <button className="sg-modal__close" onClick={onClose} aria-label={t.close}>
-              ✕
+              <Icon name="close" size={12} />
             </button>
           </div>
 
@@ -225,17 +226,17 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
               <h3 className="sg-settings__label">{t.dataManagement}</h3>
               <div className="sg-settings__row sg-settings__row--btns">
                 <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleExport}>
-                  📤 {t.exportData}
+                  <Icon name="upload" size={14} /> {t.exportData}
                 </button>
                 <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleImportClick}>
-                  📥 {t.importData}
+                  <Icon name="download" size={14} /> {t.importData}
                 </button>
               </div>
               <button
                 className="sg-btn sg-btn--sm sg-btn--ghost"
                 onClick={() => setShowImport(true)}
               >
-                📂 {t.importChrome}
+                <Icon name="folder-open" size={14} /> {t.importChrome}
               </button>
               <p className="sg-settings__desc">{t.exportDesc}</p>
               <input
@@ -247,10 +248,10 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
                 tabIndex={-1}
               />
               {importStatus === 'success' && (
-                <p className="sg-settings__status sg-settings__status--ok">✅ {t.importSuccess}</p>
+                <p className="sg-settings__status sg-settings__status--ok"><Icon name="check-circle" size={14} /> {t.importSuccess}</p>
               )}
               {importStatus === 'error' && (
-                <p className="sg-settings__status sg-settings__status--err">❌ {t.importError}</p>
+                <p className="sg-settings__status sg-settings__status--err"><Icon name="x-circle" size={14} /> {t.importError}</p>
               )}
             </div>
 
@@ -265,8 +266,8 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
                 syncFolderName ? (
                   <div className="sg-settings__sync-info">
                     <div className="sg-settings__sync-row">
-                      <span className="sg-settings__sync-badge">✅ {t.syncActive}</span>
-                      <span className="sg-settings__sync-folder">📁 {syncFolderName}</span>
+                      <span className="sg-settings__sync-badge"><Icon name="check-circle" size={14} /> {t.syncActive}</span>
+                      <span className="sg-settings__sync-folder"><Icon name="folder" size={14} /> {syncFolderName}</span>
                     </div>
                     <p className="sg-settings__desc">{t.lastSynced(formatDate(settings.lastSyncedAt))}</p>
                     <div className="sg-settings__row sg-settings__row--btns">
@@ -275,38 +276,38 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
                         onClick={handleSyncNow}
                         disabled={syncStatus === 'syncing'}
                       >
-                        {syncStatus === 'syncing' ? '⏳' : '🔄'} {t.syncNow}
+                        {syncStatus === 'syncing' ? <Icon name="spinner" size={14} /> : <Icon name="refresh" size={14} />} {t.syncNow}
                       </button>
                       <button
                         className="sg-btn sg-btn--sm sg-btn--ghost"
                         onClick={handleSyncTest}
                         disabled={syncTestStatus === 'testing'}
                       >
-                        {syncTestStatus === 'testing' ? '⏳' : '🔗'} {t.connectionTest}
+                        {syncTestStatus === 'testing' ? <Icon name="spinner" size={14} /> : <Icon name="link" size={14} />} {t.connectionTest}
                       </button>
                       <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleDisconnect}>
                         {t.disconnectSync}
                       </button>
                     </div>
-                    {syncStatus === 'done' && <p className="sg-settings__status sg-settings__status--ok">✅ Synced!</p>}
+                    {syncStatus === 'done' && <p className="sg-settings__status sg-settings__status--ok"><Icon name="check-circle" size={14} /> Synced!</p>}
                     {syncStatus === 'error' && (
-                      <p className="sg-settings__status sg-settings__status--err">❌ Sync failed</p>
+                      <p className="sg-settings__status sg-settings__status--err"><Icon name="x-circle" size={14} /> Sync failed</p>
                     )}
                     {syncTestStatus === 'ok' && (
-                      <p className="sg-settings__status sg-settings__status--ok">✅ {t.syncTestOk}</p>
+                      <p className="sg-settings__status sg-settings__status--ok"><Icon name="check-circle" size={14} /> {t.syncTestOk}</p>
                     )}
                     {syncTestStatus === 'error' && (
-                      <p className="sg-settings__status sg-settings__status--err">❌ {t.syncTestFailed}</p>
+                      <p className="sg-settings__status sg-settings__status--err"><Icon name="x-circle" size={14} /> {t.syncTestFailed}</p>
                     )}
                   </div>
                 ) : (
                   <button className="sg-btn sg-btn--sm sg-btn--primary" onClick={handlePickFolder}>
-                    📁 {t.selectFolder}
+                    <Icon name="folder" size={14} /> {t.selectFolder}
                   </button>
                 )
               ) : (
                 <p className="sg-settings__desc sg-settings__desc--dim">
-                  ⚠️ File System Access API is not supported in this browser.
+                  <Icon name="warning" size={14} /> File System Access API is not supported in this browser.
                 </p>
               )}
             </div>
@@ -315,7 +316,7 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
 
             {/* AI Settings */}
             <div className="sg-settings__section">
-              <h3 className="sg-settings__label">🤖 {t.aiSettings}</h3>
+              <h3 className="sg-settings__label"><Icon name="bot" size={14} /> {t.aiSettings}</h3>
               <p className="sg-settings__desc">{t.aiDesc}</p>
 
               {/* Provider */}
@@ -362,16 +363,16 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
                       onClick={handleAiTest}
                       disabled={aiTestStatus === 'testing' || !settings.ai.openaiApiKey}
                     >
-                      {aiTestStatus === 'testing' ? '⏳' : '🔗'}{' '}
+                      {aiTestStatus === 'testing' ? <Icon name="spinner" size={14} /> : <Icon name="link" size={14} />}{' '}
                       {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
                     </button>
                   </div>
                   {aiTestStatus === 'ok' && (
-                    <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>
+                    <p className="sg-settings__status sg-settings__status--ok"><Icon name="check-circle" size={14} /> {t.connectionOk}</p>
                   )}
                   {aiTestStatus === 'error' && (
                     <p className="sg-settings__status sg-settings__status--err">
-                      ❌ {t.connectionFailed}
+                      <Icon name="x-circle" size={14} /> {t.connectionFailed}
                       {aiTestError ? `: ${aiTestError}` : ''}
                     </p>
                   )}
@@ -408,16 +409,16 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
                       onClick={handleAiTest}
                       disabled={aiTestStatus === 'testing' || !settings.ai.geminiApiKey}
                     >
-                      {aiTestStatus === 'testing' ? '⏳' : '🔗'}{' '}
+                      {aiTestStatus === 'testing' ? <Icon name="spinner" size={14} /> : <Icon name="link" size={14} />}{' '}
                       {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
                     </button>
                   </div>
                   {aiTestStatus === 'ok' && (
-                    <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>
+                    <p className="sg-settings__status sg-settings__status--ok"><Icon name="check-circle" size={14} /> {t.connectionOk}</p>
                   )}
                   {aiTestStatus === 'error' && (
                     <p className="sg-settings__status sg-settings__status--err">
-                      ❌ {t.connectionFailed}
+                      <Icon name="x-circle" size={14} /> {t.connectionFailed}
                       {aiTestError ? `: ${aiTestError}` : ''}
                     </p>
                   )}
@@ -429,7 +430,7 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
 
             {/* Shortcuts */}
             <div className="sg-settings__section">
-              <h3 className="sg-settings__label">⌨️ {t.shortcuts}</h3>
+              <h3 className="sg-settings__label"><Icon name="keyboard" size={14} /> {t.shortcuts}</h3>
               <ShortcutEditor
                 shortcuts={settings.shortcuts}
                 onChange={(shortcuts) => onUpdateSettings({ shortcuts })}
@@ -441,7 +442,7 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
 
             {/* Security */}
             <div className="sg-settings__section">
-              <h3 className="sg-settings__label">🔒 {t.security}</h3>
+              <h3 className="sg-settings__label"><Icon name="lock" size={14} /> {t.security}</h3>
               <p className="sg-settings__desc sg-settings__desc--pre">{t.securityDesc}</p>
             </div>
           </div>

@@ -13,6 +13,7 @@ import { ContextMenu, type MenuItem } from './components/ContextMenu'
 import { AddBookmarkForm } from './components/AddBookmarkForm'
 import { SettingsPanel } from './components/SettingsPanel'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { Icon } from './components/Icon'
 import {
   addBookmark,
   removeBookmark,
@@ -564,7 +565,7 @@ export default function App() {
           </div>
         ) : (
           <button className="sg-tab sg-tab--add" onClick={handleAddGroup} title={t.newGroup} aria-label={t.newGroup}>
-            ＋
+            <Icon name="plus" size={14} />
           </button>
         )}
       </div>
@@ -647,7 +648,7 @@ export default function App() {
                       aria-label={t.back}
                       {...getBreadcrumbDropHandlers(parentId)}
                     >
-                      ←
+                      <Icon name="arrow-left" size={14} />
                     </button>
                   ) : (
                     <button
@@ -656,7 +657,7 @@ export default function App() {
                       title={t.back}
                       aria-label={t.back}
                     >
-                      ←
+                      <Icon name="arrow-left" size={14} />
                     </button>
                   )
                 })()}

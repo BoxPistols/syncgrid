@@ -3,6 +3,7 @@ import { getFaviconUrl, getDomain } from '../utils/favicon'
 import { formatRelativeDate } from '../utils/date'
 import { UrlPreview } from './UrlPreview'
 import type { SyncGridItem } from '../types'
+import { Icon } from './Icon'
 import type { DragHandlers } from '../hooks/useDragReorder'
 import type { Messages } from '../i18n'
 
@@ -106,7 +107,7 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
           }}
           aria-label={t.menu}
         >
-          ⋯
+          <Icon name="more" size={14} />
         </button>
       </div>
       {preview && (

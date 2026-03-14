@@ -3,6 +3,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap'
 import { fetchPageTitleWithPermission } from '../utils/fetchTitle'
 import { generateTags } from '../utils/ai'
 import { isComposing } from '../utils/keyboard'
+import { Icon } from './Icon'
 import type { SyncGridItem, AISettings } from '../types'
 import type { Messages } from '../i18n'
 
@@ -91,7 +92,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialT
         <div className="sg-modal__header">
           <span className="sg-modal__title">{t.editBookmark}</span>
           <button className="sg-modal__close" onClick={onClose} aria-label={t.close}>
-            ✕
+            <Icon name="close" size={12} />
           </button>
         </div>
         <form onSubmit={handleSubmit}>
@@ -114,7 +115,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialT
                 disabled={fetching || !url.trim()}
                 title={t.refetchTitle}
               >
-                {fetching ? '⏳' : '🔄'} {t.refetchTitle}
+                {fetching ? <Icon name="spinner" size={14} /> : <Icon name="refresh" size={14} />} {t.refetchTitle}
               </button>
             </div>
             <label className="sg-label">{t.url}</label>
@@ -134,7 +135,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialT
                   onClick={handleAiAutoTag}
                   disabled={aiTagLoading || !title.trim()}
                 >
-                  {aiTagLoading ? '⏳' : '✨'} {t.aiAutoTag}
+                  {aiTagLoading ? <Icon name="spinner" size={14} /> : <Icon name="sparkle" size={14} />} {t.aiAutoTag}
                 </button>
               )}
             </div>
@@ -143,7 +144,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialT
                 <span key={tag} className="sg-tag">
                   {tag}
                   <span className="sg-tag--remove" onClick={() => removeTag(tag)}>
-                    ✕
+                    <Icon name="close" size={8} />
                   </span>
                 </span>
               ))}
