@@ -132,4 +132,12 @@ export const ja = {
   shortcutSelectAll: 'すべて選択',
   shortcutPressKey: 'キーを押してください…',
   shortcutReset: '初期化',
+  // Tags
+  tags: 'タグ',
+  tagPlaceholder: 'タグを入力…',
+  filterByTag: 'タグで絞り込み',
+  allTags: 'すべて',
+  // AI拡張
+  aiAutoTag: 'AI自動タグ',
+  aiCategorize: 'AI分類',
 } as const

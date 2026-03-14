@@ -51,9 +51,20 @@ export interface SyncGridGroup {
   depth: number
 }
 
+/** OGPプレビュー情報（キャッシュ用） */
+export interface OgpData {
+  title?: string
+  description?: string
+  image?: string
+  siteName?: string
+  fetchedAt: number
+}
+
 /** ローカルメタデータ（chrome.storage.local） */
 export interface BookmarkMeta {
   memo: string
+  tags?: string[]
+  ogp?: OgpData
 }
 
 /** AI プロバイダ */

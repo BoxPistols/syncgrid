@@ -24,9 +24,10 @@ import {
   flattenGroups,
   countAll,
 } from './utils/bookmarks'
-import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
+import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode, BookmarkMeta } from './types'
 import { isComposing, matchesBinding } from './utils/keyboard'
 import { getDomain } from './utils/favicon'
+import { loadAllMeta, saveMeta } from './utils/storage'
 
 import './styles/global.css'
 
@@ -44,6 +45,13 @@ export default function App() {
     [updateSettings],
   )
   useAutoSync(groups, handleSynced)
+
+  // --- Metadata (tags, ogp cache) ---
+  const [allMeta, setAllMeta] = useState<Record<string, BookmarkMeta>>({})
+
+  useEffect(() => {
+    loadAllMeta().then(setAllMeta)
+  }, [groups])
 
   // --- Navigation State ---
   const [path, setPath] = useState<string[]>([])
@@ -328,12 +336,14 @@ export default function App() {
   )
 
   const handleSaveBookmark = useCallback(
-    async (id: string, title: string, url: string) => {
+    async (id: string, title: string, url: string, tags: string[]) => {
       await updateBookmark(id, { title, url })
+      const existingMeta = allMeta[id]
+      await saveMeta(id, { memo: existingMeta?.memo ?? '', tags, ogp: existingMeta?.ogp })
       setEditItem(null)
       await refresh()
     },
-    [refresh],
+    [refresh, allMeta],
   )
 
   const handleDeleteBookmark = useCallback(
@@ -727,6 +737,7 @@ export default function App() {
                     locale={settings.locale}
                     isSelected={selectedIds.has(item.id)}
                     onToggleSelect={toggleSelect}
+                    tags={allMeta[item.id]?.tags}
                   />
                 ))}
               </div>
@@ -742,6 +753,7 @@ export default function App() {
           onDelete={handleDeleteBookmark}
           onClose={() => setEditItem(null)}
           t={t}
+          initialTags={allMeta[editItem.id]?.tags}
         />
       )}
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />}

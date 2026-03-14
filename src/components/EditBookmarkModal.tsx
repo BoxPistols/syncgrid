@@ -1,20 +1,24 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { fetchPageTitleWithPermission } from '../utils/fetchTitle'
+import { isComposing } from '../utils/keyboard'
 import type { SyncGridItem } from '../types'
 import type { Messages } from '../i18n'
 
 interface Props {
   item: SyncGridItem
-  onSave: (id: string, title: string, url: string) => void
+  onSave: (id: string, title: string, url: string, tags: string[]) => void
   onDelete: (id: string) => void
   onClose: () => void
   t: Messages
+  initialTags?: string[]
 }
 
-export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props) {
+export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialTags }: Props) {
   const [title, setTitle] = useState(item.title)
   const [url, setUrl] = useState(item.url)
+  const [tags, setTags] = useState<string[]>(initialTags ?? [])
+  const [tagInput, setTagInput] = useState('')
   const [fetching, setFetching] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const trapRef = useFocusTrap<HTMLDivElement>()
@@ -27,7 +31,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!url.trim()) return
-    onSave(item.id, title.trim() || url.trim(), url.trim())
+    onSave(item.id, title.trim() || url.trim(), url.trim(), tags)
   }
 
   const handleRefetchTitle = useCallback(async () => {
@@ -41,6 +45,18 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
       setFetching(false)
     }
   }, [url])
+
+  const addTag = useCallback(() => {
+    const tag = tagInput.trim()
+    if (tag && !tags.includes(tag)) {
+      setTags((prev) => [...prev, tag])
+    }
+    setTagInput('')
+  }, [tagInput, tags])
+
+  const removeTag = useCallback((tag: string) => {
+    setTags((prev) => prev.filter((t) => t !== tag))
+  }, [])
 
   return (
     <div className="sg-modal-overlay" onClick={onClose}>
@@ -92,6 +108,35 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
               onChange={(e) => setUrl(e.target.value)}
               autoComplete="off"
             />
+            <label className="sg-label">{t.tags}</label>
+            <div className="sg-tags">
+              {tags.map((tag) => (
+                <span key={tag} className="sg-tag">
+                  {tag}
+                  <span className="sg-tag--remove" onClick={() => removeTag(tag)}>
+                    ✕
+                  </span>
+                </span>
+              ))}
+              <input
+                type="text"
+                className="sg-tag-input"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (isComposing(e)) return
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addTag()
+                  }
+                  if (e.key === 'Backspace' && !tagInput && tags.length > 0) {
+                    removeTag(tags[tags.length - 1])
+                  }
+                }}
+                onBlur={addTag}
+                placeholder={t.tagPlaceholder}
+              />
+            </div>
           </div>
           <div className="sg-modal__footer">
             <button
