@@ -292,6 +292,10 @@ if (!IS_EXTENSION) {
         },
       },
     },
+    permissions: {
+      contains: () => Promise.resolve(true),
+      request: () => Promise.resolve(true),
+    },
   } as unknown as typeof chrome
 
   console.info('[SyncGrid] Dev mode: using mock Chrome APIs')

@@ -16,6 +16,10 @@
     "https://api.openai.com/*",
     "https://generativelanguage.googleapis.com/*"
   ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",

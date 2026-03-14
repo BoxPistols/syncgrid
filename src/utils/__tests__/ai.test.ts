@@ -6,6 +6,10 @@ import { DEFAULT_AI_SETTINGS } from '../../types'
 const mockFetch = vi.fn()
 globalThis.fetch = mockFetch
 
+// chrome.permissions モック（タイトル取得パーミッション）
+const g = globalThis as unknown as { chrome: { permissions: { contains: () => Promise<boolean> } } }
+g.chrome = { permissions: { contains: () => Promise.resolve(false) } } as typeof g.chrome
+
 beforeEach(() => {
   mockFetch.mockReset()
 })
@@ -24,20 +28,19 @@ const geminiSettings: AISettings = {
   geminiModel: 'gemini-2.5-flash',
 }
 
-/** fetchPageTitle の fetch を失敗させるモック（CORS想定） */
-function mockPageFetchFail() {
-  mockFetch.mockRejectedValueOnce(new Error('CORS'))
-}
+// パーミッション未付与のため fetchPageTitle は自動的にスキップされる
+// 追加のモック不要
 
 describe('generateTitle', () => {
   it('throws when provider is none', async () => {
-    mockPageFetchFail()
+
     await expect(generateTitle('https://example.com', DEFAULT_AI_SETTINGS)).rejects.toThrow(
       'AI provider not configured',
     )
   })
 
-  it('returns page title when fetchable', async () => {
+  it('returns page title when fetchable and permission granted', async () => {
+    g.chrome = { permissions: { contains: () => Promise.resolve(true) } } as typeof g.chrome
     mockFetch.mockResolvedValueOnce({
       ok: true,
       body: {
@@ -60,12 +63,13 @@ describe('generateTitle', () => {
 
     const result = await generateTitle('https://example.com', openaiSettings)
     expect(result).toBe('ページタイトル')
-    // AI API は呼ばれない
     expect(mockFetch).toHaveBeenCalledTimes(1)
+    // cleanup
+    g.chrome = { permissions: { contains: () => Promise.resolve(false) } } as typeof g.chrome
   })
 
   it('calls OpenAI API correctly', async () => {
-    mockPageFetchFail()
+
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () =>
@@ -77,8 +81,8 @@ describe('generateTitle', () => {
     const result = await generateTitle('https://example.com', openaiSettings)
 
     expect(result).toBe('Example Site')
-    expect(mockFetch).toHaveBeenCalledTimes(2) // fetchPageTitle + AI
-    const [url, opts] = mockFetch.mock.calls[1]
+    expect(mockFetch).toHaveBeenCalledTimes(1) // パーミッション未付与のためfetchPageTitleスキップ
+    const [url, opts] = mockFetch.mock.calls[0]
     expect(url).toBe('https://api.openai.com/v1/chat/completions')
     expect(opts.method).toBe('POST')
     expect(opts.headers['Authorization']).toBe('Bearer sk-test-key')
@@ -87,7 +91,7 @@ describe('generateTitle', () => {
   })
 
   it('calls Gemini API correctly', async () => {
-    mockPageFetchFail()
+
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () =>
@@ -99,15 +103,15 @@ describe('generateTitle', () => {
     const result = await generateTitle('https://example.com', geminiSettings)
 
     expect(result).toBe('Example Page')
-    expect(mockFetch).toHaveBeenCalledTimes(2)
-    const [url] = mockFetch.mock.calls[1]
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    const [url] = mockFetch.mock.calls[0]
     expect(url).toContain('generativelanguage.googleapis.com')
     expect(url).toContain('gemini-2.5-flash')
     expect(url).toContain('key=test-gemini-key')
   })
 
   it('throws on OpenAI API error', async () => {
-    mockPageFetchFail()
+
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 401,
@@ -118,7 +122,7 @@ describe('generateTitle', () => {
   })
 
   it('throws on Gemini API error', async () => {
-    mockPageFetchFail()
+
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 403,
@@ -129,7 +133,7 @@ describe('generateTitle', () => {
   })
 
   it('throws on empty OpenAI response', async () => {
-    mockPageFetchFail()
+
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ choices: [] }),
@@ -139,7 +143,7 @@ describe('generateTitle', () => {
   })
 
   it('throws on empty Gemini response', async () => {
-    mockPageFetchFail()
+
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ candidates: [] }),
@@ -149,13 +153,13 @@ describe('generateTitle', () => {
   })
 
   it('throws when OpenAI API key is empty', async () => {
-    mockPageFetchFail()
+
     const noKey = { ...openaiSettings, openaiApiKey: '' }
     await expect(generateTitle('https://example.com', noKey)).rejects.toThrow('OpenAI API key not set')
   })
 
   it('throws when Gemini API key is empty', async () => {
-    mockPageFetchFail()
+
     const noKey = { ...geminiSettings, geminiApiKey: '' }
     await expect(generateTitle('https://example.com', noKey)).rejects.toThrow('Gemini API key not set')
   })

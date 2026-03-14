@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import type { Messages } from '../i18n'
 import type { AISettings } from '../types'
 import { generateTitle } from '../utils/ai'
-import { fetchPageTitle } from '../utils/fetchTitle'
+import { fetchPageTitle, fetchPageTitleWithPermission } from '../utils/fetchTitle'
 import { isModKey, isComposing, MOD_LABEL, ENTER_LABEL } from '../utils/keyboard'
 
 interface Props {
@@ -32,12 +32,11 @@ export function AddBookmarkForm({ onAdd, onCancel, t, aiSettings }: Props) {
     return trimmed
   }
 
-  // URL確定時（blur）に自動タイトル取得
+  // URL確定時（blur）に自動タイトル取得（パーミッション付与済みの場合のみ）
   const handleUrlBlur = useCallback(async () => {
     const finalUrl = normalizeUrl(url)
-    if (!finalUrl || title.trim()) return // タイトル既入力なら取得しない
+    if (!finalUrl || title.trim()) return
 
-    // 前のfetchをキャンセル
     fetchAbortRef.current?.abort()
     const controller = new AbortController()
     fetchAbortRef.current = controller
@@ -54,6 +53,22 @@ export function AddBookmarkForm({ onAdd, onCancel, t, aiSettings }: Props) {
       }
     }
   }, [url, title])
+
+  // 明示的にタイトル取得（パーミッション未付与なら要求）
+  const handleFetchTitle = useCallback(async () => {
+    const finalUrl = normalizeUrl(url)
+    if (!finalUrl) return
+
+    setFetchingTitle(true)
+    try {
+      const pageTitle = await fetchPageTitleWithPermission(finalUrl)
+      if (pageTitle) {
+        setTitle(pageTitle)
+      }
+    } finally {
+      setFetchingTitle(false)
+    }
+  }, [url])
 
   const handleSubmit = () => {
     const finalUrl = normalizeUrl(url)
@@ -134,6 +149,17 @@ export function AddBookmarkForm({ onAdd, onCancel, t, aiSettings }: Props) {
           spellCheck={false}
           disabled={fetchingTitle}
         />
+        {url.trim() && (
+          <button
+            type="button"
+            className="sg-btn sg-btn--sm sg-btn--ghost"
+            onClick={handleFetchTitle}
+            disabled={fetchingTitle}
+            title={t.fetchingTitle}
+          >
+            {fetchingTitle ? '⏳' : '🔍'}
+          </button>
+        )}
         {showAiBtn && (
           <button
             type="button"

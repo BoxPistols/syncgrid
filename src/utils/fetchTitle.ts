@@ -1,8 +1,32 @@
 /**
- * ページのHTMLを取得して<title>タグを抽出する
- * CORSで失敗する場合はnullを返す
+ * ページの<title>タグを取得するユーティリティ
+ * Chrome拡張のoptional_host_permissionsでCORSバイパス
+ */
+
+import { hasTitleFetchPermission, requestTitleFetchPermission } from './permissions'
+
+/**
+ * ページタイトルを取得（パーミッション確認済みの場合のみ）
+ * パーミッション未付与時はnullを返す
  */
 export async function fetchPageTitle(url: string): Promise<string | null> {
+  const hasPermission = await hasTitleFetchPermission()
+  if (!hasPermission) return null
+  return doFetch(url)
+}
+
+/**
+ * パーミッションをリクエストしてからページタイトルを取得
+ * ユーザージェスチャー（ボタンクリック等）のコンテキストで呼ぶこと
+ */
+export async function fetchPageTitleWithPermission(url: string): Promise<string | null> {
+  const granted = await requestTitleFetchPermission()
+  if (!granted) return null
+  return doFetch(url)
+}
+
+/** 実際のfetch処理 */
+async function doFetch(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(5000),
