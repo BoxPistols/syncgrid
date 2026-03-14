@@ -77,6 +77,7 @@ export const ja = {
   aiDesc: 'AIを使ってブックマークのタイトル自動生成などが利用できます。APIキーはローカルにのみ保存されます。',
   aiGenerateTitle: 'AI整理',
   fetchingTitle: 'タイトル取得中…',
+  refetchTitle: '再取得',
   aiGenerating: '生成中…',
   aiError: 'AI生成に失敗しました',
   aiNotConfigured: 'AI設定が未構成です。設定画面からAPIキーを設定してください。',

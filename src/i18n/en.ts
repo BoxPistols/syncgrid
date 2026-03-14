@@ -63,6 +63,7 @@ export const en = {
   aiDesc: 'Use AI to auto-generate bookmark titles and more. API keys are stored locally only.',
   aiGenerateTitle: 'AI Refine',
   fetchingTitle: 'Fetching title…',
+  refetchTitle: 'Re-fetch',
   aiGenerating: 'Generating…',
   aiError: 'AI generation failed',
   aiNotConfigured: 'AI not configured. Please set up your API key in Settings.',
