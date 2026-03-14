@@ -12,6 +12,7 @@ import { EditBookmarkModal } from './components/EditBookmarkModal'
 import { ContextMenu, type MenuItem } from './components/ContextMenu'
 import { AddBookmarkForm } from './components/AddBookmarkForm'
 import { SettingsPanel } from './components/SettingsPanel'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import {
   addBookmark,
   removeBookmark,
@@ -56,6 +57,11 @@ export default function App() {
     x: number
     y: number
     items: MenuItem[]
+  } | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    message: string
+    onConfirm: () => void
+    confirmLabel?: string
   } | null>(null)
 
   // --- Active Tab (computed — stale ID falls back to first group) ---
@@ -116,6 +122,9 @@ export default function App() {
     }
     return results
   }, [query, groups])
+
+  // --- Page transition key ---
+  const pageKey = searchResults ? 'search' : `${activeTabId}/${path.join('/')}`
 
   // --- Handlers ---
   const handleSelectTab = useCallback(
@@ -231,15 +240,20 @@ export default function App() {
             label: t.delete,
             icon: '🗑️',
             danger: true,
-            action: async () => {
-              if (confirm(t.confirmDeleteFolder(group.title))) {
-                await deleteGroup(group.id)
-                setPath((prev) => {
-                  const idx = prev.indexOf(group.id)
-                  return idx >= 0 ? prev.slice(0, idx) : prev
-                })
-                refresh()
-              }
+            action: () => {
+              setConfirmDialog({
+                message: t.confirmDeleteFolder(group.title),
+                confirmLabel: t.delete,
+                onConfirm: async () => {
+                  setConfirmDialog(null)
+                  await deleteGroup(group.id)
+                  setPath((prev) => {
+                    const idx = prev.indexOf(group.id)
+                    return idx >= 0 ? prev.slice(0, idx) : prev
+                  })
+                  refresh()
+                },
+              })
             },
           },
         ],
@@ -277,15 +291,20 @@ export default function App() {
             label: t.delete,
             icon: '🗑️',
             danger: true,
-            action: async () => {
-              if (confirm(t.confirmDeleteTab(group.title))) {
-                await deleteGroup(group.id)
-                if (activeTabId === group.id) {
-                  const rem = groups.filter((g) => g.id !== group.id)
-                  if (rem.length > 0) updateSettings({ activeTabId: rem[0].id })
-                }
-                refresh()
-              }
+            action: () => {
+              setConfirmDialog({
+                message: t.confirmDeleteTab(group.title),
+                confirmLabel: t.delete,
+                onConfirm: async () => {
+                  setConfirmDialog(null)
+                  await deleteGroup(group.id)
+                  if (activeTabId === group.id) {
+                    const rem = groups.filter((g) => g.id !== group.id)
+                    if (rem.length > 0) updateSettings({ activeTabId: rem[0].id })
+                  }
+                  refresh()
+                },
+              })
             },
           },
         ],
@@ -309,11 +328,13 @@ export default function App() {
       />
 
       {/* Tab Bar */}
-      <div className="sg-tabbar">
+      <div className="sg-tabbar" role="tablist">
         {groups.map((g) => (
           <button
             key={g.id}
             className={`sg-tab ${g.id === activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id ? 'sg-tab--drop-target' : ''}`}
+            role="tab"
+            aria-selected={g.id === activeTabId}
             onClick={() => handleSelectTab(g.id)}
             onContextMenu={(e) => handleTabContext(g, e)}
             onDoubleClick={() => {
@@ -359,148 +380,155 @@ export default function App() {
             />
           </div>
         ) : (
-          <button className="sg-tab sg-tab--add" onClick={handleAddGroup} title={t.newGroup}>
+          <button className="sg-tab sg-tab--add" onClick={handleAddGroup} title={t.newGroup} aria-label={t.newGroup}>
             ＋
           </button>
         )}
       </div>
 
       {/* Content */}
-      {searchResults ? (
-        <div className="sg-dial">
-          <div className="sg-toolbar">
-            <span className="sg-toolbar__title">{t.searchResults(query, searchResults.length)}</span>
+      <div key={pageKey} className="sg-page-transition">
+        {searchResults ? (
+          <div className="sg-dial">
+            <div className="sg-toolbar">
+              <span className="sg-toolbar__title">{t.searchResults(query, searchResults.length)}</span>
+            </div>
+            {searchResults.length > 0 ? (
+              <div className="sg-dial__grid">
+                {searchResults.map((item) => (
+                  <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} />
+                ))}
+              </div>
+            ) : (
+              <div className="sg-empty">
+                <div className="sg-empty__icon">🔍</div>
+                <p className="sg-empty__text">{t.noSearchResults}</p>
+              </div>
+            )}
           </div>
-          {searchResults.length > 0 ? (
-            <div className="sg-dial__grid">
-              {searchResults.map((item) => (
-                <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} />
-              ))}
-            </div>
-          ) : (
-            <div className="sg-empty">
-              <div className="sg-empty__icon">🔍</div>
-              <p className="sg-empty__text">{t.noSearchResults}</p>
-            </div>
-          )}
-        </div>
-      ) : groups.length === 0 ? (
-        <div className="sg-empty">
-          <div className="sg-empty__icon">📂</div>
-          <p className="sg-empty__text" style={{ whiteSpace: 'pre-line' }}>
-            {t.noGroups}
-          </p>
-        </div>
-      ) : currentFolder ? (
-        <div className="sg-dial">
-          {path.length > 0 && (
-            <div className="sg-breadcrumb">
-              {breadcrumb.map((crumb, i) => {
-                const crumbParentId = i === 0 ? activeGroup?.id : breadcrumb[i]?.id
-                return (
-                  <span key={crumb.id || 'root'}>
-                    {i > 0 && <span className="sg-breadcrumb__sep"> › </span>}
-                    {i < breadcrumb.length - 1 && crumbParentId ? (
-                      <button
-                        className={`sg-breadcrumb__item ${dragState.dropBreadcrumbId === crumbParentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
-                        onClick={() => handleBreadcrumbClick(i)}
-                        {...getBreadcrumbDropHandlers(crumbParentId)}
-                      >
-                        {crumb.title}
-                      </button>
-                    ) : (
-                      <span className="sg-breadcrumb__current">{crumb.title}</span>
-                    )}
-                  </span>
-                )
-              })}
-            </div>
-          )}
-
-          <div className="sg-toolbar">
-            {path.length > 0 &&
-              (() => {
-                const parentId = path.length >= 2 ? path[path.length - 2] : activeGroup?.id
-                return parentId ? (
-                  <button
-                    className={`sg-btn--icon ${dragState.dropBreadcrumbId === parentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
-                    onClick={() => setPath((p) => p.slice(0, -1))}
-                    title={t.back}
-                    {...getBreadcrumbDropHandlers(parentId)}
-                  >
-                    ←
-                  </button>
-                ) : (
-                  <button className="sg-btn--icon" onClick={() => setPath((p) => p.slice(0, -1))} title={t.back}>
-                    ←
-                  </button>
-                )
-              })()}
-            <span className="sg-toolbar__title">{path.length === 0 ? '' : currentFolder.title}</span>
-            <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>
-              {showAddForm ? t.cancel : t.addBookmark}
-            </button>
-            <button
-              className="sg-btn sg-btn--sm sg-btn--ghost"
-              onClick={() => {
-                setCreatingGroup(true)
-                setNewGroupName('')
-              }}
-            >
-              {t.newFolder}
-            </button>
+        ) : groups.length === 0 ? (
+          <div className="sg-empty">
+            <div className="sg-empty__icon">📂</div>
+            <p className="sg-empty__text sg-preline">{t.noGroups}</p>
           </div>
+        ) : currentFolder ? (
+          <div className="sg-dial">
+            {path.length > 0 && (
+              <nav className="sg-breadcrumb" aria-label="breadcrumb">
+                {breadcrumb.map((crumb, i) => {
+                  const crumbParentId = i === 0 ? activeGroup?.id : breadcrumb[i]?.id
+                  return (
+                    <span key={crumb.id || 'root'}>
+                      {i > 0 && <span className="sg-breadcrumb__sep"> › </span>}
+                      {i < breadcrumb.length - 1 && crumbParentId ? (
+                        <button
+                          className={`sg-breadcrumb__item ${dragState.dropBreadcrumbId === crumbParentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
+                          onClick={() => handleBreadcrumbClick(i)}
+                          {...getBreadcrumbDropHandlers(crumbParentId)}
+                        >
+                          {crumb.title}
+                        </button>
+                      ) : (
+                        <span className="sg-breadcrumb__current" aria-current="page">
+                          {crumb.title}
+                        </span>
+                      )}
+                    </span>
+                  )
+                })}
+              </nav>
+            )}
 
-          {showAddForm && (
-            <div style={{ padding: '0 24px' }}>
-              <AddBookmarkForm
-                onAdd={handleAddBookmark}
-                onCancel={() => setShowAddForm(false)}
-                t={t}
-                aiSettings={settings.ai}
-              />
+            <div className="sg-toolbar">
+              {path.length > 0 &&
+                (() => {
+                  const parentId = path.length >= 2 ? path[path.length - 2] : activeGroup?.id
+                  return parentId ? (
+                    <button
+                      className={`sg-btn--icon ${dragState.dropBreadcrumbId === parentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
+                      onClick={() => setPath((p) => p.slice(0, -1))}
+                      title={t.back}
+                      aria-label={t.back}
+                      {...getBreadcrumbDropHandlers(parentId)}
+                    >
+                      ←
+                    </button>
+                  ) : (
+                    <button
+                      className="sg-btn--icon"
+                      onClick={() => setPath((p) => p.slice(0, -1))}
+                      title={t.back}
+                      aria-label={t.back}
+                    >
+                      ←
+                    </button>
+                  )
+                })()}
+              <span className="sg-toolbar__title">{path.length === 0 ? '' : currentFolder.title}</span>
+              <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>
+                {showAddForm ? t.cancel : t.addBookmark}
+              </button>
+              <button
+                className="sg-btn sg-btn--sm sg-btn--ghost"
+                onClick={() => {
+                  setCreatingGroup(true)
+                  setNewGroupName('')
+                }}
+              >
+                {t.newFolder}
+              </button>
             </div>
-          )}
 
-          {currentFolder.children.length === 0 && currentFolder.items.length === 0 ? (
-            <div className="sg-empty">
-              <div className="sg-empty__icon">📌</div>
-              <p className="sg-empty__text" style={{ whiteSpace: 'pre-line' }}>
-                {t.emptyFolder}
-              </p>
-            </div>
-          ) : (
-            <div className="sg-dial__grid">
-              {currentFolder.children.map((child) => (
-                <FolderCard
-                  key={child.id}
-                  group={child}
-                  onClick={handleOpenFolder}
-                  onContextMenu={handleFolderContext}
+            {showAddForm && (
+              <div className="sg-add-form-wrapper">
+                <AddBookmarkForm
+                  onAdd={handleAddBookmark}
+                  onCancel={() => setShowAddForm(false)}
                   t={t}
-                  dragHandlers={getDragHandlers(child.id, 'folder')}
-                  isDragging={dragState.draggingId === child.id}
-                  isDropTarget={dragState.dropTargetId === child.id}
-                  dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null}
+                  aiSettings={settings.ai}
                 />
-              ))}
-              {currentFolder.items.map((item) => (
-                <BookmarkCard
-                  key={item.id}
-                  item={item}
-                  onContextMenu={handleBookmarkContext}
-                  dragHandlers={getDragHandlers(item.id, 'bookmark')}
-                  isDragging={dragState.draggingId === item.id}
-                  isDropTarget={dragState.dropTargetId === item.id}
-                  dropMode={
-                    dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      ) : null}
+              </div>
+            )}
+
+            {currentFolder.children.length === 0 && currentFolder.items.length === 0 ? (
+              <div className="sg-empty">
+                <div className="sg-empty__icon">📌</div>
+                <p className="sg-empty__text sg-preline">{t.emptyFolder}</p>
+              </div>
+            ) : (
+              <div className="sg-dial__grid">
+                {currentFolder.children.map((child) => (
+                  <FolderCard
+                    key={child.id}
+                    group={child}
+                    onClick={handleOpenFolder}
+                    onContextMenu={handleFolderContext}
+                    t={t}
+                    dragHandlers={getDragHandlers(child.id, 'folder')}
+                    isDragging={dragState.draggingId === child.id}
+                    isDropTarget={dragState.dropTargetId === child.id}
+                    dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null}
+                  />
+                ))}
+                {currentFolder.items.map((item) => (
+                  <BookmarkCard
+                    key={item.id}
+                    item={item}
+                    onContextMenu={handleBookmarkContext}
+                    dragHandlers={getDragHandlers(item.id, 'bookmark')}
+                    isDragging={dragState.draggingId === item.id}
+                    isDropTarget={dragState.dropTargetId === item.id}
+                    dropMode={
+                      dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null
+                    }
+                    t={t}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
+      </div>
 
       {editItem && (
         <EditBookmarkModal
@@ -519,6 +547,15 @@ export default function App() {
           t={t}
           onUpdateSettings={updateSettings}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+      {confirmDialog && (
+        <ConfirmDialog
+          message={confirmDialog.message}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+          confirmLabel={confirmDialog.confirmLabel}
+          t={t}
         />
       )}
     </>

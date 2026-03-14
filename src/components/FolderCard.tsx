@@ -43,7 +43,10 @@ export function FolderCard({
       tabIndex={0}
       onClick={() => onClick(group)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') onClick(group)
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick(group)
+        }
       }}
       onContextMenu={(e) => {
         e.preventDefault()
@@ -60,7 +63,7 @@ export function FolderCard({
           e.stopPropagation()
           onContextMenu(group, e.clientX, e.clientY)
         }}
-        title="⋯"
+        aria-label={t.menu}
       >
         ⋯
       </button>

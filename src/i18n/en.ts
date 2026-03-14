@@ -74,4 +74,6 @@ export const en = {
   securityDesc:
     '• Data is stored only via Chrome Bookmarks API\n• No data is ever sent to external servers\n• Local sync writes only to the folder you explicitly select\n• Export files are not encrypted — store them securely\n• AI API keys are stored locally and only sent to your chosen provider',
   close: 'Close',
+  confirmOk: 'Confirm',
+  menu: 'Menu',
 } as const

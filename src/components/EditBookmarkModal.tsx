@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import type { SyncGridItem } from '../types'
 import type { Messages } from '../i18n'
 
@@ -14,6 +15,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
   const [title, setTitle] = useState(item.title)
   const [url, setUrl] = useState(item.url)
   const titleRef = useRef<HTMLInputElement>(null)
+  const trapRef = useFocusTrap<HTMLDivElement>()
 
   useEffect(() => {
     titleRef.current?.focus()
@@ -29,7 +31,11 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
   return (
     <div className="sg-modal-overlay" onClick={onClose}>
       <div
+        ref={trapRef}
         className="sg-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t.editBookmark}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key === 'Escape') onClose()
@@ -37,7 +43,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
       >
         <div className="sg-modal__header">
           <span className="sg-modal__title">{t.editBookmark}</span>
-          <button className="sg-modal__close" onClick={onClose}>
+          <button className="sg-modal__close" onClick={onClose} aria-label={t.close}>
             ✕
           </button>
         </div>
@@ -72,7 +78,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
             >
               {t.delete}
             </button>
-            <div style={{ flex: 1 }} />
+            <div className="sg-spacer" />
             <button type="button" className="sg-btn sg-btn--ghost" onClick={onClose}>
               {t.cancel}
             </button>

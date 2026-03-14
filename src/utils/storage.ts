@@ -1,15 +1,23 @@
-import { DEFAULT_SETTINGS, type SyncGridSettings, type BookmarkMeta } from '../types'
+import { DEFAULT_SETTINGS, DEFAULT_AI_SETTINGS, type SyncGridSettings, type BookmarkMeta } from '../types'
 
 const SETTINGS_KEY = 'syncgrid_settings'
 const META_PREFIX = 'meta_'
 
 /**
- * 設定を読み込み
+ * 設定を読み込み（ネストされたオブジェクトもデフォルト値とマージ）
  */
 export async function loadSettings(): Promise<SyncGridSettings> {
   const result = await chrome.storage.local.get(SETTINGS_KEY)
-  const stored = result[SETTINGS_KEY] as Partial<SyncGridSettings> | undefined
-  return { ...DEFAULT_SETTINGS, ...stored }
+  const stored = result[SETTINGS_KEY]
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) {
+    return { ...DEFAULT_SETTINGS }
+  }
+  const s = stored as Partial<SyncGridSettings>
+  return {
+    ...DEFAULT_SETTINGS,
+    ...s,
+    ai: { ...DEFAULT_AI_SETTINGS, ...(s.ai ?? {}) },
+  }
 }
 
 /**

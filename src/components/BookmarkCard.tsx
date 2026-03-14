@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { getFaviconUrl, getDomain } from '../utils/favicon'
 import type { SyncGridItem } from '../types'
 import type { DragHandlers } from '../hooks/useDragReorder'
+import type { Messages } from '../i18n'
 
 interface Props {
   item: SyncGridItem
@@ -10,9 +11,10 @@ interface Props {
   isDragging?: boolean
   isDropTarget?: boolean
   dropMode?: 'before' | 'after' | null
+  t: Messages
 }
 
-export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode }: Props) {
+export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t }: Props) {
   const [imgFailed, setImgFailed] = useState(false)
   const domain = getDomain(item.url)
   const initial = domain.charAt(0).toUpperCase()
@@ -33,7 +35,10 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
       tabIndex={0}
       onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') window.open(item.url, '_blank')
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          window.open(item.url, '_blank', 'noopener,noreferrer')
+        }
       }}
       onContextMenu={(e) => {
         e.preventDefault()
@@ -64,7 +69,7 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
           e.stopPropagation()
           onContextMenu(item, e.clientX, e.clientY)
         }}
-        title="メニュー"
+        aria-label={t.menu}
       >
         ⋯
       </button>

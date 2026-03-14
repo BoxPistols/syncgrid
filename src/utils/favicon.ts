@@ -10,17 +10,21 @@ export function getFaviconUrl(url: string, size: number = 32): string {
     // show_fallback_monogram: ファビコンが無い場合にイニシャルアイコンを表示
     return `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=${size}`
   } catch {
+    // 不正なURLの場合は空文字（BookmarkCardのfallback UIが表示される）
     return ''
   }
 }
 
 /**
  * URLからドメイン名を抽出
+ * 不正なURLの場合は元のURLの先頭部分を返す
  */
 export function getDomain(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, '')
   } catch {
-    return url
+    // URLパース不可の場合、プロトコルやパスを除去して返す
+    const cleaned = url.replace(/^[a-z]+:\/\//i, '').split('/')[0]
+    return cleaned || url
   }
 }
