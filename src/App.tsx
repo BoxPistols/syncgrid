@@ -50,7 +50,7 @@ export default function App() {
   const [editItem, setEditItem] = useState<SyncGridItem | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [creatingGroup, setCreatingGroup] = useState(false)
+  const [creatingGroup, setCreatingGroup] = useState<'tab' | 'subfolder' | false>(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
@@ -185,11 +185,26 @@ export default function App() {
   }, [updateSettings])
 
   const handleAddGroup = useCallback(() => {
-    setCreatingGroup(true)
+    setCreatingGroup('tab')
     setNewGroupName('')
   }, [])
 
+  // タブバー「＋」→ 常にSyncGridルート直下にグループ（タブ）作成
   const handleCreateGroup = useCallback(async () => {
+    const name = newGroupName.trim()
+    if (!name) {
+      setCreatingGroup(false)
+      return
+    }
+    const rootId = await getRootId()
+    await createGroup(name, rootId)
+    setCreatingGroup(false)
+    setNewGroupName('')
+    await refresh()
+  }, [newGroupName, refresh])
+
+  // ツールバー「新規フォルダ」→ 現在のフォルダ内にサブフォルダ作成
+  const handleCreateSubfolder = useCallback(async () => {
     const name = newGroupName.trim()
     if (!name) {
       setCreatingGroup(false)
@@ -400,7 +415,7 @@ export default function App() {
             )}
           </button>
         ))}
-        {creatingGroup ? (
+        {creatingGroup === 'tab' ? (
           <div className="sg-tab sg-tab--creating">
             <input
               className="sg-tab__rename"
@@ -507,7 +522,7 @@ export default function App() {
               <button
                 className="sg-btn sg-btn--sm sg-btn--ghost"
                 onClick={() => {
-                  setCreatingGroup(true)
+                  setCreatingGroup('subfolder')
                   setNewGroupName('')
                 }}
               >
@@ -523,6 +538,25 @@ export default function App() {
                   t={t}
                   aiSettings={settings.ai}
                 />
+              </div>
+            )}
+
+            {creatingGroup === 'subfolder' && (
+              <div className="sg-add-form-wrapper">
+                <div className="sg-add-form">
+                  <input
+                    className="sg-add-form__input"
+                    placeholder={t.groupNamePlaceholder}
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    onBlur={handleCreateSubfolder}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreateSubfolder()
+                      if (e.key === 'Escape') setCreatingGroup(false)
+                    }}
+                    autoFocus
+                  />
+                </div>
               </div>
             )}
 
