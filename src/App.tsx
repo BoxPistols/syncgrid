@@ -25,7 +25,7 @@ import {
   countAll,
 } from './utils/bookmarks'
 import type { SyncGridItem, SyncGridGroup, LayoutMode } from './types'
-import { isModKey, isComposing, MOD_LABEL } from './utils/keyboard'
+import { isModKey, isComposing } from './utils/keyboard'
 
 import './styles/global.css'
 
@@ -136,8 +136,8 @@ export default function App() {
         input?.focus()
       }
 
-      // Cmd+N / Ctrl+N → ブックマーク追加フォーム表示
-      if (isModKey(e) && e.key === 'n') {
+      // Ctrl+N → ブックマーク追加フォーム表示（Cmd+Nはブラウザ新規ウィンドウと競合するためCtrl固定）
+      if (e.ctrlKey && !e.metaKey && e.key === 'n') {
         e.preventDefault()
         setShowAddForm(true)
       }
@@ -502,7 +502,7 @@ export default function App() {
                 })()}
               <span className="sg-toolbar__title">{path.length === 0 ? '' : currentFolder.title}</span>
               <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>
-                {showAddForm ? t.cancel : t.addBookmark(MOD_LABEL)}
+                {showAddForm ? t.cancel : t.addBookmark('Ctrl')}
               </button>
               <button
                 className="sg-btn sg-btn--sm sg-btn--ghost"
