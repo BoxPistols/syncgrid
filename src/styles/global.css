@@ -398,6 +398,7 @@ button {
   align-items: center;
   gap: 8px;
   padding: 8px 24px;
+  flex-wrap: wrap;
 }
 
 .sg-toolbar__title {
@@ -651,6 +652,7 @@ button {
   background: var(--sg-folder-soft);
   border-radius: 12px;
   font-size: 24px;
+  color: var(--sg-folder);
 }
 
 .sg-folder-card__title {
@@ -1320,6 +1322,17 @@ button {
   color: var(--sg-accent);
   white-space: nowrap;
 }
+/* カード内タグ（card=非表示、list/compact=flex-shrink） */
+.sg-card__tags {
+  display: none;
+}
+.sg-dial__grid--list .sg-card__tags {
+  display: flex;
+  flex-shrink: 0;
+  max-width: 200px;
+  overflow: hidden;
+}
+
 .sg-tag--active {
   background: var(--sg-accent);
   color: var(--sg-text-on-accent);
@@ -1369,9 +1382,19 @@ button {
   text-align: left;
   border-radius: var(--sg-radius-sm);
 }
+.sg-dial__grid--list .sg-card,
+.sg-dial__grid--list .sg-folder-card {
+  border-bottom: 1px solid var(--sg-border);
+}
+.sg-dial__grid--list .sg-card:last-child,
+.sg-dial__grid--list .sg-folder-card:last-child {
+  border-bottom: none;
+}
 .sg-dial__grid--list .sg-card:hover,
 .sg-dial__grid--list .sg-folder-card:hover {
   transform: none;
+  border-left: 3px solid var(--sg-accent);
+  padding-left: 13px;
 }
 .sg-dial__grid--list .sg-card__icon {
   width: 20px;
@@ -1395,6 +1418,7 @@ button {
   font-size: 14px;
   border-radius: 6px;
   flex-shrink: 0;
+  color: var(--sg-folder);
 }
 .sg-dial__grid--list .sg-card__title,
 .sg-dial__grid--list .sg-folder-card__title {
