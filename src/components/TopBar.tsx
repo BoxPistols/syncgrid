@@ -1,5 +1,7 @@
 import { useRef } from 'react'
 import type { Messages } from '../i18n'
+import type { LayoutMode, CardSize } from '../types'
+import { MOD_LABEL } from '../utils/keyboard'
 
 interface Props {
   query: string
@@ -7,10 +9,14 @@ interface Props {
   theme: string
   onToggleTheme: () => void
   onOpenSettings: () => void
+  layout: LayoutMode
+  cardSize: CardSize
+  onChangeLayout: (layout: LayoutMode) => void
+  onChangeCardSize: (size: CardSize) => void
   t: Messages
 }
 
-export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSettings, t }: Props) {
+export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSettings, layout, cardSize, onChangeLayout, onChangeCardSize, t }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   return (
@@ -36,7 +42,7 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
           ref={inputRef}
           type="text"
           className="sg-topbar__search-input"
-          placeholder={t.searchPlaceholder}
+          placeholder={t.searchPlaceholder(MOD_LABEL)}
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           autoComplete="off"
@@ -56,6 +62,74 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
       </div>
 
       <div className="sg-topbar__actions">
+        {/* Layout switcher */}
+        <div className="sg-layout-switcher" role="radiogroup" aria-label={t.layout}>
+          <button
+            className={`sg-layout-switcher__btn ${layout === 'card' ? 'sg-layout-switcher__btn--active' : ''}`}
+            onClick={() => onChangeLayout('card')}
+            title={`${t.layoutCard} (${MOD_LABEL}1)`}
+            aria-label={t.layoutCard}
+            role="radio"
+            aria-checked={layout === 'card'}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+              <rect x="0" y="0" width="6" height="6" rx="1" />
+              <rect x="8" y="0" width="6" height="6" rx="1" />
+              <rect x="0" y="8" width="6" height="6" rx="1" />
+              <rect x="8" y="8" width="6" height="6" rx="1" />
+            </svg>
+          </button>
+          <button
+            className={`sg-layout-switcher__btn ${layout === 'list' ? 'sg-layout-switcher__btn--active' : ''}`}
+            onClick={() => onChangeLayout('list')}
+            title={`${t.layoutList} (${MOD_LABEL}2)`}
+            aria-label={t.layoutList}
+            role="radio"
+            aria-checked={layout === 'list'}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+              <rect x="0" y="1" width="14" height="3" rx="1" />
+              <rect x="0" y="5.5" width="14" height="3" rx="1" />
+              <rect x="0" y="10" width="14" height="3" rx="1" />
+            </svg>
+          </button>
+          <button
+            className={`sg-layout-switcher__btn ${layout === 'compact' ? 'sg-layout-switcher__btn--active' : ''}`}
+            onClick={() => onChangeLayout('compact')}
+            title={`${t.layoutCompact} (${MOD_LABEL}3)`}
+            aria-label={t.layoutCompact}
+            role="radio"
+            aria-checked={layout === 'compact'}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+              <rect x="0" y="0.5" width="14" height="2" rx="0.5" />
+              <rect x="0" y="4" width="14" height="2" rx="0.5" />
+              <rect x="0" y="7.5" width="14" height="2" rx="0.5" />
+              <rect x="0" y="11" width="14" height="2" rx="0.5" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Card size (カード表示時のみ) */}
+        {layout === 'card' && (
+          <div className="sg-layout-switcher" role="radiogroup" aria-label="Card size">
+            {(['sm', 'md', 'lg'] as const).map((size) => (
+              <button
+                key={size}
+                className={`sg-layout-switcher__btn ${cardSize === size ? 'sg-layout-switcher__btn--active' : ''}`}
+                onClick={() => onChangeCardSize(size)}
+                title={size === 'sm' ? 'S' : size === 'md' ? 'M' : 'L'}
+                role="radio"
+                aria-checked={cardSize === size}
+              >
+                <span className={`sg-size-label sg-size-label--${size}`}>
+                  {size === 'sm' ? 'S' : size === 'md' ? 'M' : 'L'}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
         <button className="sg-btn--icon" onClick={onToggleTheme} title={t.toggleTheme}>
           {theme === 'dark' ? '☀️' : '🌙'}
         </button>

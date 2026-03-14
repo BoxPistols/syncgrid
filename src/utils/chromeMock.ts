@@ -26,7 +26,32 @@ if (!IS_EXTENSION) {
     id: '0',
     title: '',
     children: [
-      { id: '1', parentId: '0', title: 'Bookmarks Bar', children: [] },
+      {
+        id: '1',
+        parentId: '0',
+        title: 'Bookmarks Bar',
+        children: [
+          {
+            id: '60',
+            parentId: '1',
+            title: 'Tech',
+            children: [
+              { id: '61', parentId: '60', title: 'Hacker News', url: 'https://news.ycombinator.com', dateAdded: Date.now() },
+              { id: '62', parentId: '60', title: 'Reddit', url: 'https://reddit.com', dateAdded: Date.now() },
+              { id: '63', parentId: '60', title: 'Zenn', url: 'https://zenn.dev', dateAdded: Date.now() },
+            ],
+          },
+          {
+            id: '64',
+            parentId: '1',
+            title: 'News',
+            children: [
+              { id: '65', parentId: '64', title: 'NHK', url: 'https://www3.nhk.or.jp', dateAdded: Date.now() },
+              { id: '66', parentId: '64', title: 'BBC', url: 'https://bbc.com', dateAdded: Date.now() },
+            ],
+          },
+        ],
+      },
       {
         id: '2',
         parentId: '0',
@@ -170,6 +195,9 @@ if (!IS_EXTENSION) {
   g.chrome = {
     runtime: { id: '' },
     bookmarks: {
+      getTree: () => {
+        return Promise.resolve([toTreeNode(root)])
+      },
       search: (query: { title?: string }) => {
         const all = flattenAll(root)
         const results = all.filter((n) => {
@@ -263,6 +291,10 @@ if (!IS_EXTENSION) {
           return Promise.resolve()
         },
       },
+    },
+    permissions: {
+      contains: () => Promise.resolve(true),
+      request: () => Promise.resolve(true),
     },
   } as unknown as typeof chrome
 

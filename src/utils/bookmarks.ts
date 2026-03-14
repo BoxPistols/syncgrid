@@ -195,3 +195,72 @@ export function flattenGroups(groups: SyncGridGroup[]): SyncGridGroup[] {
   }
   return result
 }
+
+/** Chrome bookmark tree内のフォルダ情報 */
+export interface ChromeFolder {
+  id: string
+  title: string
+  path: string
+  bookmarkCount: number
+  children: chrome.bookmarks.BookmarkTreeNode[]
+}
+
+/**
+ * Chromeブックマークツリーからインポート可能なフォルダ一覧を取得
+ * __SyncGrid__ フォルダは除外
+ */
+export async function getImportableFolders(): Promise<ChromeFolder[]> {
+  const tree = await chrome.bookmarks.getTree()
+  const folders: ChromeFolder[] = []
+
+  function countBookmarks(node: chrome.bookmarks.BookmarkTreeNode): number {
+    if (node.url) return 1
+    return (node.children ?? []).reduce((sum, c) => sum + countBookmarks(c), 0)
+  }
+
+  function traverse(node: chrome.bookmarks.BookmarkTreeNode, path: string) {
+    if (node.title === SYNCGRID_ROOT) return
+    if (!node.url && node.children) {
+      // ルートノード(id=0)とその直下は表示しない（Bookmarks Bar等の中身を見せる）
+      if (node.id !== '0' && node.id !== '1' && node.id !== '2') {
+        folders.push({
+          id: node.id,
+          title: node.title,
+          path,
+          bookmarkCount: countBookmarks(node),
+          children: node.children,
+        })
+      }
+      for (const child of node.children) {
+        if (!child.url) {
+          const childPath = path ? `${path} / ${node.title}` : node.title
+          traverse(child, childPath)
+        }
+      }
+    }
+  }
+
+  for (const root of tree) {
+    traverse(root, '')
+  }
+
+  return folders
+}
+
+/**
+ * Chromeブックマークフォルダの内容をSyncGridにインポート（再帰コピー）
+ */
+export async function importChromeFolder(folderId: string, targetParentId: string): Promise<void> {
+  const [folder] = await chrome.bookmarks.getSubTree(folderId)
+  if (!folder.children) return
+
+  const group = await createGroup(folder.title, targetParentId)
+
+  for (const child of folder.children) {
+    if (child.url) {
+      await addBookmark(group.id, child.title, child.url)
+    } else {
+      await importChromeFolder(child.id, group.id)
+    }
+  }
+}

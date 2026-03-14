@@ -2,7 +2,7 @@ export const ja = {
   // App
   loading: '読み込み中…',
   // TopBar
-  searchPlaceholder: 'ブックマークを検索…',
+  searchPlaceholder: (modKey: string) => `ブックマークを検索… (${modKey}K)`,
   toggleTheme: 'テーマ切替',
   settings: '設定',
   // TabBar
@@ -10,7 +10,7 @@ export const ja = {
   groupNamePlaceholder: 'グループ名…',
   // Toolbar
   back: '戻る',
-  addBookmark: '＋ 追加',
+  addBookmark: (modKey: string) => `＋ 追加 (${modKey}N)`,
   newFolder: '📁 新規フォルダ',
   cancel: 'キャンセル',
   // Search
@@ -29,7 +29,8 @@ export const ja = {
   confirmDeleteTab: (name: string) => `「${name}」タブとその中身をすべて削除しますか？`,
   // Bookmark form
   urlPlaceholder: 'URL（例: github.com）',
-  titlePlaceholder: 'タイトル（空欄ならURLを使用）',
+  titlePlaceholder: 'タイトル（自動取得・空欄ならURLを使用）',
+  submitHint: (modKey: string, enterKey: string) => `${modKey}+${enterKey} で追加`,
   add: '追加',
   // Edit modal
   editBookmark: 'ブックマークを編集',
@@ -74,7 +75,9 @@ export const ja = {
   aiApiKeyPlaceholder: 'sk-...',
   aiModel: 'モデル',
   aiDesc: 'AIを使ってブックマークのタイトル自動生成などが利用できます。APIキーはローカルにのみ保存されます。',
-  aiGenerateTitle: 'AI',
+  aiGenerateTitle: 'AI整理',
+  fetchingTitle: 'タイトル取得中…',
+  refetchTitle: '再取得',
   aiGenerating: '生成中…',
   aiError: 'AI生成に失敗しました',
   aiNotConfigured: 'AI設定が未構成です。設定画面からAPIキーを設定してください。',
@@ -90,4 +93,43 @@ export const ja = {
   securityDesc:
     '• データはChrome Bookmarks APIにのみ保存されます\n• 外部サーバーへの送信は一切ありません\n• ローカル同期はユーザーが明示的に選択したフォルダのみに書き込みます\n• エクスポートファイルは暗号化されていません — 安全な場所に保管してください\n• AI APIキーはローカルにのみ保存され、選択したプロバイダにのみ送信されます',
   close: '閉じる',
+  confirmOk: '実行',
+  menu: 'メニュー',
+  // Sort
+  sort: 'ソート',
+  sortManual: '手動',
+  sortNameAsc: '名前 A→Z',
+  sortNameDesc: '名前 Z→A',
+  sortDateNew: '新しい順',
+  sortDateOld: '古い順',
+  sortDomain: 'ドメイン順',
+  // Layout
+  layout: 'レイアウト',
+  layoutCard: 'カード',
+  layoutList: 'リスト',
+  layoutCompact: 'コンパクト',
+  // Chrome bookmark import
+  importChrome: 'Chromeブックマークからインポート',
+  importChromeDesc: '既存のChromeブックマークフォルダをSyncGridに取り込みます。',
+  importSelected: '選択したフォルダをインポート',
+  selectAll: 'すべて選択',
+  deselectAll: 'すべて解除',
+  noFolders: 'インポート可能なフォルダが見つかりません',
+  importChromeSuccess: (n: number) => `${n}件のフォルダをインポートしました`,
+  bookmarkCount: (n: number) => `${n}件のブックマーク`,
+  // Selection
+  selected: (n: number) => `${n}件選択中`,
+  deleteSelected: '選択を削除',
+  clearSelection: '選択解除',
+  // Shortcuts
+  shortcuts: 'キーボードショートカット',
+  shortcutSearch: '検索',
+  shortcutAddBookmark: 'ブックマーク追加',
+  shortcutLayoutCard: 'カード表示',
+  shortcutLayoutList: 'リスト表示',
+  shortcutLayoutCompact: 'コンパクト表示',
+  shortcutDeleteSelected: '選択削除',
+  shortcutSelectAll: 'すべて選択',
+  shortcutPressKey: 'キーを押してください…',
+  shortcutReset: '初期化',
 } as const

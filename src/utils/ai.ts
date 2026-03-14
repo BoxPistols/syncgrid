@@ -10,6 +10,7 @@
  */
 
 import type { AISettings } from '../types'
+import { fetchPageTitle } from './fetchTitle'
 
 /** Test AI API connection by calling a lightweight endpoint */
 export async function testAiConnection(settings: AISettings): Promise<{ ok: boolean; error?: string }> {
@@ -42,13 +43,29 @@ export async function testAiConnection(settings: AISettings): Promise<{ ok: bool
   }
 }
 
-/** Generate a bookmark title from a URL using the configured AI provider */
+/**
+ * URLからブックマークタイトルを生成
+ * 1. まずページの<title>タグを直接取得（CORS許可時）
+ * 2. 取得できない場合はAIにフォールバック
+ */
 export async function generateTitle(url: string, settings: AISettings): Promise<string> {
+  // まずページの<title>タグを直接取得
+  const pageTitle = await fetchPageTitle(url)
+  if (pageTitle) return pageTitle
+
+  // AI フォールバック
   if (settings.provider === 'none') {
     throw new Error('AI provider not configured')
   }
 
-  const prompt = `Given this URL, generate a concise, descriptive bookmark title (max 60 chars). Return ONLY the title text, nothing else.\n\nURL: ${url}`
+  const prompt = [
+    'Given this URL, generate a concise, descriptive bookmark title (max 60 chars).',
+    'IMPORTANT: Use the SAME LANGUAGE as the page content. If the page is Japanese, respond in Japanese. Do NOT translate.',
+    'If you can determine the actual page title from the URL structure, use that.',
+    'Return ONLY the title text, nothing else.',
+    '',
+    `URL: ${url}`,
+  ].join('\n')
 
   if (settings.provider === 'openai') {
     return callOpenAI(prompt, settings.openaiApiKey, settings.openaiModel)
@@ -74,7 +91,11 @@ async function callOpenAI(prompt: string, apiKey: string, model: string): Promis
     body: JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: 'You are a helpful assistant that generates concise bookmark titles.' },
+        {
+          role: 'system',
+          content:
+            'You are a helpful assistant that generates concise bookmark titles. Always respond in the same language as the page content. Never translate.',
+        },
         { role: 'user', content: prompt },
       ],
       max_tokens: 100,

@@ -1,4 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useFocusTrap } from '../hooks/useFocusTrap'
+import { ConfirmDialog } from './ConfirmDialog'
+import { BookmarkImport } from './BookmarkImport'
+import { ShortcutEditor } from './ShortcutEditor'
 import type { SyncGridSettings, SyncGridGroup, AIProvider } from '../types'
 import { OPENAI_MODELS, GEMINI_MODELS } from '../types'
 import type { Messages } from '../i18n'
@@ -21,18 +25,25 @@ interface Props {
   t: Messages
   onUpdateSettings: (patch: Partial<SyncGridSettings>) => void
   onClose: () => void
+  onRefresh: () => void
 }
 
-export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }: Props) {
+export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, onRefresh }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const aiTestTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const syncTestTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const trapRef = useFocusTrap<HTMLDivElement>()
   const [syncFolderName, setSyncFolderName] = useState<string | null>(null)
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [aiTestStatus, setAiTestStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
   const [aiTestError, setAiTestError] = useState('')
   const [syncTestStatus, setSyncTestStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
+  const [confirmState, setConfirmState] = useState<{
+    message: string
+    onConfirm: () => void
+  } | null>(null)
+  const [showImport, setShowImport] = useState(false)
 
   useEffect(() => {
     getSyncFolderName().then(setSyncFolderName)
@@ -57,21 +68,25 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
       if (!file) return
       e.target.value = ''
 
-      if (!confirm(t.importConfirm)) return
-
-      try {
-        const text = await readFileAsText(file)
-        const validated = await validateImport(text)
-        if (!validated) {
-          setImportStatus('error')
-          return
-        }
-        await importToBookmarks(validated.data)
-        setImportStatus('success')
-        setTimeout(() => location.reload(), 1500)
-      } catch {
-        setImportStatus('error')
-      }
+      setConfirmState({
+        message: t.importConfirm,
+        onConfirm: async () => {
+          setConfirmState(null)
+          try {
+            const text = await readFileAsText(file)
+            const validated = await validateImport(text)
+            if (!validated) {
+              setImportStatus('error')
+              return
+            }
+            await importToBookmarks(validated.data)
+            setImportStatus('success')
+            setTimeout(() => location.reload(), 1500)
+          } catch {
+            setImportStatus('error')
+          }
+        },
+      })
     },
     [t],
   )
@@ -151,257 +166,311 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
   }
 
   return (
-    <div className="sg-modal-overlay" onClick={onClose}>
-      <div className="sg-modal sg-modal--wide" onClick={(e) => e.stopPropagation()}>
-        <div className="sg-modal__header">
-          <span className="sg-modal__title">{t.settingsTitle}</span>
-          <button className="sg-modal__close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
-        <div className="sg-modal__body sg-settings">
-          {/* Language */}
-          <div className="sg-settings__section">
-            <h3 className="sg-settings__label">{t.language}</h3>
-            <div className="sg-settings__row">
-              <select
-                className="sg-input sg-input--sm"
-                value={settings.locale}
-                onChange={(e) => onUpdateSettings({ locale: e.target.value as Locale })}
-              >
-                <option value="ja">日本語</option>
-                <option value="en">English</option>
-              </select>
-            </div>
+    <>
+      <div className="sg-modal-overlay" onClick={onClose}>
+        <div
+          ref={trapRef}
+          className="sg-modal sg-modal--wide"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t.settingsTitle}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onClose()
+          }}
+        >
+          <div className="sg-modal__header">
+            <span className="sg-modal__title">{t.settingsTitle}</span>
+            <button className="sg-modal__close" onClick={onClose} aria-label={t.close}>
+              ✕
+            </button>
           </div>
 
-          {/* Theme */}
-          <div className="sg-settings__section">
-            <h3 className="sg-settings__label">{t.theme}</h3>
-            <div className="sg-settings__row sg-settings__row--btns">
-              {(['light', 'dark', 'system'] as const).map((th) => (
-                <button
-                  key={th}
-                  className={`sg-btn sg-btn--sm ${settings.theme === th ? 'sg-btn--primary' : 'sg-btn--ghost'}`}
-                  onClick={() => onUpdateSettings({ theme: th })}
+          <div className="sg-modal__body sg-settings">
+            {/* Language */}
+            <div className="sg-settings__section">
+              <h3 className="sg-settings__label">{t.language}</h3>
+              <div className="sg-settings__row">
+                <select
+                  className="sg-input sg-input--sm"
+                  value={settings.locale}
+                  onChange={(e) => onUpdateSettings({ locale: e.target.value as Locale })}
                 >
-                  {th === 'light' ? t.themeLight : th === 'dark' ? t.themeDark : t.themeSystem}
+                  <option value="ja">日本語</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Theme */}
+            <div className="sg-settings__section">
+              <h3 className="sg-settings__label">{t.theme}</h3>
+              <div className="sg-settings__row sg-settings__row--btns">
+                {(['light', 'dark', 'system'] as const).map((th) => (
+                  <button
+                    key={th}
+                    className={`sg-btn sg-btn--sm ${settings.theme === th ? 'sg-btn--primary' : 'sg-btn--ghost'}`}
+                    onClick={() => onUpdateSettings({ theme: th })}
+                  >
+                    {th === 'light' ? t.themeLight : th === 'dark' ? t.themeDark : t.themeSystem}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <hr className="sg-settings__divider" />
+
+            {/* Data export / import */}
+            <div className="sg-settings__section">
+              <h3 className="sg-settings__label">{t.dataManagement}</h3>
+              <div className="sg-settings__row sg-settings__row--btns">
+                <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleExport}>
+                  📤 {t.exportData}
                 </button>
-              ))}
-            </div>
-          </div>
-
-          <hr className="sg-settings__divider" />
-
-          {/* Data export / import */}
-          <div className="sg-settings__section">
-            <h3 className="sg-settings__label">{t.dataManagement}</h3>
-            <div className="sg-settings__row sg-settings__row--btns">
-              <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleExport}>
-                📤 {t.exportData}
+                <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleImportClick}>
+                  📥 {t.importData}
+                </button>
+              </div>
+              <button
+                className="sg-btn sg-btn--sm sg-btn--ghost"
+                onClick={() => setShowImport(true)}
+              >
+                📂 {t.importChrome}
               </button>
-              <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleImportClick}>
-                📥 {t.importData}
-              </button>
+              <p className="sg-settings__desc">{t.exportDesc}</p>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".json"
+                className="sg-sr-only"
+                onChange={handleFileChange}
+                tabIndex={-1}
+              />
+              {importStatus === 'success' && (
+                <p className="sg-settings__status sg-settings__status--ok">✅ {t.importSuccess}</p>
+              )}
+              {importStatus === 'error' && (
+                <p className="sg-settings__status sg-settings__status--err">❌ {t.importError}</p>
+              )}
             </div>
-            <p className="sg-settings__desc">{t.exportDesc}</p>
-            <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileChange} />
-            {importStatus === 'success' && (
-              <p className="sg-settings__status sg-settings__status--ok">✅ {t.importSuccess}</p>
-            )}
-            {importStatus === 'error' && (
-              <p className="sg-settings__status sg-settings__status--err">❌ {t.importError}</p>
-            )}
-          </div>
 
-          <hr className="sg-settings__divider" />
+            <hr className="sg-settings__divider" />
 
-          {/* Local folder sync */}
-          <div className="sg-settings__section">
-            <h3 className="sg-settings__label">{t.localSync}</h3>
-            <p className="sg-settings__desc">{t.syncDesc}</p>
+            {/* Local folder sync */}
+            <div className="sg-settings__section">
+              <h3 className="sg-settings__label">{t.localSync}</h3>
+              <p className="sg-settings__desc">{t.syncDesc}</p>
 
-            {isSyncSupported() ? (
-              syncFolderName ? (
-                <div className="sg-settings__sync-info">
-                  <div className="sg-settings__sync-row">
-                    <span className="sg-settings__sync-badge">✅ {t.syncActive}</span>
-                    <span className="sg-settings__sync-folder">📁 {syncFolderName}</span>
+              {isSyncSupported() ? (
+                syncFolderName ? (
+                  <div className="sg-settings__sync-info">
+                    <div className="sg-settings__sync-row">
+                      <span className="sg-settings__sync-badge">✅ {t.syncActive}</span>
+                      <span className="sg-settings__sync-folder">📁 {syncFolderName}</span>
+                    </div>
+                    <p className="sg-settings__desc">{t.lastSynced(formatDate(settings.lastSyncedAt))}</p>
+                    <div className="sg-settings__row sg-settings__row--btns">
+                      <button
+                        className="sg-btn sg-btn--sm sg-btn--primary"
+                        onClick={handleSyncNow}
+                        disabled={syncStatus === 'syncing'}
+                      >
+                        {syncStatus === 'syncing' ? '⏳' : '🔄'} {t.syncNow}
+                      </button>
+                      <button
+                        className="sg-btn sg-btn--sm sg-btn--ghost"
+                        onClick={handleSyncTest}
+                        disabled={syncTestStatus === 'testing'}
+                      >
+                        {syncTestStatus === 'testing' ? '⏳' : '🔗'} {t.connectionTest}
+                      </button>
+                      <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleDisconnect}>
+                        {t.disconnectSync}
+                      </button>
+                    </div>
+                    {syncStatus === 'done' && <p className="sg-settings__status sg-settings__status--ok">✅ Synced!</p>}
+                    {syncStatus === 'error' && (
+                      <p className="sg-settings__status sg-settings__status--err">❌ Sync failed</p>
+                    )}
+                    {syncTestStatus === 'ok' && (
+                      <p className="sg-settings__status sg-settings__status--ok">✅ {t.syncTestOk}</p>
+                    )}
+                    {syncTestStatus === 'error' && (
+                      <p className="sg-settings__status sg-settings__status--err">❌ {t.syncTestFailed}</p>
+                    )}
                   </div>
-                  <p className="sg-settings__desc">{t.lastSynced(formatDate(settings.lastSyncedAt))}</p>
-                  <div className="sg-settings__row sg-settings__row--btns">
-                    <button
-                      className="sg-btn sg-btn--sm sg-btn--primary"
-                      onClick={handleSyncNow}
-                      disabled={syncStatus === 'syncing'}
-                    >
-                      {syncStatus === 'syncing' ? '⏳' : '🔄'} {t.syncNow}
-                    </button>
+                ) : (
+                  <button className="sg-btn sg-btn--sm sg-btn--primary" onClick={handlePickFolder}>
+                    📁 {t.selectFolder}
+                  </button>
+                )
+              ) : (
+                <p className="sg-settings__desc sg-settings__desc--dim">
+                  ⚠️ File System Access API is not supported in this browser.
+                </p>
+              )}
+            </div>
+
+            <hr className="sg-settings__divider" />
+
+            {/* AI Settings */}
+            <div className="sg-settings__section">
+              <h3 className="sg-settings__label">🤖 {t.aiSettings}</h3>
+              <p className="sg-settings__desc">{t.aiDesc}</p>
+
+              {/* Provider */}
+              <label className="sg-label">{t.aiProvider}</label>
+              <div className="sg-settings__row sg-settings__row--btns">
+                {(['none', 'openai', 'gemini'] as const).map((p) => (
+                  <button
+                    key={p}
+                    className={`sg-btn sg-btn--sm ${settings.ai.provider === p ? 'sg-btn--primary' : 'sg-btn--ghost'}`}
+                    onClick={() => onUpdateSettings({ ai: { ...settings.ai, provider: p as AIProvider } })}
+                  >
+                    {p === 'none' ? t.aiProviderNone : p === 'openai' ? t.aiProviderOpenai : t.aiProviderGemini}
+                  </button>
+                ))}
+              </div>
+
+              {/* OpenAI Settings */}
+              {settings.ai.provider === 'openai' && (
+                <>
+                  <label className="sg-label">{t.aiApiKey}</label>
+                  <input
+                    type="password"
+                    className="sg-input"
+                    placeholder={t.aiApiKeyPlaceholder}
+                    value={settings.ai.openaiApiKey}
+                    onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, openaiApiKey: e.target.value } })}
+                    autoComplete="off"
+                  />
+                  <label className="sg-label">{t.aiModel}</label>
+                  <select
+                    className="sg-input sg-input--sm"
+                    value={settings.ai.openaiModel}
+                    onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, openaiModel: e.target.value } })}
+                  >
+                    {OPENAI_MODELS.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="sg-settings__row sg-settings__row--mt">
                     <button
                       className="sg-btn sg-btn--sm sg-btn--ghost"
-                      onClick={handleSyncTest}
-                      disabled={syncTestStatus === 'testing'}
+                      onClick={handleAiTest}
+                      disabled={aiTestStatus === 'testing' || !settings.ai.openaiApiKey}
                     >
-                      {syncTestStatus === 'testing' ? '⏳' : '🔗'} {t.connectionTest}
-                    </button>
-                    <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleDisconnect}>
-                      {t.disconnectSync}
+                      {aiTestStatus === 'testing' ? '⏳' : '🔗'}{' '}
+                      {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
                     </button>
                   </div>
-                  {syncStatus === 'done' && <p className="sg-settings__status sg-settings__status--ok">✅ Synced!</p>}
-                  {syncStatus === 'error' && (
-                    <p className="sg-settings__status sg-settings__status--err">❌ Sync failed</p>
+                  {aiTestStatus === 'ok' && (
+                    <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>
                   )}
-                  {syncTestStatus === 'ok' && (
-                    <p className="sg-settings__status sg-settings__status--ok">✅ {t.syncTestOk}</p>
+                  {aiTestStatus === 'error' && (
+                    <p className="sg-settings__status sg-settings__status--err">
+                      ❌ {t.connectionFailed}
+                      {aiTestError ? `: ${aiTestError}` : ''}
+                    </p>
                   )}
-                  {syncTestStatus === 'error' && (
-                    <p className="sg-settings__status sg-settings__status--err">❌ {t.syncTestFailed}</p>
+                </>
+              )}
+
+              {/* Gemini Settings */}
+              {settings.ai.provider === 'gemini' && (
+                <>
+                  <label className="sg-label">{t.aiApiKey}</label>
+                  <input
+                    type="password"
+                    className="sg-input"
+                    placeholder="AIza..."
+                    value={settings.ai.geminiApiKey}
+                    onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, geminiApiKey: e.target.value } })}
+                    autoComplete="off"
+                  />
+                  <label className="sg-label">{t.aiModel}</label>
+                  <select
+                    className="sg-input sg-input--sm"
+                    value={settings.ai.geminiModel}
+                    onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, geminiModel: e.target.value } })}
+                  >
+                    {GEMINI_MODELS.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="sg-settings__row sg-settings__row--mt">
+                    <button
+                      className="sg-btn sg-btn--sm sg-btn--ghost"
+                      onClick={handleAiTest}
+                      disabled={aiTestStatus === 'testing' || !settings.ai.geminiApiKey}
+                    >
+                      {aiTestStatus === 'testing' ? '⏳' : '🔗'}{' '}
+                      {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
+                    </button>
+                  </div>
+                  {aiTestStatus === 'ok' && (
+                    <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>
                   )}
-                </div>
-              ) : (
-                <button className="sg-btn sg-btn--sm sg-btn--primary" onClick={handlePickFolder}>
-                  📁 {t.selectFolder}
-                </button>
-              )
-            ) : (
-              <p className="sg-settings__desc" style={{ opacity: 0.6 }}>
-                ⚠️ File System Access API is not supported in this browser.
-              </p>
-            )}
-          </div>
-
-          <hr className="sg-settings__divider" />
-
-          {/* AI Settings */}
-          <div className="sg-settings__section">
-            <h3 className="sg-settings__label">🤖 {t.aiSettings}</h3>
-            <p className="sg-settings__desc">{t.aiDesc}</p>
-
-            {/* Provider */}
-            <label className="sg-label">{t.aiProvider}</label>
-            <div className="sg-settings__row sg-settings__row--btns">
-              {(['none', 'openai', 'gemini'] as const).map((p) => (
-                <button
-                  key={p}
-                  className={`sg-btn sg-btn--sm ${settings.ai.provider === p ? 'sg-btn--primary' : 'sg-btn--ghost'}`}
-                  onClick={() => onUpdateSettings({ ai: { ...settings.ai, provider: p as AIProvider } })}
-                >
-                  {p === 'none' ? t.aiProviderNone : p === 'openai' ? t.aiProviderOpenai : t.aiProviderGemini}
-                </button>
-              ))}
+                  {aiTestStatus === 'error' && (
+                    <p className="sg-settings__status sg-settings__status--err">
+                      ❌ {t.connectionFailed}
+                      {aiTestError ? `: ${aiTestError}` : ''}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
-            {/* OpenAI Settings */}
-            {settings.ai.provider === 'openai' && (
-              <>
-                <label className="sg-label">{t.aiApiKey}</label>
-                <input
-                  type="password"
-                  className="sg-input"
-                  placeholder={t.aiApiKeyPlaceholder}
-                  value={settings.ai.openaiApiKey}
-                  onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, openaiApiKey: e.target.value } })}
-                  autoComplete="off"
-                />
-                <label className="sg-label">{t.aiModel}</label>
-                <select
-                  className="sg-input sg-input--sm"
-                  value={settings.ai.openaiModel}
-                  onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, openaiModel: e.target.value } })}
-                >
-                  {OPENAI_MODELS.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="sg-settings__row" style={{ marginTop: 8 }}>
-                  <button
-                    className="sg-btn sg-btn--sm sg-btn--ghost"
-                    onClick={handleAiTest}
-                    disabled={aiTestStatus === 'testing' || !settings.ai.openaiApiKey}
-                  >
-                    {aiTestStatus === 'testing' ? '⏳' : '🔗'}{' '}
-                    {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
-                  </button>
-                </div>
-                {aiTestStatus === 'ok' && (
-                  <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>
-                )}
-                {aiTestStatus === 'error' && (
-                  <p className="sg-settings__status sg-settings__status--err">
-                    ❌ {t.connectionFailed}
-                    {aiTestError ? `: ${aiTestError}` : ''}
-                  </p>
-                )}
-              </>
-            )}
+            <hr className="sg-settings__divider" />
 
-            {/* Gemini Settings */}
-            {settings.ai.provider === 'gemini' && (
-              <>
-                <label className="sg-label">{t.aiApiKey}</label>
-                <input
-                  type="password"
-                  className="sg-input"
-                  placeholder="AIza..."
-                  value={settings.ai.geminiApiKey}
-                  onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, geminiApiKey: e.target.value } })}
-                  autoComplete="off"
-                />
-                <label className="sg-label">{t.aiModel}</label>
-                <select
-                  className="sg-input sg-input--sm"
-                  value={settings.ai.geminiModel}
-                  onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, geminiModel: e.target.value } })}
-                >
-                  {GEMINI_MODELS.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="sg-settings__row" style={{ marginTop: 8 }}>
-                  <button
-                    className="sg-btn sg-btn--sm sg-btn--ghost"
-                    onClick={handleAiTest}
-                    disabled={aiTestStatus === 'testing' || !settings.ai.geminiApiKey}
-                  >
-                    {aiTestStatus === 'testing' ? '⏳' : '🔗'}{' '}
-                    {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
-                  </button>
-                </div>
-                {aiTestStatus === 'ok' && (
-                  <p className="sg-settings__status sg-settings__status--ok">✅ {t.connectionOk}</p>
-                )}
-                {aiTestStatus === 'error' && (
-                  <p className="sg-settings__status sg-settings__status--err">
-                    ❌ {t.connectionFailed}
-                    {aiTestError ? `: ${aiTestError}` : ''}
-                  </p>
-                )}
-              </>
-            )}
+            {/* Shortcuts */}
+            <div className="sg-settings__section">
+              <h3 className="sg-settings__label">⌨️ {t.shortcuts}</h3>
+              <ShortcutEditor
+                shortcuts={settings.shortcuts}
+                onChange={(shortcuts) => onUpdateSettings({ shortcuts })}
+                t={t}
+              />
+            </div>
+
+            <hr className="sg-settings__divider" />
+
+            {/* Security */}
+            <div className="sg-settings__section">
+              <h3 className="sg-settings__label">🔒 {t.security}</h3>
+              <p className="sg-settings__desc sg-settings__desc--pre">{t.securityDesc}</p>
+            </div>
           </div>
 
-          <hr className="sg-settings__divider" />
-
-          {/* Security */}
-          <div className="sg-settings__section">
-            <h3 className="sg-settings__label">🔒 {t.security}</h3>
-            <p className="sg-settings__desc sg-settings__desc--pre">{t.securityDesc}</p>
+          <div className="sg-modal__footer">
+            <div className="sg-spacer" />
+            <button className="sg-btn sg-btn--ghost" onClick={onClose}>
+              {t.close}
+            </button>
           </div>
-        </div>
-
-        <div className="sg-modal__footer">
-          <div style={{ flex: 1 }} />
-          <button className="sg-btn sg-btn--ghost" onClick={onClose}>
-            {t.close}
-          </button>
         </div>
       </div>
-    </div>
+
+      {confirmState && (
+        <ConfirmDialog
+          message={confirmState.message}
+          onConfirm={confirmState.onConfirm}
+          onCancel={() => setConfirmState(null)}
+          confirmLabel={t.confirmOk}
+          t={t}
+        />
+      )}
+      {showImport && (
+        <BookmarkImport
+          onDone={onRefresh}
+          onClose={() => setShowImport(false)}
+          t={t}
+        />
+      )}
+    </>
   )
 }

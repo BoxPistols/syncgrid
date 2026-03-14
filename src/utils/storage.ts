@@ -1,15 +1,36 @@
-import { DEFAULT_SETTINGS, type SyncGridSettings, type BookmarkMeta } from '../types'
+import {
+  DEFAULT_SETTINGS,
+  DEFAULT_AI_SETTINGS,
+  DEFAULT_SHORTCUTS,
+  type SyncGridSettings,
+  type BookmarkMeta,
+  type LayoutMode,
+  type SortMode,
+} from '../types'
 
 const SETTINGS_KEY = 'syncgrid_settings'
 const META_PREFIX = 'meta_'
 
 /**
- * 設定を読み込み
+ * 設定を読み込み（ネストされたオブジェクトもデフォルト値とマージ）
  */
 export async function loadSettings(): Promise<SyncGridSettings> {
   const result = await chrome.storage.local.get(SETTINGS_KEY)
-  const stored = result[SETTINGS_KEY] as Partial<SyncGridSettings> | undefined
-  return { ...DEFAULT_SETTINGS, ...stored }
+  const stored = result[SETTINGS_KEY]
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) {
+    return { ...DEFAULT_SETTINGS }
+  }
+  const s = stored as Partial<SyncGridSettings>
+  const VALID_LAYOUTS: LayoutMode[] = ['card', 'list', 'compact']
+  const VALID_SORTS: SortMode[] = ['manual', 'name-asc', 'name-desc', 'date-new', 'date-old', 'domain']
+  return {
+    ...DEFAULT_SETTINGS,
+    ...s,
+    ai: { ...DEFAULT_AI_SETTINGS, ...(s.ai ?? {}) },
+    layout: VALID_LAYOUTS.includes(s.layout as LayoutMode) ? (s.layout as LayoutMode) : DEFAULT_SETTINGS.layout,
+    sort: VALID_SORTS.includes(s.sort as SortMode) ? (s.sort as SortMode) : DEFAULT_SETTINGS.sort,
+    shortcuts: { ...DEFAULT_SHORTCUTS, ...(s.shortcuts ?? {}) },
+  }
 }
 
 /**

@@ -12,6 +12,7 @@ import { EditBookmarkModal } from './components/EditBookmarkModal'
 import { ContextMenu, type MenuItem } from './components/ContextMenu'
 import { AddBookmarkForm } from './components/AddBookmarkForm'
 import { SettingsPanel } from './components/SettingsPanel'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import {
   addBookmark,
   removeBookmark,
@@ -23,7 +24,9 @@ import {
   flattenGroups,
   countAll,
 } from './utils/bookmarks'
-import type { SyncGridItem, SyncGridGroup } from './types'
+import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
+import { isComposing, matchesBinding } from './utils/keyboard'
+import { getDomain } from './utils/favicon'
 
 import './styles/global.css'
 
@@ -48,7 +51,7 @@ export default function App() {
   const [editItem, setEditItem] = useState<SyncGridItem | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [creatingGroup, setCreatingGroup] = useState(false)
+  const [creatingGroup, setCreatingGroup] = useState<'tab' | 'subfolder' | false>(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
@@ -57,6 +60,12 @@ export default function App() {
     y: number
     items: MenuItem[]
   } | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    message: string
+    onConfirm: () => void
+    confirmLabel?: string
+  } | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // --- Active Tab (computed — stale ID falls back to first group) ---
   const activeTabId = useMemo(() => {
@@ -117,10 +126,136 @@ export default function App() {
     return results
   }, [query, groups])
 
+  // --- Selection handlers ---
+  const toggleSelect = useCallback((id: string, e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey) {
+      // Cmd/Ctrl+Click → トグル選択
+      e.preventDefault()
+      e.stopPropagation()
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+        return next
+      })
+      return true
+    }
+    return false
+  }, [])
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (selectedIds.size === 0) return
+    setConfirmDialog({
+      message: t.selected(selectedIds.size),
+      confirmLabel: t.delete,
+      onConfirm: async () => {
+        setConfirmDialog(null)
+        for (const id of selectedIds) {
+          try {
+            await removeBookmark(id)
+          } catch {
+            try {
+              await deleteGroup(id)
+            } catch { /* skip */ }
+          }
+        }
+        setSelectedIds(new Set())
+        refresh()
+      },
+    })
+  }, [selectedIds, refresh, t])
+
+  // --- Global keyboard shortcuts (設定ベース) ---
+  useEffect(() => {
+    const sc = settings.shortcuts
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (isComposing(e)) return
+
+      if (matchesBinding(e, sc.search)) {
+        e.preventDefault()
+        document.querySelector<HTMLInputElement>('.sg-topbar__search-input')?.focus()
+      } else if (matchesBinding(e, sc.addBookmark)) {
+        e.preventDefault()
+        setShowAddForm(true)
+      } else if (matchesBinding(e, sc.layoutCard)) {
+        e.preventDefault()
+        updateSettings({ layout: 'card' })
+      } else if (matchesBinding(e, sc.layoutList)) {
+        e.preventDefault()
+        updateSettings({ layout: 'list' })
+      } else if (matchesBinding(e, sc.layoutCompact)) {
+        e.preventDefault()
+        updateSettings({ layout: 'compact' })
+      } else if (matchesBinding(e, sc.deleteSelected)) {
+        if (selectedIds.size > 0) {
+          e.preventDefault()
+          handleDeleteSelected()
+        }
+      } else if (matchesBinding(e, sc.selectAll)) {
+        if (currentFolder) {
+          e.preventDefault()
+          const allIds = new Set([
+            ...currentFolder.items.map((i) => i.id),
+            ...currentFolder.children.map((c) => c.id),
+          ])
+          setSelectedIds(allIds)
+        }
+      } else if (e.key === 'Escape' && selectedIds.size > 0) {
+        setSelectedIds(new Set())
+      }
+    }
+
+    document.addEventListener('keydown', handleGlobalKeyDown)
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, currentFolder])
+
+  // --- Page transition key ---
+  const pageKey = searchResults ? 'search' : `${activeTabId}/${path.join('/')}`
+
+  // --- Layout class ---
+  const gridClass = [
+    'sg-dial__grid',
+    settings.layout !== 'card' && `sg-dial__grid--${settings.layout}`,
+    settings.layout === 'card' && settings.cardSize !== 'md' && `sg-dial__grid--size-${settings.cardSize}`,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  // --- Sort ---
+  const sortItems = useCallback(
+    (items: SyncGridItem[]): SyncGridItem[] => {
+      if (settings.sort === 'manual') return items
+      const sorted = [...items]
+      switch (settings.sort) {
+        case 'name-asc':
+          return sorted.sort((a, b) => a.title.localeCompare(b.title))
+        case 'name-desc':
+          return sorted.sort((a, b) => b.title.localeCompare(a.title))
+        case 'date-new':
+          return sorted.sort((a, b) => (b.dateAdded ?? 0) - (a.dateAdded ?? 0))
+        case 'date-old':
+          return sorted.sort((a, b) => (a.dateAdded ?? 0) - (b.dateAdded ?? 0))
+        case 'domain':
+          return sorted.sort((a, b) => getDomain(a.url).localeCompare(getDomain(b.url)))
+        default:
+          return items
+      }
+    },
+    [settings.sort],
+  )
+
+  const handleChangeSort = useCallback(
+    (sort: SortMode) => {
+      updateSettings({ sort })
+    },
+    [updateSettings],
+  )
+
   // --- Handlers ---
   const handleSelectTab = useCallback(
     (id: string) => {
       setPath([])
+      setSelectedIds(new Set())
       updateSettings({ activeTabId: id, lastPath: [] })
       setQuery('')
     },
@@ -129,11 +264,19 @@ export default function App() {
 
   const handleOpenFolder = useCallback((group: SyncGridGroup) => {
     setPath((prev) => [...prev, group.id])
+    setSelectedIds(new Set())
   }, [])
 
   const handleBreadcrumbClick = useCallback((index: number) => {
     setPath((prev) => prev.slice(0, index))
   }, [])
+
+  const handleChangeLayout = useCallback(
+    (layout: LayoutMode) => {
+      updateSettings({ layout })
+    },
+    [updateSettings],
+  )
 
   const handleToggleTheme = useCallback(() => {
     updateSettings((prev) => ({
@@ -142,11 +285,26 @@ export default function App() {
   }, [updateSettings])
 
   const handleAddGroup = useCallback(() => {
-    setCreatingGroup(true)
+    setCreatingGroup('tab')
     setNewGroupName('')
   }, [])
 
+  // タブバー「＋」→ 常にSyncGridルート直下にグループ（タブ）作成
   const handleCreateGroup = useCallback(async () => {
+    const name = newGroupName.trim()
+    if (!name) {
+      setCreatingGroup(false)
+      return
+    }
+    const rootId = await getRootId()
+    await createGroup(name, rootId)
+    setCreatingGroup(false)
+    setNewGroupName('')
+    await refresh()
+  }, [newGroupName, refresh])
+
+  // ツールバー「新規フォルダ」→ 現在のフォルダ内にサブフォルダ作成
+  const handleCreateSubfolder = useCallback(async () => {
     const name = newGroupName.trim()
     if (!name) {
       setCreatingGroup(false)
@@ -231,15 +389,20 @@ export default function App() {
             label: t.delete,
             icon: '🗑️',
             danger: true,
-            action: async () => {
-              if (confirm(t.confirmDeleteFolder(group.title))) {
-                await deleteGroup(group.id)
-                setPath((prev) => {
-                  const idx = prev.indexOf(group.id)
-                  return idx >= 0 ? prev.slice(0, idx) : prev
-                })
-                refresh()
-              }
+            action: () => {
+              setConfirmDialog({
+                message: t.confirmDeleteFolder(group.title),
+                confirmLabel: t.delete,
+                onConfirm: async () => {
+                  setConfirmDialog(null)
+                  await deleteGroup(group.id)
+                  setPath((prev) => {
+                    const idx = prev.indexOf(group.id)
+                    return idx >= 0 ? prev.slice(0, idx) : prev
+                  })
+                  refresh()
+                },
+              })
             },
           },
         ],
@@ -277,15 +440,20 @@ export default function App() {
             label: t.delete,
             icon: '🗑️',
             danger: true,
-            action: async () => {
-              if (confirm(t.confirmDeleteTab(group.title))) {
-                await deleteGroup(group.id)
-                if (activeTabId === group.id) {
-                  const rem = groups.filter((g) => g.id !== group.id)
-                  if (rem.length > 0) updateSettings({ activeTabId: rem[0].id })
-                }
-                refresh()
-              }
+            action: () => {
+              setConfirmDialog({
+                message: t.confirmDeleteTab(group.title),
+                confirmLabel: t.delete,
+                onConfirm: async () => {
+                  setConfirmDialog(null)
+                  await deleteGroup(group.id)
+                  if (activeTabId === group.id) {
+                    const rem = groups.filter((g) => g.id !== group.id)
+                    if (rem.length > 0) updateSettings({ activeTabId: rem[0].id })
+                  }
+                  refresh()
+                },
+              })
             },
           },
         ],
@@ -305,15 +473,21 @@ export default function App() {
         theme={settings.theme}
         onToggleTheme={handleToggleTheme}
         onOpenSettings={() => setShowSettings(true)}
+        layout={settings.layout}
+        cardSize={settings.cardSize}
+        onChangeLayout={handleChangeLayout}
+        onChangeCardSize={(size) => updateSettings({ cardSize: size })}
         t={t}
       />
 
       {/* Tab Bar */}
-      <div className="sg-tabbar">
+      <div className="sg-tabbar" role="tablist">
         {groups.map((g) => (
           <button
             key={g.id}
             className={`sg-tab ${g.id === activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id ? 'sg-tab--drop-target' : ''}`}
+            role="tab"
+            aria-selected={g.id === activeTabId}
             onClick={() => handleSelectTab(g.id)}
             onContextMenu={(e) => handleTabContext(g, e)}
             onDoubleClick={() => {
@@ -343,7 +517,7 @@ export default function App() {
             )}
           </button>
         ))}
-        {creatingGroup ? (
+        {creatingGroup === 'tab' ? (
           <div className="sg-tab sg-tab--creating">
             <input
               className="sg-tab__rename"
@@ -359,148 +533,207 @@ export default function App() {
             />
           </div>
         ) : (
-          <button className="sg-tab sg-tab--add" onClick={handleAddGroup} title={t.newGroup}>
+          <button className="sg-tab sg-tab--add" onClick={handleAddGroup} title={t.newGroup} aria-label={t.newGroup}>
             ＋
           </button>
         )}
       </div>
 
       {/* Content */}
-      {searchResults ? (
-        <div className="sg-dial">
-          <div className="sg-toolbar">
-            <span className="sg-toolbar__title">{t.searchResults(query, searchResults.length)}</span>
-          </div>
-          {searchResults.length > 0 ? (
-            <div className="sg-dial__grid">
-              {searchResults.map((item) => (
-                <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} />
-              ))}
-            </div>
-          ) : (
-            <div className="sg-empty">
-              <div className="sg-empty__icon">🔍</div>
-              <p className="sg-empty__text">{t.noSearchResults}</p>
-            </div>
-          )}
+      {/* Selection bar */}
+      {selectedIds.size > 0 && (
+        <div className="sg-selection-bar">
+          <span>{t.selected(selectedIds.size)}</span>
+          <button className="sg-btn sg-btn--sm sg-btn--danger" onClick={handleDeleteSelected}>
+            {t.deleteSelected}
+          </button>
+          <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setSelectedIds(new Set())}>
+            {t.clearSelection}
+          </button>
         </div>
-      ) : groups.length === 0 ? (
-        <div className="sg-empty">
-          <div className="sg-empty__icon">📂</div>
-          <p className="sg-empty__text" style={{ whiteSpace: 'pre-line' }}>
-            {t.noGroups}
-          </p>
-        </div>
-      ) : currentFolder ? (
-        <div className="sg-dial">
-          {path.length > 0 && (
-            <div className="sg-breadcrumb">
-              {breadcrumb.map((crumb, i) => {
-                const crumbParentId = i === 0 ? activeGroup?.id : breadcrumb[i]?.id
-                return (
-                  <span key={crumb.id || 'root'}>
-                    {i > 0 && <span className="sg-breadcrumb__sep"> › </span>}
-                    {i < breadcrumb.length - 1 && crumbParentId ? (
-                      <button
-                        className={`sg-breadcrumb__item ${dragState.dropBreadcrumbId === crumbParentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
-                        onClick={() => handleBreadcrumbClick(i)}
-                        {...getBreadcrumbDropHandlers(crumbParentId)}
-                      >
-                        {crumb.title}
-                      </button>
-                    ) : (
-                      <span className="sg-breadcrumb__current">{crumb.title}</span>
-                    )}
-                  </span>
-                )
-              })}
-            </div>
-          )}
+      )}
 
-          <div className="sg-toolbar">
-            {path.length > 0 &&
-              (() => {
-                const parentId = path.length >= 2 ? path[path.length - 2] : activeGroup?.id
-                return parentId ? (
-                  <button
-                    className={`sg-btn--icon ${dragState.dropBreadcrumbId === parentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
-                    onClick={() => setPath((p) => p.slice(0, -1))}
-                    title={t.back}
-                    {...getBreadcrumbDropHandlers(parentId)}
-                  >
-                    ←
-                  </button>
-                ) : (
-                  <button className="sg-btn--icon" onClick={() => setPath((p) => p.slice(0, -1))} title={t.back}>
-                    ←
-                  </button>
-                )
-              })()}
-            <span className="sg-toolbar__title">{path.length === 0 ? '' : currentFolder.title}</span>
-            <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>
-              {showAddForm ? t.cancel : t.addBookmark}
-            </button>
-            <button
-              className="sg-btn sg-btn--sm sg-btn--ghost"
-              onClick={() => {
-                setCreatingGroup(true)
-                setNewGroupName('')
-              }}
-            >
-              {t.newFolder}
-            </button>
+      <div key={pageKey} className="sg-page-transition">
+        {searchResults ? (
+          <div className="sg-dial">
+            <div className="sg-toolbar">
+              <span className="sg-toolbar__title">{t.searchResults(query, searchResults.length)}</span>
+            </div>
+            {searchResults.length > 0 ? (
+              <div className={gridClass}>
+                {searchResults.map((item) => (
+                  <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} />
+                ))}
+              </div>
+            ) : (
+              <div className="sg-empty">
+                <div className="sg-empty__icon">🔍</div>
+                <p className="sg-empty__text">{t.noSearchResults}</p>
+              </div>
+            )}
           </div>
+        ) : groups.length === 0 ? (
+          <div className="sg-empty">
+            <div className="sg-empty__icon">📂</div>
+            <p className="sg-empty__text sg-preline">{t.noGroups}</p>
+          </div>
+        ) : currentFolder ? (
+          <div className="sg-dial">
+            {path.length > 0 && (
+              <nav className="sg-breadcrumb" aria-label="breadcrumb">
+                {breadcrumb.map((crumb, i) => {
+                  const crumbParentId = i === 0 ? activeGroup?.id : breadcrumb[i]?.id
+                  return (
+                    <span key={crumb.id || 'root'}>
+                      {i > 0 && <span className="sg-breadcrumb__sep"> › </span>}
+                      {i < breadcrumb.length - 1 && crumbParentId ? (
+                        <button
+                          className={`sg-breadcrumb__item ${dragState.dropBreadcrumbId === crumbParentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
+                          onClick={() => handleBreadcrumbClick(i)}
+                          {...getBreadcrumbDropHandlers(crumbParentId)}
+                        >
+                          {crumb.title}
+                        </button>
+                      ) : (
+                        <span className="sg-breadcrumb__current" aria-current="page">
+                          {crumb.title}
+                        </span>
+                      )}
+                    </span>
+                  )
+                })}
+              </nav>
+            )}
 
-          {showAddForm && (
-            <div style={{ padding: '0 24px' }}>
-              <AddBookmarkForm
-                onAdd={handleAddBookmark}
-                onCancel={() => setShowAddForm(false)}
-                t={t}
-                aiSettings={settings.ai}
-              />
+            <div className="sg-toolbar">
+              {path.length > 0 &&
+                (() => {
+                  const parentId = path.length >= 2 ? path[path.length - 2] : activeGroup?.id
+                  return parentId ? (
+                    <button
+                      className={`sg-btn--icon ${dragState.dropBreadcrumbId === parentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
+                      onClick={() => setPath((p) => p.slice(0, -1))}
+                      title={t.back}
+                      aria-label={t.back}
+                      {...getBreadcrumbDropHandlers(parentId)}
+                    >
+                      ←
+                    </button>
+                  ) : (
+                    <button
+                      className="sg-btn--icon"
+                      onClick={() => setPath((p) => p.slice(0, -1))}
+                      title={t.back}
+                      aria-label={t.back}
+                    >
+                      ←
+                    </button>
+                  )
+                })()}
+              <span className="sg-toolbar__title">{path.length === 0 ? '' : currentFolder.title}</span>
+              <div className="sg-sort">
+                <select
+                  className="sg-sort__select"
+                  value={settings.sort}
+                  onChange={(e) => handleChangeSort(e.target.value as SortMode)}
+                  aria-label={t.sort}
+                >
+                  <option value="manual">{t.sortManual}</option>
+                  <option value="name-asc">{t.sortNameAsc}</option>
+                  <option value="name-desc">{t.sortNameDesc}</option>
+                  <option value="date-new">{t.sortDateNew}</option>
+                  <option value="date-old">{t.sortDateOld}</option>
+                  <option value="domain">{t.sortDomain}</option>
+                </select>
+              </div>
+              <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>
+                {showAddForm ? t.cancel : t.addBookmark('Ctrl')}
+              </button>
+              <button
+                className="sg-btn sg-btn--sm sg-btn--ghost"
+                onClick={() => {
+                  setCreatingGroup('subfolder')
+                  setNewGroupName('')
+                }}
+              >
+                {t.newFolder}
+              </button>
             </div>
-          )}
 
-          {currentFolder.children.length === 0 && currentFolder.items.length === 0 ? (
-            <div className="sg-empty">
-              <div className="sg-empty__icon">📌</div>
-              <p className="sg-empty__text" style={{ whiteSpace: 'pre-line' }}>
-                {t.emptyFolder}
-              </p>
-            </div>
-          ) : (
-            <div className="sg-dial__grid">
-              {currentFolder.children.map((child) => (
-                <FolderCard
-                  key={child.id}
-                  group={child}
-                  onClick={handleOpenFolder}
-                  onContextMenu={handleFolderContext}
+            {showAddForm && (
+              <div className="sg-add-form-wrapper">
+                <AddBookmarkForm
+                  onAdd={handleAddBookmark}
+                  onCancel={() => setShowAddForm(false)}
                   t={t}
-                  dragHandlers={getDragHandlers(child.id, 'folder')}
-                  isDragging={dragState.draggingId === child.id}
-                  isDropTarget={dragState.dropTargetId === child.id}
-                  dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null}
+                  aiSettings={settings.ai}
                 />
-              ))}
-              {currentFolder.items.map((item) => (
-                <BookmarkCard
-                  key={item.id}
-                  item={item}
-                  onContextMenu={handleBookmarkContext}
-                  dragHandlers={getDragHandlers(item.id, 'bookmark')}
-                  isDragging={dragState.draggingId === item.id}
-                  isDropTarget={dragState.dropTargetId === item.id}
-                  dropMode={
-                    dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      ) : null}
+              </div>
+            )}
+
+            {creatingGroup === 'subfolder' && (
+              <div className="sg-add-form-wrapper">
+                <div className="sg-add-form">
+                  <input
+                    className="sg-add-form__input"
+                    placeholder={t.groupNamePlaceholder}
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    onBlur={handleCreateSubfolder}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreateSubfolder()
+                      if (e.key === 'Escape') setCreatingGroup(false)
+                    }}
+                    autoFocus
+                  />
+                </div>
+              </div>
+            )}
+
+            {currentFolder.children.length === 0 && currentFolder.items.length === 0 ? (
+              <div className="sg-empty">
+                <div className="sg-empty__icon">📌</div>
+                <p className="sg-empty__text sg-preline">{t.emptyFolder}</p>
+              </div>
+            ) : (
+              <div className={gridClass}>
+                {currentFolder.children.map((child) => (
+                  <FolderCard
+                    key={child.id}
+                    group={child}
+                    onClick={handleOpenFolder}
+                    onContextMenu={handleFolderContext}
+                    t={t}
+                    dragHandlers={getDragHandlers(child.id, 'folder')}
+                    isDragging={dragState.draggingId === child.id}
+                    isDropTarget={dragState.dropTargetId === child.id}
+                    dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null}
+                    isSelected={selectedIds.has(child.id)}
+                    onToggleSelect={toggleSelect}
+                  />
+                ))}
+                {sortItems(currentFolder.items).map((item) => (
+                  <BookmarkCard
+                    key={item.id}
+                    item={item}
+                    onContextMenu={handleBookmarkContext}
+                    dragHandlers={getDragHandlers(item.id, 'bookmark')}
+                    isDragging={dragState.draggingId === item.id}
+                    isDropTarget={dragState.dropTargetId === item.id}
+                    dropMode={
+                      dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null
+                    }
+                    t={t}
+                    locale={settings.locale}
+                    isSelected={selectedIds.has(item.id)}
+                    onToggleSelect={toggleSelect}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
+      </div>
 
       {editItem && (
         <EditBookmarkModal
@@ -519,6 +752,16 @@ export default function App() {
           t={t}
           onUpdateSettings={updateSettings}
           onClose={() => setShowSettings(false)}
+          onRefresh={refresh}
+        />
+      )}
+      {confirmDialog && (
+        <ConfirmDialog
+          message={confirmDialog.message}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+          confirmLabel={confirmDialog.confirmLabel}
+          t={t}
         />
       )}
     </>

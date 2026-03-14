@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { getFaviconUrl, getDomain } from '../utils/favicon'
+import { formatRelativeDate } from '../utils/date'
 import type { SyncGridItem } from '../types'
 import type { DragHandlers } from '../hooks/useDragReorder'
+import type { Messages } from '../i18n'
 
 interface Props {
   item: SyncGridItem
@@ -10,15 +12,20 @@ interface Props {
   isDragging?: boolean
   isDropTarget?: boolean
   dropMode?: 'before' | 'after' | null
+  t: Messages
+  locale?: string
+  isSelected?: boolean
+  onToggleSelect?: (id: string, e: React.MouseEvent) => boolean
 }
 
-export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode }: Props) {
+export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t, locale, isSelected, onToggleSelect }: Props) {
   const [imgFailed, setImgFailed] = useState(false)
   const domain = getDomain(item.url)
   const initial = domain.charAt(0).toUpperCase()
 
   const className = [
     'sg-card',
+    isSelected && 'sg-card--selected',
     isDragging && 'sg-card--dragging',
     isDropTarget && dropMode === 'before' && 'sg-card--drop-before',
     isDropTarget && dropMode === 'after' && 'sg-card--drop-after',
@@ -31,9 +38,15 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
       className={className}
       role="link"
       tabIndex={0}
-      onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
+      onClick={(e) => {
+        if (onToggleSelect?.(item.id, e)) return
+        window.open(item.url, '_blank', 'noopener,noreferrer')
+      }}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') window.open(item.url, '_blank')
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          window.open(item.url, '_blank', 'noopener,noreferrer')
+        }
       }}
       onContextMenu={(e) => {
         e.preventDefault()
@@ -57,6 +70,7 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
         )}
       </div>
       <span className="sg-card__title">{item.title}</span>
+      <span className="sg-card__date">{formatRelativeDate(item.dateAdded, locale ?? 'ja')}</span>
       <span className="sg-card__domain">{domain}</span>
       <button
         className="sg-card__menu"
@@ -64,7 +78,7 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
           e.stopPropagation()
           onContextMenu(item, e.clientX, e.clientY)
         }}
-        title="メニュー"
+        aria-label={t.menu}
       >
         ⋯
       </button>

@@ -1,5 +1,37 @@
 import type { Locale } from '../i18n'
 
+/** レイアウトモード */
+export type LayoutMode = 'card' | 'list' | 'compact'
+
+/** カードサイズ */
+export type CardSize = 'sm' | 'md' | 'lg'
+
+/** ソートモード */
+export type SortMode = 'manual' | 'name-asc' | 'name-desc' | 'date-new' | 'date-old' | 'domain'
+
+/** キーバインド定義 */
+export interface KeyBinding {
+  key: string
+  meta: boolean
+  ctrl: boolean
+  shift: boolean
+  alt: boolean
+}
+
+/** ショートカット設定 */
+export interface ShortcutConfig {
+  search: KeyBinding
+  addBookmark: KeyBinding
+  layoutCard: KeyBinding
+  layoutList: KeyBinding
+  layoutCompact: KeyBinding
+  deleteSelected: KeyBinding
+  selectAll: KeyBinding
+}
+
+/** ショートカットアクション名 */
+export type ShortcutAction = keyof ShortcutConfig
+
 /** SyncGrid内のブックマーク1件 */
 export interface SyncGridItem {
   id: string
@@ -66,6 +98,39 @@ export interface SyncGridSettings {
   lastSyncedAt: string
   /** AI設定 */
   ai: AISettings
+  /** レイアウトモード */
+  layout: LayoutMode
+  /** カードサイズ */
+  cardSize: CardSize
+  /** ソートモード */
+  sort: SortMode
+  /** キーボードショートカット */
+  shortcuts: ShortcutConfig
+}
+
+const _isMac =
+  typeof navigator !== 'undefined' &&
+  (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Macintosh/.test(navigator.userAgent))
+
+/** OS判定済みデフォルトキーバインド */
+function kb(key: string, opts: { mod?: boolean; ctrl?: boolean; shift?: boolean; alt?: boolean } = {}): KeyBinding {
+  return {
+    key,
+    meta: opts.mod ? _isMac : false,
+    ctrl: opts.mod ? !_isMac : !!opts.ctrl,
+    shift: !!opts.shift,
+    alt: !!opts.alt,
+  }
+}
+
+export const DEFAULT_SHORTCUTS: ShortcutConfig = {
+  search: kb('k', { mod: true }),
+  addBookmark: kb('n', { ctrl: true }),
+  layoutCard: kb('1', { mod: true }),
+  layoutList: kb('2', { mod: true }),
+  layoutCompact: kb('3', { mod: true }),
+  deleteSelected: kb('Delete'),
+  selectAll: kb('a', { mod: true }),
 }
 
 export const DEFAULT_SETTINGS: SyncGridSettings = {
@@ -75,6 +140,10 @@ export const DEFAULT_SETTINGS: SyncGridSettings = {
   lastPath: [],
   lastSyncedAt: '',
   ai: DEFAULT_AI_SETTINGS,
+  layout: 'list',
+  cardSize: 'md',
+  sort: 'manual',
+  shortcuts: DEFAULT_SHORTCUTS,
 }
 
 /** エクスポートデータ形式 */

@@ -12,6 +12,8 @@ interface Props {
   isDragging?: boolean
   isDropTarget?: boolean
   dropMode?: 'before' | 'after' | 'into' | null
+  isSelected?: boolean
+  onToggleSelect?: (id: string, e: React.MouseEvent) => boolean
 }
 
 export function FolderCard({
@@ -23,11 +25,14 @@ export function FolderCard({
   isDragging,
   isDropTarget,
   dropMode,
+  isSelected,
+  onToggleSelect,
 }: Props) {
   const totalItems = countAll(group)
 
   const className = [
     'sg-folder-card',
+    isSelected && 'sg-folder-card--selected',
     isDragging && 'sg-folder-card--dragging',
     isDropTarget && dropMode === 'before' && 'sg-folder-card--drop-before',
     isDropTarget && dropMode === 'after' && 'sg-folder-card--drop-after',
@@ -41,9 +46,15 @@ export function FolderCard({
       className={className}
       role="button"
       tabIndex={0}
-      onClick={() => onClick(group)}
+      onClick={(e) => {
+        if (onToggleSelect?.(group.id, e)) return
+        onClick(group)
+      }}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') onClick(group)
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick(group)
+        }
       }}
       onContextMenu={(e) => {
         e.preventDefault()
@@ -60,7 +71,7 @@ export function FolderCard({
           e.stopPropagation()
           onContextMenu(group, e.clientX, e.clientY)
         }}
-        title="⋯"
+        aria-label={t.menu}
       >
         ⋯
       </button>
