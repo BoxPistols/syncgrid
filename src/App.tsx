@@ -74,6 +74,7 @@ export default function App() {
     confirmLabel?: string
   } | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [filterTag, setFilterTag] = useState<string | null>(null)
 
   // --- Active Tab (computed — stale ID falls back to first group) ---
   const activeTabId = useMemo(() => {
@@ -219,6 +220,25 @@ export default function App() {
 
   // --- Page transition key ---
   const pageKey = searchResults ? 'search' : `${activeTabId}/${path.join('/')}`
+
+  // --- Tag filter ---
+  const allTagsInFolder = useMemo(() => {
+    if (!currentFolder) return []
+    const tagSet = new Set<string>()
+    for (const item of currentFolder.items) {
+      const meta = allMeta[item.id]
+      if (meta?.tags) meta.tags.forEach((t) => tagSet.add(t))
+    }
+    return [...tagSet].sort()
+  }, [currentFolder, allMeta])
+
+  const filterItems = useCallback(
+    (items: SyncGridItem[]): SyncGridItem[] => {
+      if (!filterTag) return items
+      return items.filter((item) => allMeta[item.id]?.tags?.includes(filterTag))
+    },
+    [filterTag, allMeta],
+  )
 
   // --- Layout class ---
   const gridClass = [
@@ -656,6 +676,25 @@ export default function App() {
                   <option value="domain">{t.sortDomain}</option>
                 </select>
               </div>
+              {allTagsInFolder.length > 0 && (
+                <div className="sg-tags">
+                  <button
+                    className={`sg-tag ${!filterTag ? 'sg-tag--active' : ''}`}
+                    onClick={() => setFilterTag(null)}
+                  >
+                    {t.allTags}
+                  </button>
+                  {allTagsInFolder.map((tag) => (
+                    <button
+                      key={tag}
+                      className={`sg-tag ${filterTag === tag ? 'sg-tag--active' : ''}`}
+                      onClick={() => setFilterTag(filterTag === tag ? null : tag)}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
               <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>
                 {showAddForm ? t.cancel : t.addBookmark('Ctrl')}
               </button>
@@ -722,7 +761,7 @@ export default function App() {
                     onToggleSelect={toggleSelect}
                   />
                 ))}
-                {sortItems(currentFolder.items).map((item) => (
+                {sortItems(filterItems(currentFolder.items)).map((item) => (
                   <BookmarkCard
                     key={item.id}
                     item={item}
@@ -754,6 +793,7 @@ export default function App() {
           onClose={() => setEditItem(null)}
           t={t}
           initialTags={allMeta[editItem.id]?.tags}
+          aiSettings={settings.ai}
         />
       )}
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />}

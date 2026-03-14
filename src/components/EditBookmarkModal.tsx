@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { fetchPageTitleWithPermission } from '../utils/fetchTitle'
+import { generateTags } from '../utils/ai'
 import { isComposing } from '../utils/keyboard'
-import type { SyncGridItem } from '../types'
+import type { SyncGridItem, AISettings } from '../types'
 import type { Messages } from '../i18n'
 
 interface Props {
@@ -12,14 +13,16 @@ interface Props {
   onClose: () => void
   t: Messages
   initialTags?: string[]
+  aiSettings: AISettings
 }
 
-export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialTags }: Props) {
+export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialTags, aiSettings }: Props) {
   const [title, setTitle] = useState(item.title)
   const [url, setUrl] = useState(item.url)
   const [tags, setTags] = useState<string[]>(initialTags ?? [])
   const [tagInput, setTagInput] = useState('')
   const [fetching, setFetching] = useState(false)
+  const [aiTagLoading, setAiTagLoading] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const trapRef = useFocusTrap<HTMLDivElement>()
 
@@ -57,6 +60,20 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialT
   const removeTag = useCallback((tag: string) => {
     setTags((prev) => prev.filter((t) => t !== tag))
   }, [])
+
+  const handleAiAutoTag = useCallback(async () => {
+    if (aiSettings.provider === 'none') return
+    setAiTagLoading(true)
+    try {
+      const generated = await generateTags(url.trim(), title.trim(), aiSettings)
+      // 既存タグと重複しないものを追加
+      setTags((prev) => [...new Set([...prev, ...generated])])
+    } catch {
+      // エラー時は静かに失敗
+    } finally {
+      setAiTagLoading(false)
+    }
+  }, [url, title, aiSettings])
 
   return (
     <div className="sg-modal-overlay" onClick={onClose}>
@@ -108,7 +125,19 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialT
               onChange={(e) => setUrl(e.target.value)}
               autoComplete="off"
             />
-            <label className="sg-label">{t.tags}</label>
+            <div className="sg-settings__row">
+              <label className="sg-label">{t.tags}</label>
+              {aiSettings.provider !== 'none' && (
+                <button
+                  type="button"
+                  className="sg-btn sg-btn--sm sg-btn--ai"
+                  onClick={handleAiAutoTag}
+                  disabled={aiTagLoading || !title.trim()}
+                >
+                  {aiTagLoading ? '⏳' : '✨'} {t.aiAutoTag}
+                </button>
+              )}
+            </div>
             <div className="sg-tags">
               {tags.map((tag) => (
                 <span key={tag} className="sg-tag">
