@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { getFaviconUrl, getDomain } from '../utils/favicon'
 import { formatRelativeDate } from '../utils/date'
 import { UrlPreview } from './UrlPreview'
@@ -25,19 +25,34 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
   const [imgFailed, setImgFailed] = useState(false)
   const [preview, setPreview] = useState<{ x: number; y: number } | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const leaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const domain = getDomain(item.url)
   const initial = domain.charAt(0).toUpperCase()
 
+  // スクロール時にプレビュー消す
+  useEffect(() => {
+    if (!preview) return
+    const handleScroll = () => {
+      clearTimeout(hoverTimer.current)
+      setPreview(null)
+    }
+    window.addEventListener('scroll', handleScroll, true)
+    return () => window.removeEventListener('scroll', handleScroll, true)
+  }, [preview])
+
   const handleMouseEnter = useCallback((e: React.MouseEvent) => {
+    if (isDragging) return // ドラッグ中はプレビュー表示しない
+    clearTimeout(leaveTimer.current)
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
     hoverTimer.current = setTimeout(() => {
       setPreview({ x: rect.left, y: rect.bottom })
-    }, 600) // 600ms遅延でプレビュー表示
-  }, [])
+    }, 600)
+  }, [isDragging])
 
   const handleMouseLeave = useCallback(() => {
     clearTimeout(hoverTimer.current)
-    setPreview(null)
+    // 即座に消す（ちらつき防止の微小遅延）
+    leaveTimer.current = setTimeout(() => setPreview(null), 50)
   }, [])
 
   const className = [

@@ -54,15 +54,19 @@ async function fetchHead(url: string): Promise<string | null> {
 
     const chunks: Uint8Array[] = []
     let totalLength = 0
-    while (totalLength < 65536) {
+    const MAX_HEAD_SIZE = 262144 // 256KB
+
+    while (totalLength < MAX_HEAD_SIZE) {
       const { done, value } = await reader.read()
       if (done) break
       if (value) {
         chunks.push(value)
         totalLength += value.length
       }
-      const peek = new TextDecoder('ascii', { fatal: false }).decode(chunks[chunks.length - 1])
-      if (peek.includes('</head>') || peek.includes('</HEAD>')) break
+      // Check for </head> in the last 1KB of the current buffer to avoid re-decoding everything
+      const lastChunk = chunks[chunks.length - 1]
+      const peek = new TextDecoder('ascii').decode(lastChunk)
+      if (peek.toLowerCase().includes('</head>')) break
     }
     reader.cancel()
 
