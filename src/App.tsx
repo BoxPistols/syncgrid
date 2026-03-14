@@ -213,7 +213,13 @@ export default function App() {
   const pageKey = searchResults ? 'search' : `${activeTabId}/${path.join('/')}`
 
   // --- Layout class ---
-  const gridClass = `sg-dial__grid${settings.layout !== 'card' ? ` sg-dial__grid--${settings.layout}` : ''}`
+  const gridClass = [
+    'sg-dial__grid',
+    settings.layout !== 'card' && `sg-dial__grid--${settings.layout}`,
+    settings.layout === 'card' && settings.cardSize !== 'md' && `sg-dial__grid--size-${settings.cardSize}`,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   // --- Sort ---
   const sortItems = useCallback(
@@ -468,7 +474,9 @@ export default function App() {
         onToggleTheme={handleToggleTheme}
         onOpenSettings={() => setShowSettings(true)}
         layout={settings.layout}
+        cardSize={settings.cardSize}
         onChangeLayout={handleChangeLayout}
+        onChangeCardSize={(size) => updateSettings({ cardSize: size })}
         t={t}
       />
 

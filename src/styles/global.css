@@ -416,10 +416,19 @@ button {
   padding: 16px 24px 60px;
 }
 
+/* カードサイズ: デフォルトはmedium */
 .sg-dial__grid {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+.sg-dial__grid--size-sm {
   grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
   gap: 12px;
+}
+.sg-dial__grid--size-lg {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
 }
 
 /* --- Bookmark Card --- */
@@ -482,6 +491,41 @@ button {
 }
 .sg-card__icon img {
   border-radius: 10px;
+}
+/* large card: アイコン大きく、タイトル2行 */
+.sg-dial__grid--size-lg .sg-card {
+  padding: 24px 14px 18px;
+  gap: 12px;
+}
+.sg-dial__grid--size-lg .sg-card__icon {
+  width: 64px;
+  height: 64px;
+}
+.sg-dial__grid--size-lg .sg-card__icon img {
+  width: 64px;
+  height: 64px;
+}
+.sg-dial__grid--size-lg .sg-favicon--lg {
+  width: 64px;
+  height: 64px;
+  font-size: 28px;
+}
+.sg-dial__grid--size-lg .sg-card__title {
+  font-size: 13px;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.sg-dial__grid--size-lg .sg-folder-card {
+  padding: 24px 14px 18px;
+  gap: 12px;
+}
+.sg-dial__grid--size-lg .sg-folder-card__icon {
+  width: 64px;
+  height: 64px;
+  font-size: 32px;
+  border-radius: 16px;
 }
 
 .sg-card__title {
@@ -1433,7 +1477,7 @@ button {
    ===================== */
 @media (max-width: 768px) {
   .sg-dial__grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
   .sg-topbar__search {
     max-width: 200px;

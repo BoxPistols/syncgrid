@@ -3,6 +3,9 @@ import type { Locale } from '../i18n'
 /** レイアウトモード */
 export type LayoutMode = 'card' | 'list' | 'compact'
 
+/** カードサイズ */
+export type CardSize = 'sm' | 'md' | 'lg'
+
 /** ソートモード */
 export type SortMode = 'manual' | 'name-asc' | 'name-desc' | 'date-new' | 'date-old' | 'domain'
 
@@ -97,6 +100,8 @@ export interface SyncGridSettings {
   ai: AISettings
   /** レイアウトモード */
   layout: LayoutMode
+  /** カードサイズ */
+  cardSize: CardSize
   /** ソートモード */
   sort: SortMode
   /** キーボードショートカット */
@@ -136,6 +141,7 @@ export const DEFAULT_SETTINGS: SyncGridSettings = {
   lastSyncedAt: '',
   ai: DEFAULT_AI_SETTINGS,
   layout: 'list',
+  cardSize: 'md',
   sort: 'manual',
   shortcuts: DEFAULT_SHORTCUTS,
 }
