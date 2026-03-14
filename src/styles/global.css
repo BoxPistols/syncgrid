@@ -32,28 +32,29 @@
   --sg-focus-ring: 0 0 0 3px var(--sg-accent-soft);
 }
 
+/* Dracula / Monokai 風ダークテーマ — 明るめで視認性重視 */
 [data-theme='dark'] {
-  --sg-bg: #0f0f12;
-  --sg-bg-card: #1a1a22;
-  --sg-bg-card-hover: #24242e;
-  --sg-bg-header: rgba(15, 15, 18, 0.88);
-  --sg-bg-input: #24242e;
+  --sg-bg: #282a36;
+  --sg-bg-card: #343746;
+  --sg-bg-card-hover: #3e4254;
+  --sg-bg-header: rgba(40, 42, 54, 0.92);
+  --sg-bg-input: #3e4254;
   --sg-bg-tab: transparent;
-  --sg-bg-tab-active: #1a1a22;
-  --sg-text: #e8e8ed;
-  --sg-text-secondary: #8b8b96;
-  --sg-text-tertiary: #5a5a66;
+  --sg-bg-tab-active: #343746;
+  --sg-text: #f8f8f2;
+  --sg-text-secondary: #bfbfcf;
+  --sg-text-tertiary: #6272a4;
   --sg-text-on-accent: #ffffff;
-  --sg-border: #2a2a34;
-  --sg-accent: #6c8eff;
-  --sg-accent-hover: #5a7ef0;
-  --sg-accent-soft: rgba(108, 142, 255, 0.12);
-  --sg-folder: #fbbf24;
-  --sg-folder-soft: rgba(251, 191, 36, 0.12);
-  --sg-danger: #f87171;
-  --sg-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
-  --sg-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  --sg-shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --sg-border: #44475a;
+  --sg-accent: #bd93f9;
+  --sg-accent-hover: #a77ef0;
+  --sg-accent-soft: rgba(189, 147, 249, 0.14);
+  --sg-folder: #f1fa8c;
+  --sg-folder-soft: rgba(241, 250, 140, 0.12);
+  --sg-danger: #ff5555;
+  --sg-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --sg-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --sg-shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 /* --- Reset --- */
@@ -706,6 +707,12 @@ button {
 .sg-add-form__actions {
   display: flex;
   gap: 6px;
+}
+
+.sg-add-form__hint {
+  font-size: 11px;
+  color: var(--sg-text-tertiary);
+  white-space: nowrap;
 }
 
 .sg-btn--ai {

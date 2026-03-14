@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import type { Messages } from '../i18n'
 import type { LayoutMode } from '../types'
+import { MOD_LABEL } from '../utils/keyboard'
 
 interface Props {
   query: string
@@ -39,7 +40,7 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
           ref={inputRef}
           type="text"
           className="sg-topbar__search-input"
-          placeholder={t.searchPlaceholder}
+          placeholder={t.searchPlaceholder(MOD_LABEL)}
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           autoComplete="off"

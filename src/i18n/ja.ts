@@ -2,7 +2,7 @@ export const ja = {
   // App
   loading: '読み込み中…',
   // TopBar
-  searchPlaceholder: 'ブックマークを検索…',
+  searchPlaceholder: (modKey: string) => `ブックマークを検索… (${modKey}K)`,
   toggleTheme: 'テーマ切替',
   settings: '設定',
   // TabBar
@@ -10,7 +10,7 @@ export const ja = {
   groupNamePlaceholder: 'グループ名…',
   // Toolbar
   back: '戻る',
-  addBookmark: '＋ 追加',
+  addBookmark: (modKey: string) => `＋ 追加 (${modKey}N)`,
   newFolder: '📁 新規フォルダ',
   cancel: 'キャンセル',
   // Search
@@ -29,7 +29,8 @@ export const ja = {
   confirmDeleteTab: (name: string) => `「${name}」タブとその中身をすべて削除しますか？`,
   // Bookmark form
   urlPlaceholder: 'URL（例: github.com）',
-  titlePlaceholder: 'タイトル（空欄ならURLを使用）',
+  titlePlaceholder: 'タイトル（自動取得・空欄ならURLを使用）',
+  submitHint: (modKey: string, enterKey: string) => `${modKey}+${enterKey} で追加`,
   add: '追加',
   // Edit modal
   editBookmark: 'ブックマークを編集',
@@ -74,7 +75,8 @@ export const ja = {
   aiApiKeyPlaceholder: 'sk-...',
   aiModel: 'モデル',
   aiDesc: 'AIを使ってブックマークのタイトル自動生成などが利用できます。APIキーはローカルにのみ保存されます。',
-  aiGenerateTitle: 'AI',
+  aiGenerateTitle: 'AI整理',
+  fetchingTitle: 'タイトル取得中…',
   aiGenerating: '生成中…',
   aiError: 'AI生成に失敗しました',
   aiNotConfigured: 'AI設定が未構成です。設定画面からAPIキーを設定してください。',

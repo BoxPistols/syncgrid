@@ -25,6 +25,7 @@ import {
   countAll,
 } from './utils/bookmarks'
 import type { SyncGridItem, SyncGridGroup, LayoutMode } from './types'
+import { isModKey, isComposing, MOD_LABEL } from './utils/keyboard'
 
 import './styles/global.css'
 
@@ -122,6 +123,29 @@ export default function App() {
     }
     return results
   }, [query, groups])
+
+  // --- Global keyboard shortcuts ---
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (isComposing(e)) return
+
+      // Cmd+K / Ctrl+K → 検索にフォーカス
+      if (isModKey(e) && e.key === 'k') {
+        e.preventDefault()
+        const input = document.querySelector<HTMLInputElement>('.sg-topbar__search-input')
+        input?.focus()
+      }
+
+      // Cmd+N / Ctrl+N → ブックマーク追加フォーム表示
+      if (isModKey(e) && e.key === 'n') {
+        e.preventDefault()
+        setShowAddForm(true)
+      }
+    }
+
+    document.addEventListener('keydown', handleGlobalKeyDown)
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [])
 
   // --- Page transition key ---
   const pageKey = searchResults ? 'search' : `${activeTabId}/${path.join('/')}`
@@ -478,7 +502,7 @@ export default function App() {
                 })()}
               <span className="sg-toolbar__title">{path.length === 0 ? '' : currentFolder.title}</span>
               <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>
-                {showAddForm ? t.cancel : t.addBookmark}
+                {showAddForm ? t.cancel : t.addBookmark(MOD_LABEL)}
               </button>
               <button
                 className="sg-btn sg-btn--sm sg-btn--ghost"
