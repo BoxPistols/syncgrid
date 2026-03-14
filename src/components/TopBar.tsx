@@ -65,7 +65,7 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
           <button
             className={`sg-layout-switcher__btn ${layout === 'card' ? 'sg-layout-switcher__btn--active' : ''}`}
             onClick={() => onChangeLayout('card')}
-            title={t.layoutCard}
+            title={`${t.layoutCard} (${MOD_LABEL}1)`}
             aria-label={t.layoutCard}
             role="radio"
             aria-checked={layout === 'card'}
@@ -80,7 +80,7 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
           <button
             className={`sg-layout-switcher__btn ${layout === 'list' ? 'sg-layout-switcher__btn--active' : ''}`}
             onClick={() => onChangeLayout('list')}
-            title={t.layoutList}
+            title={`${t.layoutList} (${MOD_LABEL}2)`}
             aria-label={t.layoutList}
             role="radio"
             aria-checked={layout === 'list'}
@@ -94,7 +94,7 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
           <button
             className={`sg-layout-switcher__btn ${layout === 'compact' ? 'sg-layout-switcher__btn--active' : ''}`}
             onClick={() => onChangeLayout('compact')}
-            title={t.layoutCompact}
+            title={`${t.layoutCompact} (${MOD_LABEL}3)`}
             aria-label={t.layoutCompact}
             role="radio"
             aria-checked={layout === 'compact'}

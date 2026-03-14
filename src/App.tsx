@@ -137,6 +137,13 @@ export default function App() {
         input?.focus()
       }
 
+      // Cmd+1/2/3 → レイアウト切替
+      if (isModKey(e) && ['1', '2', '3'].includes(e.key)) {
+        e.preventDefault()
+        const layouts: LayoutMode[] = ['card', 'list', 'compact']
+        handleChangeLayout(layouts[Number(e.key) - 1])
+      }
+
       // Ctrl+N → ブックマーク追加フォーム表示（Cmd+Nはブラウザ新規ウィンドウと競合するためCtrl固定）
       if (e.ctrlKey && !e.metaKey && e.key === 'n') {
         e.preventDefault()
