@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
+import { Icon, type IconName } from './Icon'
 
 export interface MenuItem {
   label: string
-  icon?: string
+  icon?: IconName
   danger?: boolean
   action: () => void
 }
@@ -59,7 +60,7 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
               onClose()
             }}
           >
-            {item.icon && <span>{item.icon}</span>}
+            {item.icon && <Icon name={item.icon} size={14} />}
             {item.label}
           </button>
         ),

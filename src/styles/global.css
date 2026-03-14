@@ -883,7 +883,7 @@ button {
   color: var(--sg-text-secondary);
 }
 .sg-empty__icon {
-  font-size: 48px;
+  color: var(--sg-text-tertiary);
   opacity: 0.3;
 }
 .sg-empty__text {

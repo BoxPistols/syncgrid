@@ -382,12 +382,12 @@ export default function App() {
         x,
         y,
         items: [
-          { label: t.openNewTab, icon: '🔗', action: () => window.open(item.url, '_blank') },
-          { label: t.edit, icon: '✏️', action: () => setEditItem(item) },
+          { label: t.openNewTab, icon: 'link', action: () => window.open(item.url, '_blank') },
+          { label: t.edit, icon: 'edit', action: () => setEditItem(item) },
           { label: '---', action: () => {} },
           {
             label: t.delete,
-            icon: '🗑️',
+            icon: 'trash',
             danger: true,
             action: async () => {
               await removeBookmark(item.id)
@@ -406,10 +406,10 @@ export default function App() {
         x,
         y,
         items: [
-          { label: t.open, icon: '📂', action: () => handleOpenFolder(group) },
+          { label: t.open, icon: 'folder-open', action: () => handleOpenFolder(group) },
           {
             label: t.rename,
-            icon: '✏️',
+            icon: 'edit',
             action: () => {
               setRenamingTabId(group.id)
               setRenameValue(group.title)
@@ -418,7 +418,7 @@ export default function App() {
           { label: '---', action: () => {} },
           {
             label: t.delete,
-            icon: '🗑️',
+            icon: 'trash',
             danger: true,
             action: () => {
               setConfirmDialog({
@@ -460,7 +460,7 @@ export default function App() {
         items: [
           {
             label: t.rename,
-            icon: '✏️',
+            icon: 'edit',
             action: () => {
               setRenamingTabId(group.id)
               setRenameValue(group.title)
@@ -469,7 +469,7 @@ export default function App() {
           { label: '---', action: () => {} },
           {
             label: t.delete,
-            icon: '🗑️',
+            icon: 'trash',
             danger: true,
             action: () => {
               setConfirmDialog({
@@ -598,14 +598,14 @@ export default function App() {
               </div>
             ) : (
               <div className="sg-empty">
-                <div className="sg-empty__icon">🔍</div>
+                <div className="sg-empty__icon"><Icon name="search" size={48} /></div>
                 <p className="sg-empty__text">{t.noSearchResults}</p>
               </div>
             )}
           </div>
         ) : groups.length === 0 ? (
           <div className="sg-empty">
-            <div className="sg-empty__icon">📂</div>
+            <div className="sg-empty__icon"><Icon name="folder" size={48} /></div>
             <p className="sg-empty__text sg-preline">{t.noGroups}</p>
           </div>
         ) : currentFolder ? (
@@ -742,7 +742,7 @@ export default function App() {
 
             {currentFolder.children.length === 0 && currentFolder.items.length === 0 ? (
               <div className="sg-empty">
-                <div className="sg-empty__icon">📌</div>
+                <div className="sg-empty__icon"><Icon name="pin" size={48} /></div>
                 <p className="sg-empty__text sg-preline">{t.emptyFolder}</p>
               </div>
             ) : (
