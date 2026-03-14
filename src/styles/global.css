@@ -1407,6 +1407,14 @@ button {
 .sg-layout-switcher__btn:hover {
   color: var(--sg-text);
 }
+.sg-size-label {
+  font-weight: 700;
+  line-height: 1;
+}
+.sg-size-label--sm { font-size: 9px; }
+.sg-size-label--md { font-size: 11px; }
+.sg-size-label--lg { font-size: 13px; }
+
 .sg-layout-switcher__btn--active {
   background: var(--sg-bg-card);
   color: var(--sg-text);

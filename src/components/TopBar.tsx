@@ -122,7 +122,7 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
                 role="radio"
                 aria-checked={cardSize === size}
               >
-                <span style={{ fontSize: size === 'sm' ? 9 : size === 'md' ? 11 : 13, fontWeight: 700 }}>
+                <span className={`sg-size-label sg-size-label--${size}`}>
                   {size === 'sm' ? 'S' : size === 'md' ? 'M' : 'L'}
                 </span>
               </button>
