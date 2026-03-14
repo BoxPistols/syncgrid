@@ -24,8 +24,9 @@ import {
   flattenGroups,
   countAll,
 } from './utils/bookmarks'
-import type { SyncGridItem, SyncGridGroup, LayoutMode } from './types'
+import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
 import { isModKey, isComposing } from './utils/keyboard'
+import { getDomain } from './utils/favicon'
 
 import './styles/global.css'
 
@@ -152,6 +153,36 @@ export default function App() {
 
   // --- Layout class ---
   const gridClass = `sg-dial__grid${settings.layout !== 'card' ? ` sg-dial__grid--${settings.layout}` : ''}`
+
+  // --- Sort ---
+  const sortItems = useCallback(
+    (items: SyncGridItem[]): SyncGridItem[] => {
+      if (settings.sort === 'manual') return items
+      const sorted = [...items]
+      switch (settings.sort) {
+        case 'name-asc':
+          return sorted.sort((a, b) => a.title.localeCompare(b.title))
+        case 'name-desc':
+          return sorted.sort((a, b) => b.title.localeCompare(a.title))
+        case 'date-new':
+          return sorted.sort((a, b) => (b.dateAdded ?? 0) - (a.dateAdded ?? 0))
+        case 'date-old':
+          return sorted.sort((a, b) => (a.dateAdded ?? 0) - (b.dateAdded ?? 0))
+        case 'domain':
+          return sorted.sort((a, b) => getDomain(a.url).localeCompare(getDomain(b.url)))
+        default:
+          return items
+      }
+    },
+    [settings.sort],
+  )
+
+  const handleChangeSort = useCallback(
+    (sort: SortMode) => {
+      updateSettings({ sort })
+    },
+    [updateSettings],
+  )
 
   // --- Handlers ---
   const handleSelectTab = useCallback(
@@ -447,7 +478,7 @@ export default function App() {
             {searchResults.length > 0 ? (
               <div className={gridClass}>
                 {searchResults.map((item) => (
-                  <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} />
+                  <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} />
                 ))}
               </div>
             ) : (
@@ -516,6 +547,21 @@ export default function App() {
                   )
                 })()}
               <span className="sg-toolbar__title">{path.length === 0 ? '' : currentFolder.title}</span>
+              <div className="sg-sort">
+                <select
+                  className="sg-sort__select"
+                  value={settings.sort}
+                  onChange={(e) => handleChangeSort(e.target.value as SortMode)}
+                  aria-label={t.sort}
+                >
+                  <option value="manual">{t.sortManual}</option>
+                  <option value="name-asc">{t.sortNameAsc}</option>
+                  <option value="name-desc">{t.sortNameDesc}</option>
+                  <option value="date-new">{t.sortDateNew}</option>
+                  <option value="date-old">{t.sortDateOld}</option>
+                  <option value="domain">{t.sortDomain}</option>
+                </select>
+              </div>
               <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>
                 {showAddForm ? t.cancel : t.addBookmark('Ctrl')}
               </button>
@@ -580,7 +626,7 @@ export default function App() {
                     dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null}
                   />
                 ))}
-                {currentFolder.items.map((item) => (
+                {sortItems(currentFolder.items).map((item) => (
                   <BookmarkCard
                     key={item.id}
                     item={item}
@@ -592,6 +638,7 @@ export default function App() {
                       dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null
                     }
                     t={t}
+                    locale={settings.locale}
                   />
                 ))}
               </div>

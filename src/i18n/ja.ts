@@ -94,6 +94,14 @@ export const ja = {
   close: '閉じる',
   confirmOk: '実行',
   menu: 'メニュー',
+  // Sort
+  sort: 'ソート',
+  sortManual: '手動',
+  sortNameAsc: '名前 A→Z',
+  sortNameDesc: '名前 Z→A',
+  sortDateNew: '新しい順',
+  sortDateOld: '古い順',
+  sortDomain: 'ドメイン順',
   // Layout
   layout: 'レイアウト',
   layoutCard: 'カード',

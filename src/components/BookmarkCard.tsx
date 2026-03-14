@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getFaviconUrl, getDomain } from '../utils/favicon'
+import { formatRelativeDate } from '../utils/date'
 import type { SyncGridItem } from '../types'
 import type { DragHandlers } from '../hooks/useDragReorder'
 import type { Messages } from '../i18n'
@@ -12,9 +13,10 @@ interface Props {
   isDropTarget?: boolean
   dropMode?: 'before' | 'after' | null
   t: Messages
+  locale?: string
 }
 
-export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t }: Props) {
+export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t, locale }: Props) {
   const [imgFailed, setImgFailed] = useState(false)
   const domain = getDomain(item.url)
   const initial = domain.charAt(0).toUpperCase()
@@ -62,6 +64,7 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
         )}
       </div>
       <span className="sg-card__title">{item.title}</span>
+      <span className="sg-card__date">{formatRelativeDate(item.dateAdded, locale ?? 'ja')}</span>
       <span className="sg-card__domain">{domain}</span>
       <button
         className="sg-card__menu"

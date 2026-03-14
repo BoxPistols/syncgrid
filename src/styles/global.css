@@ -495,6 +495,19 @@ button {
   white-space: nowrap;
 }
 
+/* 日付（card時は非表示、list/compactで表示） */
+.sg-card__date {
+  display: none;
+}
+.sg-dial__grid--list .sg-card__date,
+.sg-dial__grid--compact .sg-card__date {
+  display: block;
+  font-size: 11px;
+  color: var(--sg-text-tertiary);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .sg-card__domain {
   font-size: 10px;
   color: var(--sg-text-tertiary);
@@ -1234,6 +1247,31 @@ button {
 .sg-dial__grid--list > *,
 .sg-dial__grid--compact > * {
   animation: none;
+}
+
+/* =====================
+   SORT DROPDOWN
+   ===================== */
+.sg-sort {
+  position: relative;
+}
+.sg-sort__select {
+  appearance: none;
+  height: 28px;
+  padding: 0 24px 0 8px;
+  border: 1px solid var(--sg-border);
+  border-radius: var(--sg-radius-sm);
+  background: var(--sg-bg-input);
+  color: var(--sg-text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.sg-sort__select:focus {
+  border-color: var(--sg-accent);
 }
 
 /* =====================
