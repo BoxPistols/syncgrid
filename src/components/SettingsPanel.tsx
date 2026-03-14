@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { ConfirmDialog } from './ConfirmDialog'
+import { BookmarkImport } from './BookmarkImport'
 import type { SyncGridSettings, SyncGridGroup, AIProvider } from '../types'
 import { OPENAI_MODELS, GEMINI_MODELS } from '../types'
 import type { Messages } from '../i18n'
@@ -23,9 +24,10 @@ interface Props {
   t: Messages
   onUpdateSettings: (patch: Partial<SyncGridSettings>) => void
   onClose: () => void
+  onRefresh: () => void
 }
 
-export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }: Props) {
+export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, onRefresh }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const aiTestTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const syncTestTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -40,6 +42,7 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
     message: string
     onConfirm: () => void
   } | null>(null)
+  const [showImport, setShowImport] = useState(false)
 
   useEffect(() => {
     getSyncFolderName().then(setSyncFolderName)
@@ -227,6 +230,12 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
                   📥 {t.importData}
                 </button>
               </div>
+              <button
+                className="sg-btn sg-btn--sm sg-btn--ghost"
+                onClick={() => setShowImport(true)}
+              >
+                📂 {t.importChrome}
+              </button>
               <p className="sg-settings__desc">{t.exportDesc}</p>
               <input
                 ref={fileRef}
@@ -439,6 +448,13 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose }
           onConfirm={confirmState.onConfirm}
           onCancel={() => setConfirmState(null)}
           confirmLabel={t.confirmOk}
+          t={t}
+        />
+      )}
+      {showImport && (
+        <BookmarkImport
+          onDone={onRefresh}
+          onClose={() => setShowImport(false)}
           t={t}
         />
       )}

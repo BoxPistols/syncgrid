@@ -24,7 +24,7 @@ import {
   flattenGroups,
   countAll,
 } from './utils/bookmarks'
-import type { SyncGridItem, SyncGridGroup } from './types'
+import type { SyncGridItem, SyncGridGroup, LayoutMode } from './types'
 
 import './styles/global.css'
 
@@ -126,6 +126,9 @@ export default function App() {
   // --- Page transition key ---
   const pageKey = searchResults ? 'search' : `${activeTabId}/${path.join('/')}`
 
+  // --- Layout class ---
+  const gridClass = `sg-dial__grid${settings.layout !== 'card' ? ` sg-dial__grid--${settings.layout}` : ''}`
+
   // --- Handlers ---
   const handleSelectTab = useCallback(
     (id: string) => {
@@ -143,6 +146,13 @@ export default function App() {
   const handleBreadcrumbClick = useCallback((index: number) => {
     setPath((prev) => prev.slice(0, index))
   }, [])
+
+  const handleChangeLayout = useCallback(
+    (layout: LayoutMode) => {
+      updateSettings({ layout })
+    },
+    [updateSettings],
+  )
 
   const handleToggleTheme = useCallback(() => {
     updateSettings((prev) => ({
@@ -324,6 +334,8 @@ export default function App() {
         theme={settings.theme}
         onToggleTheme={handleToggleTheme}
         onOpenSettings={() => setShowSettings(true)}
+        layout={settings.layout}
+        onChangeLayout={handleChangeLayout}
         t={t}
       />
 
@@ -394,7 +406,7 @@ export default function App() {
               <span className="sg-toolbar__title">{t.searchResults(query, searchResults.length)}</span>
             </div>
             {searchResults.length > 0 ? (
-              <div className="sg-dial__grid">
+              <div className={gridClass}>
                 {searchResults.map((item) => (
                   <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} />
                 ))}
@@ -496,7 +508,7 @@ export default function App() {
                 <p className="sg-empty__text sg-preline">{t.emptyFolder}</p>
               </div>
             ) : (
-              <div className="sg-dial__grid">
+              <div className={gridClass}>
                 {currentFolder.children.map((child) => (
                   <FolderCard
                     key={child.id}
@@ -547,6 +559,7 @@ export default function App() {
           t={t}
           onUpdateSettings={updateSettings}
           onClose={() => setShowSettings(false)}
+          onRefresh={refresh}
         />
       )}
       {confirmDialog && (

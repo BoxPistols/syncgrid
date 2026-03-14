@@ -42,13 +42,76 @@ export async function testAiConnection(settings: AISettings): Promise<{ ok: bool
   }
 }
 
-/** Generate a bookmark title from a URL using the configured AI provider */
+/**
+ * ページのHTMLを取得して<title>タグを抽出する
+ * CORSで失敗する場合はnullを返す
+ */
+async function fetchPageTitle(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(5000),
+      headers: { Accept: 'text/html' },
+    })
+    if (!res.ok) return null
+    // HTMLの先頭部分のみ読み取り（<title>は<head>内にある）
+    const reader = res.body?.getReader()
+    if (!reader) return null
+    let html = ''
+    const decoder = new TextDecoder()
+    while (html.length < 50000) {
+      const { done, value } = await reader.read()
+      if (done) break
+      html += decoder.decode(value, { stream: true })
+      // <title>が見つかったら早期終了
+      const match = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+      if (match) {
+        reader.cancel()
+        // HTMLエンティティをデコード
+        return decodeHtmlEntities(match[1].trim())
+      }
+    }
+    reader.cancel()
+    return null
+  } catch {
+    return null
+  }
+}
+
+/** HTMLエンティティをデコード */
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+}
+
+/**
+ * URLからブックマークタイトルを生成
+ * 1. まずページの<title>タグを直接取得（CORS許可時）
+ * 2. 取得できない場合はAIにフォールバック
+ */
 export async function generateTitle(url: string, settings: AISettings): Promise<string> {
+  // まずページの<title>タグを直接取得
+  const pageTitle = await fetchPageTitle(url)
+  if (pageTitle) return pageTitle
+
+  // AI フォールバック
   if (settings.provider === 'none') {
     throw new Error('AI provider not configured')
   }
 
-  const prompt = `Given this URL, generate a concise, descriptive bookmark title (max 60 chars). Return ONLY the title text, nothing else.\n\nURL: ${url}`
+  const prompt = [
+    'Given this URL, generate a concise, descriptive bookmark title (max 60 chars).',
+    'IMPORTANT: Use the SAME LANGUAGE as the page content. If the page is Japanese, respond in Japanese. Do NOT translate.',
+    'If you can determine the actual page title from the URL structure, use that.',
+    'Return ONLY the title text, nothing else.',
+    '',
+    `URL: ${url}`,
+  ].join('\n')
 
   if (settings.provider === 'openai') {
     return callOpenAI(prompt, settings.openaiApiKey, settings.openaiModel)
@@ -74,7 +137,11 @@ async function callOpenAI(prompt: string, apiKey: string, model: string): Promis
     body: JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: 'You are a helpful assistant that generates concise bookmark titles.' },
+        {
+          role: 'system',
+          content:
+            'You are a helpful assistant that generates concise bookmark titles. Always respond in the same language as the page content. Never translate.',
+        },
         { role: 'user', content: prompt },
       ],
       max_tokens: 100,

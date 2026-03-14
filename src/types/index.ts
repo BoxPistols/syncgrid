@@ -1,5 +1,8 @@
 import type { Locale } from '../i18n'
 
+/** レイアウトモード */
+export type LayoutMode = 'card' | 'list' | 'compact'
+
 /** SyncGrid内のブックマーク1件 */
 export interface SyncGridItem {
   id: string
@@ -66,6 +69,8 @@ export interface SyncGridSettings {
   lastSyncedAt: string
   /** AI設定 */
   ai: AISettings
+  /** レイアウトモード */
+  layout: LayoutMode
 }
 
 export const DEFAULT_SETTINGS: SyncGridSettings = {
@@ -75,6 +80,7 @@ export const DEFAULT_SETTINGS: SyncGridSettings = {
   lastPath: [],
   lastSyncedAt: '',
   ai: DEFAULT_AI_SETTINGS,
+  layout: 'card',
 }
 
 /** エクスポートデータ形式 */

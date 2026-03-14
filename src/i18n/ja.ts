@@ -92,4 +92,18 @@ export const ja = {
   close: '閉じる',
   confirmOk: '実行',
   menu: 'メニュー',
+  // Layout
+  layout: 'レイアウト',
+  layoutCard: 'カード',
+  layoutList: 'リスト',
+  layoutCompact: 'コンパクト',
+  // Chrome bookmark import
+  importChrome: 'Chromeブックマークからインポート',
+  importChromeDesc: '既存のChromeブックマークフォルダをSyncGridに取り込みます。',
+  importSelected: '選択したフォルダをインポート',
+  selectAll: 'すべて選択',
+  deselectAll: 'すべて解除',
+  noFolders: 'インポート可能なフォルダが見つかりません',
+  importChromeSuccess: (n: number) => `${n}件のフォルダをインポートしました`,
+  bookmarkCount: (n: number) => `${n}件のブックマーク`,
 } as const
