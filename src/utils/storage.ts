@@ -1,6 +1,7 @@
 import {
   DEFAULT_SETTINGS,
   DEFAULT_AI_SETTINGS,
+  DEFAULT_SHORTCUTS,
   type SyncGridSettings,
   type BookmarkMeta,
   type LayoutMode,
@@ -28,6 +29,7 @@ export async function loadSettings(): Promise<SyncGridSettings> {
     ai: { ...DEFAULT_AI_SETTINGS, ...(s.ai ?? {}) },
     layout: VALID_LAYOUTS.includes(s.layout as LayoutMode) ? (s.layout as LayoutMode) : DEFAULT_SETTINGS.layout,
     sort: VALID_SORTS.includes(s.sort as SortMode) ? (s.sort as SortMode) : DEFAULT_SETTINGS.sort,
+    shortcuts: { ...DEFAULT_SHORTCUTS, ...(s.shortcuts ?? {}) },
   }
 }
 

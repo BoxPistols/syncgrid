@@ -14,15 +14,18 @@ interface Props {
   dropMode?: 'before' | 'after' | null
   t: Messages
   locale?: string
+  isSelected?: boolean
+  onToggleSelect?: (id: string, e: React.MouseEvent) => boolean
 }
 
-export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t, locale }: Props) {
+export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t, locale, isSelected, onToggleSelect }: Props) {
   const [imgFailed, setImgFailed] = useState(false)
   const domain = getDomain(item.url)
   const initial = domain.charAt(0).toUpperCase()
 
   const className = [
     'sg-card',
+    isSelected && 'sg-card--selected',
     isDragging && 'sg-card--dragging',
     isDropTarget && dropMode === 'before' && 'sg-card--drop-before',
     isDropTarget && dropMode === 'after' && 'sg-card--drop-after',
@@ -35,7 +38,10 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
       className={className}
       role="link"
       tabIndex={0}
-      onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
+      onClick={(e) => {
+        if (onToggleSelect?.(item.id, e)) return
+        window.open(item.url, '_blank', 'noopener,noreferrer')
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()

@@ -87,8 +87,8 @@ export function AddBookmarkForm({ onAdd, onCancel, t, aiSettings }: Props) {
       return
     }
 
-    // Cmd+Enter / Ctrl+Enter で送信
-    if (e.key === 'Enter' && isModKey(e)) {
+    // Cmd+Enter / Ctrl+Enter / Cmd+S / Ctrl+S で送信
+    if ((e.key === 'Enter' || e.key === 's') && isModKey(e)) {
       e.preventDefault()
       handleSubmit()
     }

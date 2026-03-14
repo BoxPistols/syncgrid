@@ -1127,6 +1127,70 @@ button {
   }
 }
 
+/* --- Selection --- */
+.sg-card--selected,
+.sg-folder-card--selected {
+  outline: 2px solid var(--sg-accent);
+  outline-offset: -2px;
+  background: var(--sg-accent-soft);
+}
+.sg-selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 24px;
+  background: var(--sg-accent-soft);
+  border-bottom: 1px solid var(--sg-accent);
+  font-size: 13px;
+  color: var(--sg-accent);
+  font-weight: 500;
+}
+
+/* --- Shortcut editor --- */
+.sg-shortcut-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sg-shortcut-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--sg-border);
+}
+.sg-shortcut-table td:first-child {
+  color: var(--sg-text-secondary);
+  width: 40%;
+}
+.sg-shortcut__key {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--sg-border);
+  border-radius: 4px;
+  background: var(--sg-bg-input);
+  color: var(--sg-text);
+  font-size: 12px;
+  font-family: monospace;
+  cursor: pointer;
+  transition: border-color var(--sg-transition);
+  min-width: 60px;
+  text-align: center;
+}
+.sg-shortcut__key:focus {
+  border-color: var(--sg-accent);
+  box-shadow: var(--sg-focus-ring);
+  outline: none;
+}
+.sg-shortcut__key--recording {
+  border-color: var(--sg-accent);
+  color: var(--sg-accent);
+  animation: sg-pulse 1s ease infinite;
+}
+@keyframes sg-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* --- Page transition --- */
 .sg-page-transition {
   animation: sg-fade-in 0.15s ease;

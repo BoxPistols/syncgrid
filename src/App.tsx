@@ -25,7 +25,7 @@ import {
   countAll,
 } from './utils/bookmarks'
 import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
-import { isModKey, isComposing } from './utils/keyboard'
+import { isComposing, matchesBinding } from './utils/keyboard'
 import { getDomain } from './utils/favicon'
 
 import './styles/global.css'
@@ -65,6 +65,7 @@ export default function App() {
     onConfirm: () => void
     confirmLabel?: string
   } | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // --- Active Tab (computed — stale ID falls back to first group) ---
   const activeTabId = useMemo(() => {
@@ -125,35 +126,88 @@ export default function App() {
     return results
   }, [query, groups])
 
-  // --- Global keyboard shortcuts ---
+  // --- Selection handlers ---
+  const toggleSelect = useCallback((id: string, e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey) {
+      // Cmd/Ctrl+Click → トグル選択
+      e.preventDefault()
+      e.stopPropagation()
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+        return next
+      })
+      return true
+    }
+    return false
+  }, [])
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (selectedIds.size === 0) return
+    setConfirmDialog({
+      message: t.selected(selectedIds.size),
+      confirmLabel: t.delete,
+      onConfirm: async () => {
+        setConfirmDialog(null)
+        for (const id of selectedIds) {
+          try {
+            await removeBookmark(id)
+          } catch {
+            try {
+              await deleteGroup(id)
+            } catch { /* skip */ }
+          }
+        }
+        setSelectedIds(new Set())
+        refresh()
+      },
+    })
+  }, [selectedIds, refresh, t])
+
+  // --- Global keyboard shortcuts (設定ベース) ---
   useEffect(() => {
+    const sc = settings.shortcuts
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (isComposing(e)) return
 
-      // Cmd+K / Ctrl+K → 検索にフォーカス
-      if (isModKey(e) && e.key === 'k') {
+      if (matchesBinding(e, sc.search)) {
         e.preventDefault()
-        const input = document.querySelector<HTMLInputElement>('.sg-topbar__search-input')
-        input?.focus()
-      }
-
-      // Cmd+1/2/3 → レイアウト切替
-      if (isModKey(e) && ['1', '2', '3'].includes(e.key)) {
-        e.preventDefault()
-        const layouts: LayoutMode[] = ['card', 'list', 'compact']
-        handleChangeLayout(layouts[Number(e.key) - 1])
-      }
-
-      // Ctrl+N → ブックマーク追加フォーム表示（Cmd+Nはブラウザ新規ウィンドウと競合するためCtrl固定）
-      if (e.ctrlKey && !e.metaKey && e.key === 'n') {
+        document.querySelector<HTMLInputElement>('.sg-topbar__search-input')?.focus()
+      } else if (matchesBinding(e, sc.addBookmark)) {
         e.preventDefault()
         setShowAddForm(true)
+      } else if (matchesBinding(e, sc.layoutCard)) {
+        e.preventDefault()
+        updateSettings({ layout: 'card' })
+      } else if (matchesBinding(e, sc.layoutList)) {
+        e.preventDefault()
+        updateSettings({ layout: 'list' })
+      } else if (matchesBinding(e, sc.layoutCompact)) {
+        e.preventDefault()
+        updateSettings({ layout: 'compact' })
+      } else if (matchesBinding(e, sc.deleteSelected)) {
+        if (selectedIds.size > 0) {
+          e.preventDefault()
+          handleDeleteSelected()
+        }
+      } else if (matchesBinding(e, sc.selectAll)) {
+        if (currentFolder) {
+          e.preventDefault()
+          const allIds = new Set([
+            ...currentFolder.items.map((i) => i.id),
+            ...currentFolder.children.map((c) => c.id),
+          ])
+          setSelectedIds(allIds)
+        }
+      } else if (e.key === 'Escape' && selectedIds.size > 0) {
+        setSelectedIds(new Set())
       }
     }
 
     document.addEventListener('keydown', handleGlobalKeyDown)
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [])
+  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, currentFolder])
 
   // --- Page transition key ---
   const pageKey = searchResults ? 'search' : `${activeTabId}/${path.join('/')}`
@@ -195,6 +249,7 @@ export default function App() {
   const handleSelectTab = useCallback(
     (id: string) => {
       setPath([])
+      setSelectedIds(new Set())
       updateSettings({ activeTabId: id, lastPath: [] })
       setQuery('')
     },
@@ -203,6 +258,7 @@ export default function App() {
 
   const handleOpenFolder = useCallback((group: SyncGridGroup) => {
     setPath((prev) => [...prev, group.id])
+    setSelectedIds(new Set())
   }, [])
 
   const handleBreadcrumbClick = useCallback((index: number) => {
@@ -476,6 +532,19 @@ export default function App() {
       </div>
 
       {/* Content */}
+      {/* Selection bar */}
+      {selectedIds.size > 0 && (
+        <div className="sg-selection-bar">
+          <span>{t.selected(selectedIds.size)}</span>
+          <button className="sg-btn sg-btn--sm sg-btn--danger" onClick={handleDeleteSelected}>
+            {t.deleteSelected}
+          </button>
+          <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setSelectedIds(new Set())}>
+            {t.clearSelection}
+          </button>
+        </div>
+      )}
+
       <div key={pageKey} className="sg-page-transition">
         {searchResults ? (
           <div className="sg-dial">
@@ -631,6 +700,8 @@ export default function App() {
                     isDragging={dragState.draggingId === child.id}
                     isDropTarget={dragState.dropTargetId === child.id}
                     dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null}
+                    isSelected={selectedIds.has(child.id)}
+                    onToggleSelect={toggleSelect}
                   />
                 ))}
                 {sortItems(currentFolder.items).map((item) => (
@@ -646,6 +717,8 @@ export default function App() {
                     }
                     t={t}
                     locale={settings.locale}
+                    isSelected={selectedIds.has(item.id)}
+                    onToggleSelect={toggleSelect}
                   />
                 ))}
               </div>

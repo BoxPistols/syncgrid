@@ -117,4 +117,19 @@ export const ja = {
   noFolders: 'インポート可能なフォルダが見つかりません',
   importChromeSuccess: (n: number) => `${n}件のフォルダをインポートしました`,
   bookmarkCount: (n: number) => `${n}件のブックマーク`,
+  // Selection
+  selected: (n: number) => `${n}件選択中`,
+  deleteSelected: '選択を削除',
+  clearSelection: '選択解除',
+  // Shortcuts
+  shortcuts: 'キーボードショートカット',
+  shortcutSearch: '検索',
+  shortcutAddBookmark: 'ブックマーク追加',
+  shortcutLayoutCard: 'カード表示',
+  shortcutLayoutList: 'リスト表示',
+  shortcutLayoutCompact: 'コンパクト表示',
+  shortcutDeleteSelected: '選択削除',
+  shortcutSelectAll: 'すべて選択',
+  shortcutPressKey: 'キーを押してください…',
+  shortcutReset: '初期化',
 } as const
