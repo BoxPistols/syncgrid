@@ -41,31 +41,34 @@ describe('generateTitle', () => {
 
   it('returns page title when fetchable and permission granted', async () => {
     g.chrome = { permissions: { contains: () => Promise.resolve(true) } } as typeof g.chrome
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      body: {
-        getReader: () => {
-          let done = false
-          return {
-            read: () => {
-              if (done) return Promise.resolve({ done: true, value: undefined })
-              done = true
-              return Promise.resolve({
-                done: false,
-                value: new TextEncoder().encode('<html><head><title>ページタイトル</title></head></html>'),
-              })
-            },
-            cancel: () => {},
-          }
+    try {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'text/html; charset=utf-8' },
+        body: {
+          getReader: () => {
+            let done = false
+            return {
+              read: () => {
+                if (done) return Promise.resolve({ done: true, value: undefined })
+                done = true
+                return Promise.resolve({
+                  done: false,
+                  value: new TextEncoder().encode('<html><head><title>ページタイトル</title></head></html>'),
+                })
+              },
+              cancel: () => Promise.resolve(),
+            }
+          },
         },
-      },
-    })
+      })
 
-    const result = await generateTitle('https://example.com', openaiSettings)
-    expect(result).toBe('ページタイトル')
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-    // cleanup
-    g.chrome = { permissions: { contains: () => Promise.resolve(false) } } as typeof g.chrome
+      const result = await generateTitle('https://example.com', openaiSettings)
+      expect(result).toBe('ページタイトル')
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+    } finally {
+      g.chrome = { permissions: { contains: () => Promise.resolve(false) } } as typeof g.chrome
+    }
   })
 
   it('calls OpenAI API correctly', async () => {
