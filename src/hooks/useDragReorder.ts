@@ -31,9 +31,20 @@ export interface ZoneDropHandlers {
   onDrop: (e: React.DragEvent) => void
 }
 
-function calcDropMode(relX: number, targetType: DragItemType, dragId: string, targetId: string): DropMode {
+function calcDropMode(
+  relX: number,
+  targetType: DragItemType,
+  dragId: string,
+  targetId: string,
+  selectedIds?: Set<string>,
+): DropMode {
+  // 複数選択中のアイテムをフォルダにドロップ → 常にinto
+  if (targetType === 'folder' && dragId !== targetId && selectedIds && selectedIds.size > 1) {
+    return 'into'
+  }
   if (targetType === 'folder' && dragId !== targetId) {
-    return relX < 0.3 ? 'before' : relX > 0.7 ? 'after' : 'into'
+    // フォルダへのドロップ判定を緩くする（中央60%をintoに）
+    return relX < 0.2 ? 'before' : relX > 0.8 ? 'after' : 'into'
   }
   return relX < 0.5 ? 'before' : 'after'
 }
@@ -86,7 +97,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?
 
         const rect = e.currentTarget.getBoundingClientRect()
         const relX = (e.clientX - rect.left) / rect.width
-        const mode = calcDropMode(relX, type, data.id, id)
+        const mode = calcDropMode(relX, type, data.id, id, selectedIds)
 
         setDragState((prev) => {
           if (prev.dropTargetId === id && prev.dropMode === mode) return prev
@@ -117,7 +128,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?
         try {
           const rect = e.currentTarget.getBoundingClientRect()
           const relX = (e.clientX - rect.left) / rect.width
-          const mode = calcDropMode(relX, type, data.id, id)
+          const mode = calcDropMode(relX, type, data.id, id, selectedIds)
 
           // 複数選択中のアイテムがドラッグされた場合、全選択アイテムを移動
           const idsToMove =
