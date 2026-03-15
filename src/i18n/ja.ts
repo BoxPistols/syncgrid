@@ -140,4 +140,20 @@ export const ja = {
   // AI拡張
   aiAutoTag: 'AI自動タグ',
   aiCategorize: 'AI分類',
+  moveSelected: '移動先',
+  moveTo: (name: string) => `「${name}」へ移動`,
+  trash: 'ゴミ箱',
+  trashEmpty: 'ゴミ箱は空です',
+  trashDesc: '削除したブックマークは30日間保持されます',
+  restore: '復元',
+  deletePermanently: '完全に削除',
+  emptyTrash: 'ゴミ箱を空にする',
+  trashCount: (n: number) => `${n}件`,
+  deletedAt: (d: string) => `${d} に削除`,
+  // ステータス
+  statusUnread: '未読',
+  statusRead: '既読',
+  statusLater: '後で読む',
+  statusStarred: 'お気に入り',
+  statusAll: 'すべて',
 } as const

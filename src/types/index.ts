@@ -60,11 +60,25 @@ export interface OgpData {
   fetchedAt: number
 }
 
+/** ゴミ箱アイテム */
+export interface TrashItem {
+  id: string
+  title: string
+  url: string
+  parentId: string
+  parentTitle: string
+  deletedAt: number
+}
+
+/** ブックマーク閲覧ステータス */
+export type ReadStatus = 'unread' | 'read' | 'later' | 'starred'
+
 /** ローカルメタデータ（chrome.storage.local） */
 export interface BookmarkMeta {
   memo: string
   tags?: string[]
   ogp?: OgpData
+  status?: ReadStatus
 }
 
 /** AI プロバイダ */

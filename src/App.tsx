@@ -13,6 +13,7 @@ import { ContextMenu, type MenuItem } from './components/ContextMenu'
 import { AddBookmarkForm } from './components/AddBookmarkForm'
 import { SettingsPanel } from './components/SettingsPanel'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { TrashPanel } from './components/TrashPanel'
 import { Icon } from './components/Icon'
 import {
   addBookmark,
@@ -29,6 +30,8 @@ import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode, BookmarkMeta } 
 import { isComposing, matchesBinding } from './utils/keyboard'
 import { getDomain } from './utils/favicon'
 import { loadAllMeta, saveMeta } from './utils/storage'
+import { addMultipleToTrash } from './utils/trash'
+import type { TrashItem } from './types'
 
 import './styles/global.css'
 
@@ -76,6 +79,7 @@ export default function App() {
   } | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [filterTag, setFilterTag] = useState<string | null>(null)
+  const [showTrash, setShowTrash] = useState(false)
 
   // --- Active Tab (computed — stale ID falls back to first group) ---
   const activeTabId = useMemo(() => {
@@ -160,6 +164,22 @@ export default function App() {
       confirmLabel: t.delete,
       onConfirm: async () => {
         setConfirmDialog(null)
+        // ゴミ箱に入れてからChrome Bookmarksから削除
+        const trashItems: TrashItem[] = []
+        for (const id of selectedIds) {
+          const item = currentFolder?.items.find((i) => i.id === id)
+          if (item) {
+            trashItems.push({
+              id: `trash_${Date.now()}_${item.id}`,
+              title: item.title,
+              url: item.url,
+              parentId: item.parentId,
+              parentTitle: currentFolder?.title ?? '',
+              deletedAt: Date.now(),
+            })
+          }
+        }
+        if (trashItems.length > 0) await addMultipleToTrash(trashItems)
         for (const id of selectedIds) {
           try {
             await removeBookmark(id)
@@ -173,7 +193,21 @@ export default function App() {
         refresh()
       },
     })
-  }, [selectedIds, refresh, t])
+  }, [selectedIds, refresh, t, currentFolder])
+
+  // --- 一括移動 ---
+  const handleMoveSelected = useCallback(
+    async (targetGroupId: string) => {
+      for (const id of selectedIds) {
+        try {
+          await chrome.bookmarks.move(id, { parentId: targetGroupId })
+        } catch { /* skip */ }
+      }
+      setSelectedIds(new Set())
+      refresh()
+    },
+    [selectedIds, refresh],
+  )
 
   // --- Global keyboard shortcuts (設定ベース) ---
   useEffect(() => {
@@ -568,6 +602,9 @@ export default function App() {
             <Icon name="plus" size={14} />
           </button>
         )}
+        <button className="sg-tab sg-tab--add" onClick={() => setShowTrash(true)} title={t.trash} aria-label={t.trash}>
+          <Icon name="trash" size={14} />
+        </button>
       </div>
 
       {/* Content */}
@@ -575,8 +612,24 @@ export default function App() {
       {selectedIds.size > 0 && (
         <div className="sg-selection-bar">
           <span>{t.selected(selectedIds.size)}</span>
+          <select
+            className="sg-sort__select"
+            value=""
+            onChange={(e) => {
+              if (e.target.value) handleMoveSelected(e.target.value)
+            }}
+          >
+            <option value="" disabled>
+              {t.moveSelected}
+            </option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.title}
+              </option>
+            ))}
+          </select>
           <button className="sg-btn sg-btn--sm sg-btn--danger" onClick={handleDeleteSelected}>
-            {t.deleteSelected}
+            <Icon name="trash" size={12} /> {t.deleteSelected}
           </button>
           <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setSelectedIds(new Set())}>
             {t.clearSelection}
@@ -815,6 +868,14 @@ export default function App() {
           onCancel={() => setConfirmDialog(null)}
           confirmLabel={confirmDialog.confirmLabel}
           t={t}
+        />
+      )}
+      {showTrash && (
+        <TrashPanel
+          onClose={() => setShowTrash(false)}
+          onRestored={refresh}
+          t={t}
+          locale={settings.locale}
         />
       )}
     </>
