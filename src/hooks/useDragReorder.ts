@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { getRootId } from '../utils/bookmarks'
 import type { SyncGridGroup } from '../types'
 
-type DragItemType = 'bookmark' | 'folder'
+type DragItemType = 'bookmark' | 'folder' | 'tab'
 type DropMode = 'before' | 'after' | 'into' | null
 
 export interface DragState {
@@ -249,5 +249,83 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
     [],
   )
 
-  return { dragState, getDragHandlers, getTabDropHandlers, getBreadcrumbDropHandlers }
+  // --- Tab reorder drag handlers (タブ自体の並び替え) ---
+  const getTabDragHandlers = useCallback(
+    (tabId: string) => ({
+      draggable: true,
+
+      onDragStart(e: React.DragEvent) {
+        dragDataRef.current = { id: tabId, type: 'tab' }
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', tabId)
+        setTimeout(() => {
+          setDragState({
+            ...INITIAL_STATE,
+            draggingId: tabId,
+            draggingType: 'tab',
+          })
+        }, 0)
+      },
+
+      onDragEnd() {
+        dragDataRef.current = null
+        setDragState(INITIAL_STATE)
+      },
+
+      onDragOver(e: React.DragEvent) {
+        const data = dragDataRef.current
+        if (!data || data.type !== 'tab' || data.id === tabId) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        setDragState((prev) => {
+          if (prev.dropTabId === tabId) return prev
+          return { ...prev, dropTargetId: null, dropMode: null, dropTabId: tabId, dropBreadcrumbId: null }
+        })
+      },
+
+      onDragEnter(e: React.DragEvent) {
+        const data = dragDataRef.current
+        if (!data || data.type !== 'tab' || data.id === tabId) return
+        e.preventDefault()
+      },
+
+      onDragLeave(e: React.DragEvent) {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setDragState((prev) => {
+            if (prev.dropTabId !== tabId) return prev
+            return { ...prev, dropTabId: null }
+          })
+        }
+      },
+
+      async onDrop(e: React.DragEvent) {
+        e.preventDefault()
+        const data = dragDataRef.current
+        if (!data || data.type !== 'tab' || data.id === tabId) return
+
+        try {
+          const rootId = await getRootId()
+          const [rootTree] = await chrome.bookmarks.getSubTree(rootId)
+          const children = rootTree.children ?? []
+
+          const sourceIdx = children.findIndex((c) => c.id === data.id)
+          const targetIdx = children.findIndex((c) => c.id === tabId)
+          if (sourceIdx < 0 || targetIdx < 0) return
+
+          let moveIdx = targetIdx
+          if (sourceIdx < moveIdx) moveIdx += 1
+
+          await chrome.bookmarks.move(data.id, { parentId: rootId, index: moveIdx })
+        } catch (err) {
+          console.error('[SyncGrid] Tab reorder failed:', err)
+        } finally {
+          dragDataRef.current = null
+          setDragState(INITIAL_STATE)
+        }
+      },
+    }),
+    [],
+  )
+
+  return { dragState, getDragHandlers, getTabDropHandlers, getTabDragHandlers, getBreadcrumbDropHandlers }
 }

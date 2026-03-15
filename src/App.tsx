@@ -106,7 +106,8 @@ export default function App() {
   }, [activeGroup, path])
 
   // --- Drag & Drop ---
-  const { dragState, getDragHandlers, getTabDropHandlers, getBreadcrumbDropHandlers } = useDragReorder(currentFolder)
+  const { dragState, getDragHandlers, getTabDropHandlers, getTabDragHandlers, getBreadcrumbDropHandlers } =
+    useDragReorder(currentFolder)
 
   // --- Breadcrumb ---
   const breadcrumb = useMemo(() => {
@@ -516,7 +517,7 @@ export default function App() {
         {groups.map((g) => (
           <button
             key={g.id}
-            className={`sg-tab ${g.id === activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id ? 'sg-tab--drop-target' : ''}`}
+            className={`sg-tab ${g.id === activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id && dragState.draggingId !== g.id ? 'sg-tab--drop-target' : ''} ${dragState.draggingId === g.id ? 'sg-tab--dragging' : ''}`}
             role="tab"
             aria-selected={g.id === activeTabId}
             onClick={() => handleSelectTab(g.id)}
@@ -526,6 +527,7 @@ export default function App() {
               setRenameValue(g.title)
             }}
             {...getTabDropHandlers(g.id)}
+            {...getTabDragHandlers(g.id)}
           >
             {renamingTabId === g.id ? (
               <input

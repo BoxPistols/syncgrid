@@ -353,6 +353,9 @@ button {
   background: var(--sg-accent-soft);
   color: var(--sg-accent);
 }
+.sg-tab--dragging {
+  opacity: 0.4;
+}
 
 /* =====================
    BREADCRUMB
