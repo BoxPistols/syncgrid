@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>SyncGrid Screenshot Template</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1280px; height: 800px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+  /* ===== 手順 =====
+   * 1. Chrome拡張のnewtabページを開く
+   * 2. ⌘+Shift+I でDevToolsを開く
+   * 3. Device Toolbarで 1280x800 に設定
+   * 4. ⌘+Shift+P → "Capture full size screenshot"
+   * 5. 保存されたPNGをそのままストアにアップロード
+   *
+   * または、以下のコマンドでPuppeteerキャプチャ:
+   * npx puppeteer screenshot chrome-extension://YOUR_EXT_ID/index.html --width=1280 --height=800
+   */
+
+  .instructions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    background: #282a36;
+    color: #f8f8f2;
+    text-align: center;
+    gap: 24px;
+    padding: 40px;
+  }
+  h1 { font-size: 32px; color: #bd93f9; }
+  p { font-size: 16px; line-height: 1.8; color: #bfbfcf; max-width: 600px; }
+  code { background: #44475a; padding: 2px 8px; border-radius: 4px; font-size: 14px; }
+  .badge { background: #50fa7b; color: #282a36; padding: 8px 20px; border-radius: 8px; font-weight: 700; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="instructions">
+  <h1>SyncGrid スクリーンショット撮影手順</h1>
+  <p>
+    1. Chrome拡張をインストールした状態で新規タブを開く<br>
+    2. <code>⌘+Shift+I</code> → DevTools → Device Toolbar<br>
+    3. サイズを <code>1280 x 800</code> に設定<br>
+    4. <code>⌘+Shift+P</code> → <code>Capture full size screenshot</code><br>
+    5. 保存されたPNGをChrome Web Storeにアップロード
+  </p>
+  <p>推奨: ダークテーマ + リスト表示 + ブックマーク5件以上の状態で撮影</p>
+  <div class="badge">1280 x 800 px</div>
+</div>
+</body>
+</html>

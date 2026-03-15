@@ -99,3 +99,11 @@ optional_host_permissions for https://*/* and http://*/* are used to fetch page 
 - **Web history**: No
 - **User activity**: No
 - **Website content**: No
+
+---
+
+## Support / サポート
+
+SyncGrid is free and open source. If you find it useful:
+- GitHub Sponsors: https://github.com/sponsors/BoxPistols
+- Buy Me a Coffee: (URLを設定後に追記)
