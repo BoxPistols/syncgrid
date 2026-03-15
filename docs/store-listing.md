@@ -23,8 +23,13 @@ SyncGrid replaces your Chrome new tab page with a fast, beautiful Speed Dial boo
 - Japanese & English interface
 - Export & import bookmarks as JSON
 - Local folder sync — back up to Google Drive, OneDrive, iCloud, or Dropbox via a local synced folder
-- AI-powered title generation (optional) — bring your own OpenAI or Gemini API key
-- Keyboard accessible — full tab navigation and keyboard shortcuts
+- Multiple layouts: Card, List, Compact — switch with ⌘1/2/3
+- URL preview on hover — OGP images, descriptions, site info
+- Tags & filtering — organize bookmarks with tags, filter by tag
+- Sort by name, date, or domain
+- AI-powered title generation & auto-tagging (optional) — bring your own OpenAI or Gemini API key
+- Customizable keyboard shortcuts
+- Bulk select & delete with Cmd/Ctrl+Click
 
 **Privacy first:**
 - Zero telemetry — no analytics, no tracking, no external data collection
@@ -50,8 +55,13 @@ SyncGrid は Chrome の新規タブページを高速で美しい Speed Dial ブ
 - 日本語・英語対応
 - JSON形式でブックマークのエクスポート＆インポート
 - ローカルフォルダ同期 — Google Drive, OneDrive, iCloud, Dropbox 等のクラウドフォルダ経由でバックアップ
-- AI タイトル自動生成（オプション）— OpenAI または Gemini の API キーを設定して利用
-- キーボードアクセシブル — タブナビゲーションとキーボードショートカット対応
+- 複数レイアウト: カード / リスト / コンパクト — ⌘1/2/3で切替
+- URLホバープレビュー — OGP画像・説明・サイト情報を表示
+- タグ＆フィルタリング — タグでブックマークを整理・絞り込み
+- 名前・日付・ドメインでソート
+- AI タイトル自動生成＆自動タグ付け（オプション）— OpenAI / Gemini API キーで利用
+- カスタマイズ可能なキーボードショートカット
+- 複数選択＆一括削除（Cmd/Ctrl+Click）
 
 **プライバシー重視:**
 - ゼロテレメトリ — アナリティクス、トラッキング、外部データ収集一切なし
@@ -74,7 +84,10 @@ English, Japanese
 Replace the new tab page with a Speed Dial bookmark dashboard for organizing, searching, and syncing bookmarks.
 
 ### Host permission justification
-host_permissions for api.openai.com and generativelanguage.googleapis.com are used exclusively for the optional AI title generation feature. These APIs are only contacted when the user explicitly configures their own API key and triggers the feature. No data is sent otherwise.
+host_permissions for api.openai.com and generativelanguage.googleapis.com are used exclusively for the optional AI title generation and auto-tagging features. These APIs are only contacted when the user explicitly configures their own API key and triggers the feature. No data is sent otherwise.
+
+### Optional host permission justification
+optional_host_permissions for https://*/* and http://*/* are used to fetch page titles and OGP (Open Graph Protocol) metadata when users add bookmarks. This permission is requested at runtime only when the user first uses the title auto-fetch feature, and can be revoked at any time.
 
 ### Data usage disclosures
 - **Personally identifiable information**: No

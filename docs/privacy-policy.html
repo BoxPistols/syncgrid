@@ -73,7 +73,7 @@
 <body>
   <div class="container">
     <h1>SyncGrid — Privacy Policy</h1>
-    <p class="updated">Last updated: February 15, 2026</p>
+    <p class="updated">Last updated: March 15, 2026</p>
 
     <h2>Overview</h2>
     <p>SyncGrid is a Chrome extension that replaces your new tab page with a Speed Dial bookmark manager. We are committed to protecting your privacy. This policy explains what data SyncGrid accesses, how it is used, and what is never collected.</p>
@@ -87,7 +87,8 @@
 
     <h2>Optional Features</h2>
     <ul>
-      <li><strong>AI Title Generation</strong> — If you choose to configure an AI provider (OpenAI or Google Gemini), SyncGrid sends only the bookmark URL to the provider's API to generate a title. Your API key is stored locally and is only transmitted to the provider you selected. No data is sent unless you explicitly configure an API key and trigger the feature.</li>
+      <li><strong>Page Title &amp; OGP Fetching</strong> — When you add a bookmark, SyncGrid can fetch the page's title and preview information (OGP: title, description, image) directly from the website. This requires an optional permission that you grant on first use. The fetched data is cached locally. No data is sent to any third-party server.</li>
+      <li><strong>AI Title Generation &amp; Auto-tagging</strong> — If you choose to configure an AI provider (OpenAI or Google Gemini), SyncGrid sends only the bookmark URL and title to the provider's API to generate titles or tags. Your API key is stored locally and is only transmitted to the provider you selected. No data is sent unless you explicitly configure an API key and trigger the feature.</li>
       <li><strong>Local Folder Sync</strong> — If you select a local folder for backup, SyncGrid writes a JSON file to that folder using the File System Access API. The folder path and data stay entirely on your device. If that folder is synced to a cloud drive (Google Drive, OneDrive, etc.), that synchronization is handled by your operating system — not by SyncGrid.</li>
       <li><strong>Export / Import</strong> — You can export your bookmarks as a JSON file and import from one. These files are created and read locally on your device.</li>
     </ul>
@@ -107,7 +108,8 @@
       <li><strong><code>bookmarks</code></strong> — Read and organize your bookmarks within the SyncGrid folder</li>
       <li><strong><code>storage</code></strong> — Save your preferences (theme, language) locally</li>
       <li><strong><code>favicon</code></strong> — Display website favicons for your bookmarks</li>
-      <li><strong><code>host_permissions</code></strong> — Limited to <code>api.openai.com</code> and <code>generativelanguage.googleapis.com</code> only. Used exclusively for the optional AI title generation feature when you provide your own API key.</li>
+      <li><strong><code>host_permissions</code></strong> — Limited to <code>api.openai.com</code> and <code>generativelanguage.googleapis.com</code> only. Used exclusively for the optional AI title generation and auto-tagging features when you provide your own API key.</li>
+      <li><strong><code>optional_host_permissions</code></strong> — Access to web pages (<code>https://*</code>, <code>http://*</code>) is requested only when you use the page title auto-fetch or URL preview feature. This permission is granted by you on first use and can be revoked at any time in Chrome's extension settings.</li>
     </ul>
 
     <h2>Data Storage</h2>
