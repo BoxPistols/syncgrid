@@ -85,15 +85,26 @@ export default function App() {
   // --- Active Tab (computed — stale ID falls back to first group) ---
   const activeTabId = useMemo(() => {
     const stored = settings.activeTabId
+    if (stored === '__all__') return '__all__'
     if (stored && groups.find((g) => g.id === stored)) return stored
     return groups[0]?.id || ''
   }, [settings.activeTabId, groups])
 
-  const activeGroup = groups.find((g) => g.id === activeTabId) ?? groups[0]
+  const activeGroup = activeTabId === '__all__' ? null : (groups.find((g) => g.id === activeTabId) ?? groups[0])
+
+  // ALLタブ用: 全ブックマークをフラット化
+  const allItems = useMemo(() => {
+    if (activeTabId !== '__all__') return null
+    const items: SyncGridItem[] = []
+    for (const g of flattenGroups(groups)) {
+      items.push(...g.items)
+    }
+    return items
+  }, [activeTabId, groups])
 
   // Persist fallback to storage so it stays consistent
   useEffect(() => {
-    if (loaded && groups.length > 0 && settings.activeTabId !== activeTabId) {
+    if (loaded && groups.length > 0 && settings.activeTabId !== activeTabId && activeTabId !== '__all__') {
       updateSettings({ activeTabId, lastPath: [] })
     }
   }, [loaded, groups, settings.activeTabId, activeTabId, updateSettings])
@@ -310,11 +321,13 @@ export default function App() {
           return sorted.sort((a, b) => (a.dateAdded ?? 0) - (b.dateAdded ?? 0))
         case 'domain':
           return sorted.sort((a, b) => getDomain(a.url).localeCompare(getDomain(b.url)))
+        case 'last-read':
+          return sorted.sort((a, b) => (allMeta[b.id]?.lastReadAt ?? 0) - (allMeta[a.id]?.lastReadAt ?? 0))
         default:
           return items
       }
     },
-    [settings.sort],
+    [settings.sort, allMeta],
   )
 
   const handleChangeSort = useCallback(
@@ -421,9 +434,15 @@ export default function App() {
   )
 
   const handleSetStatus = useCallback(
-    async (id: string, status: ReadStatus) => {
+    async (id: string, newStatus: ReadStatus) => {
       const meta = allMeta[id]
-      await saveMeta(id, { memo: meta?.memo ?? '', tags: meta?.tags, ogp: meta?.ogp, status })
+      await saveMeta(id, {
+        memo: meta?.memo ?? '',
+        tags: meta?.tags,
+        ogp: meta?.ogp,
+        status: newStatus,
+        lastReadAt: newStatus === 'read' ? Date.now() : meta?.lastReadAt,
+      })
       loadAllMeta().then(setAllMeta)
     },
     [allMeta],
@@ -578,6 +597,15 @@ export default function App() {
 
       {/* Tab Bar */}
       <div className="sg-tabbar" role="tablist">
+        <button
+          className={`sg-tab ${activeTabId === '__all__' ? 'sg-tab--active' : ''}`}
+          role="tab"
+          aria-selected={activeTabId === '__all__'}
+          onClick={() => handleSelectTab('__all__')}
+        >
+          {t.allBookmarks}
+          <span className="sg-tab__count">{flattenGroups(groups).reduce((sum, g) => sum + g.items.length, 0)}</span>
+        </button>
         {groups.map((g) => (
           <button
             key={g.id}
@@ -695,6 +723,53 @@ export default function App() {
               </div>
             )}
           </div>
+        ) : allItems ? (
+          /* ALLタブ: 全ブックマーク表示 */
+          <div className="sg-dial">
+            <div className="sg-toolbar">
+              <span className="sg-toolbar__title">{t.allBookmarks} ({allItems.length})</span>
+              <div className="sg-status-filter">
+                {([null, 'unread', 'later', 'starred', 'read'] as const).map((s) => (
+                  <button
+                    key={s ?? 'all'}
+                    className={`sg-status-filter__btn ${filterStatus === s ? 'sg-status-filter__btn--active' : ''}`}
+                    onClick={() => setFilterStatus(s)}
+                  >
+                    {s === null ? t.statusAll : s === 'unread' ? t.statusUnread : s === 'later' ? t.statusLater : s === 'starred' ? t.statusStarred : t.statusRead}
+                  </button>
+                ))}
+              </div>
+              <div className="sg-sort">
+                <select
+                  className="sg-sort__select"
+                  value={settings.sort}
+                  onChange={(e) => handleChangeSort(e.target.value as SortMode)}
+                  aria-label={t.sort}
+                >
+                  <option value="manual">{t.sortManual}</option>
+                  <option value="name-asc">{t.sortNameAsc}</option>
+                  <option value="date-new">{t.sortDateNew}</option>
+                  <option value="date-old">{t.sortDateOld}</option>
+                  <option value="domain">{t.sortDomain}</option>
+                  <option value="last-read">{t.sortLastRead}</option>
+                </select>
+              </div>
+            </div>
+            <div className={gridClass}>
+              {sortItems(filterItems(allItems)).map((item) => (
+                <BookmarkCard
+                  key={item.id}
+                  item={item}
+                  onContextMenu={handleBookmarkContext}
+                  t={t}
+                  locale={settings.locale}
+                  tags={allMeta[item.id]?.tags}
+                  status={allMeta[item.id]?.status}
+                  onOpen={(id) => handleSetStatus(id, 'read')}
+                />
+              ))}
+            </div>
+          </div>
         ) : groups.length === 0 ? (
           <div className="sg-empty">
             <div className="sg-empty__icon"><Icon name="folder" size={48} /></div>
@@ -778,6 +853,7 @@ export default function App() {
                   <option value="date-new">{t.sortDateNew}</option>
                   <option value="date-old">{t.sortDateOld}</option>
                   <option value="domain">{t.sortDomain}</option>
+                  <option value="last-read">{t.sortLastRead}</option>
                 </select>
               </div>
               {allTagsInFolder.length > 0 && (

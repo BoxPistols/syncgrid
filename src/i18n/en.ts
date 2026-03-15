@@ -132,4 +132,7 @@ export const en = {
   statusLater: 'Read later',
   statusStarred: 'Starred',
   statusAll: 'All',
+  allBookmarks: 'ALL',
+  sortLastRead: 'Last read',
+  sortDateAdded: 'Date added',
 } as const

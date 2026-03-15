@@ -22,7 +22,7 @@ export async function loadSettings(): Promise<SyncGridSettings> {
   }
   const s = stored as Partial<SyncGridSettings>
   const VALID_LAYOUTS: LayoutMode[] = ['card', 'list', 'compact']
-  const VALID_SORTS: SortMode[] = ['manual', 'name-asc', 'name-desc', 'date-new', 'date-old', 'domain']
+  const VALID_SORTS: SortMode[] = ['manual', 'name-asc', 'name-desc', 'date-new', 'date-old', 'domain', 'last-read']
   return {
     ...DEFAULT_SETTINGS,
     ...s,

@@ -156,4 +156,7 @@ export const ja = {
   statusLater: '後で読む',
   statusStarred: 'お気に入り',
   statusAll: 'すべて',
+  allBookmarks: 'ALL',
+  sortLastRead: '最終閲覧順',
+  sortDateAdded: '追加順',
 } as const

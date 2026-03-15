@@ -7,7 +7,7 @@ export type LayoutMode = 'card' | 'list' | 'compact'
 export type CardSize = 'sm' | 'md' | 'lg'
 
 /** ソートモード */
-export type SortMode = 'manual' | 'name-asc' | 'name-desc' | 'date-new' | 'date-old' | 'domain'
+export type SortMode = 'manual' | 'name-asc' | 'name-desc' | 'date-new' | 'date-old' | 'domain' | 'last-read'
 
 /** キーバインド定義 */
 export interface KeyBinding {
@@ -79,6 +79,7 @@ export interface BookmarkMeta {
   tags?: string[]
   ogp?: OgpData
   status?: ReadStatus
+  lastReadAt?: number
 }
 
 /** AI プロバイダ */
