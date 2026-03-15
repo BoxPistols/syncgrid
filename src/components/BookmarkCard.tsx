@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { getFaviconUrl, getDomain } from '../utils/favicon'
 import { formatRelativeDate } from '../utils/date'
 import { UrlPreview } from './UrlPreview'
-import type { SyncGridItem } from '../types'
+import type { SyncGridItem, ReadStatus } from '../types'
 import { Icon } from './Icon'
 import type { DragHandlers } from '../hooks/useDragReorder'
 import type { Messages } from '../i18n'
@@ -19,9 +19,18 @@ interface Props {
   isSelected?: boolean
   onToggleSelect?: (id: string, e: React.MouseEvent) => boolean
   tags?: string[]
+  status?: ReadStatus
+  onOpen?: (id: string) => void
 }
 
-export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t, locale, isSelected, onToggleSelect, tags }: Props) {
+const STATUS_ICONS: Record<ReadStatus, { icon: 'check-circle' | 'sparkle' | 'pin'; cls: string }> = {
+  unread: { icon: 'sparkle', cls: 'sg-status--unread' },
+  read: { icon: 'check-circle', cls: 'sg-status--read' },
+  later: { icon: 'pin', cls: 'sg-status--later' },
+  starred: { icon: 'sparkle', cls: 'sg-status--starred' },
+}
+
+export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t, locale, isSelected, onToggleSelect, tags, status, onOpen }: Props) {
   const [imgFailed, setImgFailed] = useState(false)
   const [preview, setPreview] = useState<{ x: number; y: number } | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -57,6 +66,7 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
 
   const className = [
     'sg-card',
+    status && status !== 'read' && `sg-card--${status}`,
     isSelected && 'sg-card--selected',
     isDragging && 'sg-card--dragging',
     isDropTarget && dropMode === 'before' && 'sg-card--drop-before',
@@ -74,11 +84,13 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
         onClick={(e) => {
           if (onToggleSelect?.(item.id, e)) return
           window.open(item.url, '_blank', 'noopener,noreferrer')
+          onOpen?.(item.id)
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
             window.open(item.url, '_blank', 'noopener,noreferrer')
+          onOpen?.(item.id)
           }
         }}
         onContextMenu={(e) => {
@@ -104,7 +116,12 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
             />
           )}
         </div>
-        <span className="sg-card__title">{item.title}</span>
+        <span className="sg-card__title">
+          {status && status !== 'unread' && (
+            <Icon name={STATUS_ICONS[status].icon} size={12} className={STATUS_ICONS[status].cls} />
+          )}{' '}
+          {item.title}
+        </span>
         {tags && tags.length > 0 && (
           <div className="sg-tags sg-card__tags">
             {tags.map((tag) => (

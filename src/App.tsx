@@ -26,7 +26,7 @@ import {
   flattenGroups,
   countAll,
 } from './utils/bookmarks'
-import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode, BookmarkMeta } from './types'
+import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode, BookmarkMeta, ReadStatus } from './types'
 import { isComposing, matchesBinding } from './utils/keyboard'
 import { getDomain } from './utils/favicon'
 import { loadAllMeta, saveMeta } from './utils/storage'
@@ -79,6 +79,7 @@ export default function App() {
   } | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [filterTag, setFilterTag] = useState<string | null>(null)
+  const [filterStatus, setFilterStatus] = useState<ReadStatus | null>(null)
   const [showTrash, setShowTrash] = useState(false)
 
   // --- Active Tab (computed — stale ID falls back to first group) ---
@@ -272,10 +273,16 @@ export default function App() {
 
   const filterItems = useCallback(
     (items: SyncGridItem[]): SyncGridItem[] => {
-      if (!filterTag) return items
-      return items.filter((item) => allMeta[item.id]?.tags?.includes(filterTag))
+      let result = items
+      if (filterTag) {
+        result = result.filter((item) => allMeta[item.id]?.tags?.includes(filterTag))
+      }
+      if (filterStatus) {
+        result = result.filter((item) => (allMeta[item.id]?.status ?? 'unread') === filterStatus)
+      }
+      return result
     },
-    [filterTag, allMeta],
+    [filterTag, filterStatus, allMeta],
   )
 
   // --- Layout class ---
@@ -413,14 +420,35 @@ export default function App() {
     [refresh],
   )
 
+  const handleSetStatus = useCallback(
+    async (id: string, status: ReadStatus) => {
+      const meta = allMeta[id]
+      await saveMeta(id, { memo: meta?.memo ?? '', tags: meta?.tags, ogp: meta?.ogp, status })
+      loadAllMeta().then(setAllMeta)
+    },
+    [allMeta],
+  )
+
   const handleBookmarkContext = useCallback(
     (item: SyncGridItem, x: number, y: number) => {
       setCtxMenu({
         x,
         y,
         items: [
-          { label: t.openNewTab, icon: 'link', action: () => window.open(item.url, '_blank') },
+          {
+            label: t.openNewTab,
+            icon: 'link',
+            action: () => {
+              window.open(item.url, '_blank')
+              handleSetStatus(item.id, 'read')
+            },
+          },
           { label: t.edit, icon: 'edit', action: () => setEditItem(item) },
+          { label: '---', action: () => {} },
+          { label: t.statusUnread, icon: 'sparkle', action: () => handleSetStatus(item.id, 'unread') },
+          { label: t.statusLater, icon: 'pin', action: () => handleSetStatus(item.id, 'later') },
+          { label: t.statusStarred, icon: 'sparkle', action: () => handleSetStatus(item.id, 'starred') },
+          { label: t.statusRead, icon: 'check-circle', action: () => handleSetStatus(item.id, 'read') },
           { label: '---', action: () => {} },
           {
             label: t.delete,
@@ -434,7 +462,7 @@ export default function App() {
         ],
       })
     },
-    [refresh, t],
+    [refresh, t, handleSetStatus],
   )
 
   const handleFolderContext = useCallback(
@@ -726,6 +754,17 @@ export default function App() {
                   )
                 })()}
               <span className="sg-toolbar__title">{path.length === 0 ? '' : currentFolder.title}</span>
+              <div className="sg-status-filter">
+                {([null, 'unread', 'later', 'starred', 'read'] as const).map((s) => (
+                  <button
+                    key={s ?? 'all'}
+                    className={`sg-status-filter__btn ${filterStatus === s ? 'sg-status-filter__btn--active' : ''}`}
+                    onClick={() => setFilterStatus(s)}
+                  >
+                    {s === null ? t.statusAll : s === 'unread' ? t.statusUnread : s === 'later' ? t.statusLater : s === 'starred' ? t.statusStarred : t.statusRead}
+                  </button>
+                ))}
+              </div>
               <div className="sg-sort">
                 <select
                   className="sg-sort__select"
@@ -842,6 +881,8 @@ export default function App() {
                     isSelected={selectedIds.has(item.id)}
                     onToggleSelect={toggleSelect}
                     tags={allMeta[item.id]?.tags}
+                    status={allMeta[item.id]?.status}
+                    onOpen={(id) => handleSetStatus(id, 'read')}
                   />
                 ))}
               </div>
