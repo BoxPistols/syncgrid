@@ -47,7 +47,7 @@ const INITIAL_STATE: DragState = {
   dropBreadcrumbId: null,
 }
 
-export function useDragReorder(currentFolder: SyncGridGroup | null) {
+export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?: Set<string>) {
   const [dragState, setDragState] = useState<DragState>(INITIAL_STATE)
 
   const dragDataRef = useRef<{
@@ -119,9 +119,14 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
           const relX = (e.clientX - rect.left) / rect.width
           const mode = calcDropMode(relX, type, data.id, id)
 
+          // 複数選択中のアイテムがドラッグされた場合、全選択アイテムを移動
+          const idsToMove =
+            selectedIds && selectedIds.size > 1 && selectedIds.has(data.id) ? [...selectedIds] : [data.id]
+
           if (mode === 'into') {
-            // フォルダの中に移動（末尾に追加）
-            await chrome.bookmarks.move(data.id, { parentId: id })
+            for (const moveId of idsToMove) {
+              if (moveId !== id) await chrome.bookmarks.move(moveId, { parentId: id })
+            }
           } else {
             // 同一フォルダ内の並べ替え（__ungrouped__ は実際の親IDに解決）
             const folderId = currentFolder.id === '__ungrouped__' ? await getRootId() : currentFolder.id
@@ -139,10 +144,8 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
               moveIdx -= 1
             }
 
-            await chrome.bookmarks.move(data.id, {
-              parentId: folderId,
-              index: moveIdx,
-            })
+            // 単一アイテムの並び替え（複数選択時のintoはフォルダ移動なのでここは単一のみ）
+            await chrome.bookmarks.move(data.id, { parentId: folderId, index: moveIdx })
           }
         } catch (err) {
           console.error('[SyncGrid] Drop failed:', err)
@@ -152,7 +155,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
         }
       },
     }),
-    [currentFolder],
+    [currentFolder, selectedIds],
   )
 
   // --- Tab bar drop handlers ---
@@ -319,9 +322,13 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
 
             await chrome.bookmarks.move(data.id, { parentId: rootId, index: moveIdx })
           } else {
-            // カード/フォルダ → タブへ移動
+            // カード/フォルダ → タブへ移動（複数選択対応）
             const targetId = tabId === '__ungrouped__' ? await getRootId() : tabId
-            await chrome.bookmarks.move(data.id, { parentId: targetId })
+            const idsToMove =
+              selectedIds && selectedIds.size > 1 && selectedIds.has(data.id) ? [...selectedIds] : [data.id]
+            for (const moveId of idsToMove) {
+              await chrome.bookmarks.move(moveId, { parentId: targetId })
+            }
           }
         } catch (err) {
           console.error('[SyncGrid] Tab drop failed:', err)
@@ -331,7 +338,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
         }
       },
     }),
-    [],
+    [selectedIds],
   )
 
   return { dragState, getDragHandlers, getTabDropHandlers, getTabHandlers, getBreadcrumbDropHandlers }

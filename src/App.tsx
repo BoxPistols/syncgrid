@@ -110,7 +110,10 @@ export default function App() {
   }, [activeGroup, path])
 
   // --- Drag & Drop ---
-  const { dragState, getDragHandlers, getTabHandlers, getBreadcrumbDropHandlers } = useDragReorder(currentFolder)
+  const { dragState, getDragHandlers, getTabHandlers, getBreadcrumbDropHandlers } = useDragReorder(
+    currentFolder,
+    selectedIds,
+  )
 
   // --- Breadcrumb ---
   const breadcrumb = useMemo(() => {
@@ -627,6 +630,14 @@ export default function App() {
                 {g.title}
               </option>
             ))}
+            {currentFolder &&
+              currentFolder.children
+                .filter((c) => !selectedIds.has(c.id))
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {'  └ ' + c.title}
+                  </option>
+                ))}
           </select>
           <button className="sg-btn sg-btn--sm sg-btn--danger" onClick={handleDeleteSelected}>
             <Icon name="trash" size={12} /> {t.deleteSelected}
