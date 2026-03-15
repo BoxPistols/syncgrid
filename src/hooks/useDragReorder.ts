@@ -249,8 +249,8 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
     [],
   )
 
-  // --- Tab reorder drag handlers (タブ自体の並び替え) ---
-  const getTabDragHandlers = useCallback(
+  // --- Tab unified handlers (タブ自体のD&D + アイテム→タブへのドロップを統合) ---
+  const getTabHandlers = useCallback(
     (tabId: string) => ({
       draggable: true,
 
@@ -274,7 +274,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
 
       onDragOver(e: React.DragEvent) {
         const data = dragDataRef.current
-        if (!data || data.type !== 'tab' || data.id === tabId) return
+        if (!data || data.id === tabId) return
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
         setDragState((prev) => {
@@ -285,7 +285,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
 
       onDragEnter(e: React.DragEvent) {
         const data = dragDataRef.current
-        if (!data || data.type !== 'tab' || data.id === tabId) return
+        if (!data || data.id === tabId) return
         e.preventDefault()
       },
 
@@ -301,23 +301,30 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
       async onDrop(e: React.DragEvent) {
         e.preventDefault()
         const data = dragDataRef.current
-        if (!data || data.type !== 'tab' || data.id === tabId) return
+        if (!data || data.id === tabId) return
 
         try {
-          const rootId = await getRootId()
-          const [rootTree] = await chrome.bookmarks.getSubTree(rootId)
-          const children = rootTree.children ?? []
+          if (data.type === 'tab') {
+            // タブ同士の並び替え
+            const rootId = await getRootId()
+            const [rootTree] = await chrome.bookmarks.getSubTree(rootId)
+            const children = rootTree.children ?? []
 
-          const sourceIdx = children.findIndex((c) => c.id === data.id)
-          const targetIdx = children.findIndex((c) => c.id === tabId)
-          if (sourceIdx < 0 || targetIdx < 0) return
+            const sourceIdx = children.findIndex((c) => c.id === data.id)
+            const targetIdx = children.findIndex((c) => c.id === tabId)
+            if (sourceIdx < 0 || targetIdx < 0) return
 
-          let moveIdx = targetIdx
-          if (sourceIdx < moveIdx) moveIdx += 1
+            let moveIdx = targetIdx
+            if (sourceIdx < moveIdx) moveIdx += 1
 
-          await chrome.bookmarks.move(data.id, { parentId: rootId, index: moveIdx })
+            await chrome.bookmarks.move(data.id, { parentId: rootId, index: moveIdx })
+          } else {
+            // カード/フォルダ → タブへ移動
+            const targetId = tabId === '__ungrouped__' ? await getRootId() : tabId
+            await chrome.bookmarks.move(data.id, { parentId: targetId })
+          }
         } catch (err) {
-          console.error('[SyncGrid] Tab reorder failed:', err)
+          console.error('[SyncGrid] Tab drop failed:', err)
         } finally {
           dragDataRef.current = null
           setDragState(INITIAL_STATE)
@@ -327,5 +334,5 @@ export function useDragReorder(currentFolder: SyncGridGroup | null) {
     [],
   )
 
-  return { dragState, getDragHandlers, getTabDropHandlers, getTabDragHandlers, getBreadcrumbDropHandlers }
+  return { dragState, getDragHandlers, getTabDropHandlers, getTabHandlers, getBreadcrumbDropHandlers }
 }

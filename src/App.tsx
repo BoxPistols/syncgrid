@@ -106,8 +106,7 @@ export default function App() {
   }, [activeGroup, path])
 
   // --- Drag & Drop ---
-  const { dragState, getDragHandlers, getTabDropHandlers, getTabDragHandlers, getBreadcrumbDropHandlers } =
-    useDragReorder(currentFolder)
+  const { dragState, getDragHandlers, getTabHandlers, getBreadcrumbDropHandlers } = useDragReorder(currentFolder)
 
   // --- Breadcrumb ---
   const breadcrumb = useMemo(() => {
@@ -526,8 +525,7 @@ export default function App() {
               setRenamingTabId(g.id)
               setRenameValue(g.title)
             }}
-            {...getTabDropHandlers(g.id)}
-            {...getTabDragHandlers(g.id)}
+            {...getTabHandlers(g.id)}
           >
             {renamingTabId === g.id ? (
               <input
