@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import type { Messages } from '../i18n'
 import type { LayoutMode, CardSize } from '../types'
 import { MOD_LABEL } from '../utils/keyboard'
+import { Icon } from './Icon'
 
 interface Props {
   query: string
@@ -21,7 +22,7 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
 
   return (
     <div className="sg-topbar">
-      <span className="sg-topbar__logo">⚡ SyncGrid</span>
+      <span className="sg-topbar__logo"><Icon name="zap" size={16} /> SyncGrid</span>
 
       <div className="sg-topbar__search">
         <span className="sg-topbar__search-icon">
@@ -56,7 +57,7 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
               inputRef.current?.focus()
             }}
           >
-            ✕
+            <Icon name="close" size={10} />
           </button>
         )}
       </div>
@@ -131,7 +132,7 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
         )}
 
         <button className="sg-btn--icon" onClick={onToggleTheme} title={t.toggleTheme}>
-          {theme === 'dark' ? '☀️' : '🌙'}
+          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
         </button>
         <button className="sg-btn--icon" onClick={onOpenSettings} title={t.settings}>
           <svg

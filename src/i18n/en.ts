@@ -111,4 +111,10 @@ export const en = {
   shortcutSelectAll: 'Select all',
   shortcutPressKey: 'Press a key…',
   shortcutReset: 'Reset',
+  tags: 'Tags',
+  tagPlaceholder: 'Add tag…',
+  filterByTag: 'Filter by tag',
+  allTags: 'All',
+  aiAutoTag: 'AI Auto-tag',
+  aiCategorize: 'AI Categorize',
 } as const

@@ -101,7 +101,7 @@ export async function pickSyncFolder(): Promise<FileSystemDirectoryHandle | null
 }
 
 /** Get saved directory handle (may require re-permission) */
-export async function getSyncHandle(): Promise<FileSystemDirectoryHandle | null> {
+export async function getSyncHandle(requestIfNeeded = true): Promise<FileSystemDirectoryHandle | null> {
   const handle = await loadDirHandle()
   if (!handle) return null
 
@@ -110,7 +110,9 @@ export async function getSyncHandle(): Promise<FileSystemDirectoryHandle | null>
     const perm = await handle.queryPermission({ mode: 'readwrite' })
     if (perm === 'granted') return handle
 
-    // Request permission again
+    if (!requestIfNeeded) return null
+
+    // Request permission again (requires user gesture)
     const req = await handle.requestPermission({ mode: 'readwrite' })
     return req === 'granted' ? handle : null
   } catch {
@@ -123,36 +125,23 @@ export async function syncToFolder(
   groups: SyncGridGroup[],
   handle?: FileSystemDirectoryHandle | null,
 ): Promise<{ success: boolean; syncedAt: string }> {
-  const dir = handle ?? (await getSyncHandle())
+  // If no handle provided, attempt to get saved handle (but don't request permission if background sync)
+  const dir = handle ?? (await getSyncHandle(!!handle))
   if (!dir) return { success: false, syncedAt: '' }
 
   try {
     const exportObj: SyncGridExport = await exportData(groups)
     const json = JSON.stringify(exportObj, null, 2)
 
-    // Atomic write: write to temp file then rename
+    // Atomic write: write to temp file then move (rename)
     const tmpName = `${SYNC_FILENAME}.tmp`
     const tmpFile = await dir.getFileHandle(tmpName, { create: true })
     const writable = await tmpFile.createWritable()
     await writable.write(json)
     await writable.close()
 
-    // Rename: remove old, rename tmp (File System Access API doesn't have rename)
-    try {
-      await dir.removeEntry(SYNC_FILENAME)
-    } catch {
-      /* not found — OK */
-    }
-    // Copy approach: write final, remove tmp
-    const finalFile = await dir.getFileHandle(SYNC_FILENAME, { create: true })
-    const finalWritable = await finalFile.createWritable()
-    await finalWritable.write(json)
-    await finalWritable.close()
-    try {
-      await dir.removeEntry(tmpName)
-    } catch {
-      /* cleanup */
-    }
+    // Rename (move) tmp to final
+    await tmpFile.move(SYNC_FILENAME)
 
     const syncedAt = new Date().toISOString()
     return { success: true, syncedAt }

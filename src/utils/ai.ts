@@ -78,8 +78,79 @@ export async function generateTitle(url: string, settings: AISettings): Promise<
   throw new Error(`Unknown provider: ${settings.provider}`)
 }
 
+/**
+ * URLからタグを自動生成
+ * 返り値: タグ文字列の配列 (最大5個)
+ */
+export async function generateTags(url: string, title: string, settings: AISettings): Promise<string[]> {
+  if (settings.provider === 'none') {
+    throw new Error('AI provider not configured')
+  }
+
+  const prompt = [
+    'Given this bookmark URL and title, suggest 3-5 short tags for categorization.',
+    'Rules:',
+    '- Each tag should be 1-2 words, lowercase',
+    '- Use the same language as the title. If the title is Japanese, use Japanese tags.',
+    '- Return ONLY a JSON array of strings, nothing else.',
+    '- Example: ["tech","react","frontend"]',
+    '',
+    `URL: ${url}`,
+    `Title: ${title}`,
+  ].join('\n')
+
+  const raw =
+    settings.provider === 'openai'
+      ? await callOpenAI(prompt, settings.openaiApiKey, settings.openaiModel)
+      : await callGemini(prompt, settings.geminiApiKey, settings.geminiModel)
+
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed.filter((t): t is string => typeof t === 'string').slice(0, 5)
+  } catch {
+    // JSONパース失敗時はカンマ区切りとして処理
+    return raw
+      .replace(/[[\]"]/g, '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 5)
+  }
+  return []
+}
+
+/**
+ * 複数ブックマークを自動分類（フォルダ提案）
+ */
+export async function suggestCategories(
+  items: { title: string; url: string }[],
+  settings: AISettings,
+): Promise<Record<string, string[]>> {
+  if (settings.provider === 'none') throw new Error('AI provider not configured')
+
+  const list = items.map((i) => `- ${i.title} (${i.url})`).join('\n')
+  const prompt = [
+    'Given these bookmarks, suggest 3-6 category folders and assign each bookmark to a category.',
+    'Use the same language as the bookmark titles.',
+    'Return ONLY valid JSON: {"categoryName": ["bookmark title 1", "bookmark title 2"], ...}',
+    '',
+    list,
+  ].join('\n')
+
+  const raw =
+    settings.provider === 'openai'
+      ? await callOpenAI(prompt, settings.openaiApiKey, settings.openaiModel, 500)
+      : await callGemini(prompt, settings.geminiApiKey, settings.geminiModel, 500)
+
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return {}
+  }
+}
+
 /** Call OpenAI Chat Completions API */
-async function callOpenAI(prompt: string, apiKey: string, model: string): Promise<string> {
+async function callOpenAI(prompt: string, apiKey: string, model: string, maxTokens: number = 100): Promise<string> {
   if (!apiKey) throw new Error('OpenAI API key not set')
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -98,7 +169,7 @@ async function callOpenAI(prompt: string, apiKey: string, model: string): Promis
         },
         { role: 'user', content: prompt },
       ],
-      max_tokens: 100,
+      max_tokens: maxTokens,
       temperature: 0.3,
     }),
   })
@@ -115,7 +186,7 @@ async function callOpenAI(prompt: string, apiKey: string, model: string): Promis
 }
 
 /** Call Gemini generateContent API */
-async function callGemini(prompt: string, apiKey: string, model: string): Promise<string> {
+async function callGemini(prompt: string, apiKey: string, model: string, maxTokens: number = 100): Promise<string> {
   if (!apiKey) throw new Error('Gemini API key not set')
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
@@ -126,7 +197,7 @@ async function callGemini(prompt: string, apiKey: string, model: string): Promis
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
-        maxOutputTokens: 100,
+        maxOutputTokens: maxTokens,
         temperature: 0.3,
       },
     }),

@@ -3,6 +3,7 @@ import type { Messages } from '../i18n'
 import type { AISettings } from '../types'
 import { generateTitle } from '../utils/ai'
 import { fetchPageTitle, fetchPageTitleWithPermission } from '../utils/fetchTitle'
+import { Icon } from './Icon'
 import { isModKey, isComposing, MOD_LABEL, ENTER_LABEL } from '../utils/keyboard'
 
 interface Props {
@@ -157,7 +158,7 @@ export function AddBookmarkForm({ onAdd, onCancel, t, aiSettings }: Props) {
             disabled={fetchingTitle}
             title={t.fetchingTitle}
           >
-            {fetchingTitle ? '⏳' : '🔍'}
+            {fetchingTitle ? <Icon name="spinner" size={14} /> : <Icon name="search" size={14} />}
           </button>
         )}
         {showAiBtn && (
@@ -168,7 +169,7 @@ export function AddBookmarkForm({ onAdd, onCancel, t, aiSettings }: Props) {
             disabled={aiLoading || fetchingTitle}
             title={t.aiGenerateTitle}
           >
-            {aiLoading ? '⏳' : '✨'} {t.aiGenerateTitle}
+            {aiLoading ? <Icon name="spinner" size={14} /> : <Icon name="sparkle" size={14} />} {t.aiGenerateTitle}
           </button>
         )}
       </div>

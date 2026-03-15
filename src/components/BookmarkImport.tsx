@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Icon } from './Icon'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { getImportableFolders, importChromeFolder, getRootId, type ChromeFolder } from '../utils/bookmarks'
 import type { Messages } from '../i18n'
@@ -75,7 +76,7 @@ export function BookmarkImport({ onDone, onClose, t }: Props) {
         <div className="sg-modal__header">
           <span className="sg-modal__title">{t.importChrome}</span>
           <button className="sg-modal__close" onClick={onClose} aria-label={t.close}>
-            ✕
+            <Icon name="close" size={12} />
           </button>
         </div>
 
@@ -117,7 +118,7 @@ export function BookmarkImport({ onDone, onClose, t }: Props) {
             </>
           )}
 
-          {result && <p className="sg-settings__status sg-settings__status--ok">✅ {result}</p>}
+          {result && <p className="sg-settings__status sg-settings__status--ok"><Icon name="check-circle" size={14} /> {result}</p>}
         </div>
 
         <div className="sg-modal__footer">

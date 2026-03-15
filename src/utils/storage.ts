@@ -34,13 +34,18 @@ export async function loadSettings(): Promise<SyncGridSettings> {
 }
 
 /**
- * 設定を保存
+ * 設定を保存（プロミスチェーンにより並列書き込みの競合を防止）
  */
+let saveQueue: Promise<void> = Promise.resolve()
+
 export async function saveSettings(settings: Partial<SyncGridSettings>): Promise<void> {
-  const current = await loadSettings()
-  await chrome.storage.local.set({
-    [SETTINGS_KEY]: { ...current, ...settings },
+  saveQueue = saveQueue.then(async () => {
+    const current = await loadSettings()
+    await chrome.storage.local.set({
+      [SETTINGS_KEY]: { ...current, ...settings },
+    })
   })
+  return saveQueue
 }
 
 /**

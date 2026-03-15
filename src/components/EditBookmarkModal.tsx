@@ -1,21 +1,29 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { fetchPageTitleWithPermission } from '../utils/fetchTitle'
-import type { SyncGridItem } from '../types'
+import { generateTags } from '../utils/ai'
+import { isComposing } from '../utils/keyboard'
+import { Icon } from './Icon'
+import type { SyncGridItem, AISettings } from '../types'
 import type { Messages } from '../i18n'
 
 interface Props {
   item: SyncGridItem
-  onSave: (id: string, title: string, url: string) => void
+  onSave: (id: string, title: string, url: string, tags: string[]) => void
   onDelete: (id: string) => void
   onClose: () => void
   t: Messages
+  initialTags?: string[]
+  aiSettings: AISettings
 }
 
-export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props) {
+export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialTags, aiSettings }: Props) {
   const [title, setTitle] = useState(item.title)
   const [url, setUrl] = useState(item.url)
+  const [tags, setTags] = useState<string[]>(initialTags ?? [])
+  const [tagInput, setTagInput] = useState('')
   const [fetching, setFetching] = useState(false)
+  const [aiTagLoading, setAiTagLoading] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const trapRef = useFocusTrap<HTMLDivElement>()
 
@@ -27,7 +35,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!url.trim()) return
-    onSave(item.id, title.trim() || url.trim(), url.trim())
+    onSave(item.id, title.trim() || url.trim(), url.trim(), tags)
   }
 
   const handleRefetchTitle = useCallback(async () => {
@@ -41,6 +49,32 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
       setFetching(false)
     }
   }, [url])
+
+  const addTag = useCallback(() => {
+    const tag = tagInput.trim()
+    if (tag && !tags.includes(tag)) {
+      setTags((prev) => [...prev, tag])
+    }
+    setTagInput('')
+  }, [tagInput, tags])
+
+  const removeTag = useCallback((tag: string) => {
+    setTags((prev) => prev.filter((t) => t !== tag))
+  }, [])
+
+  const handleAiAutoTag = useCallback(async () => {
+    if (aiSettings.provider === 'none') return
+    setAiTagLoading(true)
+    try {
+      const generated = await generateTags(url.trim(), title.trim(), aiSettings)
+      // 既存タグと重複しないものを追加
+      setTags((prev) => [...new Set([...prev, ...generated])])
+    } catch {
+      // エラー時は静かに失敗
+    } finally {
+      setAiTagLoading(false)
+    }
+  }, [url, title, aiSettings])
 
   return (
     <div className="sg-modal-overlay" onClick={onClose}>
@@ -58,7 +92,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
         <div className="sg-modal__header">
           <span className="sg-modal__title">{t.editBookmark}</span>
           <button className="sg-modal__close" onClick={onClose} aria-label={t.close}>
-            ✕
+            <Icon name="close" size={12} />
           </button>
         </div>
         <form onSubmit={handleSubmit}>
@@ -81,7 +115,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
                 disabled={fetching || !url.trim()}
                 title={t.refetchTitle}
               >
-                {fetching ? '⏳' : '🔄'} {t.refetchTitle}
+                {fetching ? <Icon name="spinner" size={14} /> : <Icon name="refresh" size={14} />} {t.refetchTitle}
               </button>
             </div>
             <label className="sg-label">{t.url}</label>
@@ -92,6 +126,47 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t }: Props)
               onChange={(e) => setUrl(e.target.value)}
               autoComplete="off"
             />
+            <div className="sg-settings__row">
+              <label className="sg-label">{t.tags}</label>
+              {aiSettings.provider !== 'none' && (
+                <button
+                  type="button"
+                  className="sg-btn sg-btn--sm sg-btn--ai"
+                  onClick={handleAiAutoTag}
+                  disabled={aiTagLoading || !title.trim()}
+                >
+                  {aiTagLoading ? <Icon name="spinner" size={14} /> : <Icon name="sparkle" size={14} />} {t.aiAutoTag}
+                </button>
+              )}
+            </div>
+            <div className="sg-tags">
+              {tags.map((tag) => (
+                <span key={tag} className="sg-tag">
+                  {tag}
+                  <span className="sg-tag--remove" onClick={() => removeTag(tag)}>
+                    <Icon name="close" size={8} />
+                  </span>
+                </span>
+              ))}
+              <input
+                type="text"
+                className="sg-tag-input"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (isComposing(e)) return
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addTag()
+                  }
+                  if (e.key === 'Backspace' && !tagInput && tags.length > 0) {
+                    removeTag(tags[tags.length - 1])
+                  }
+                }}
+                onBlur={addTag}
+                placeholder={t.tagPlaceholder}
+              />
+            </div>
           </div>
           <div className="sg-modal__footer">
             <button

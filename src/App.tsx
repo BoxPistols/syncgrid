@@ -13,6 +13,7 @@ import { ContextMenu, type MenuItem } from './components/ContextMenu'
 import { AddBookmarkForm } from './components/AddBookmarkForm'
 import { SettingsPanel } from './components/SettingsPanel'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { Icon } from './components/Icon'
 import {
   addBookmark,
   removeBookmark,
@@ -24,9 +25,10 @@ import {
   flattenGroups,
   countAll,
 } from './utils/bookmarks'
-import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
+import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode, BookmarkMeta } from './types'
 import { isComposing, matchesBinding } from './utils/keyboard'
 import { getDomain } from './utils/favicon'
+import { loadAllMeta, saveMeta } from './utils/storage'
 
 import './styles/global.css'
 
@@ -44,6 +46,13 @@ export default function App() {
     [updateSettings],
   )
   useAutoSync(groups, handleSynced)
+
+  // --- Metadata (tags, ogp cache) ---
+  const [allMeta, setAllMeta] = useState<Record<string, BookmarkMeta>>({})
+
+  useEffect(() => {
+    loadAllMeta().then(setAllMeta)
+  }, [groups])
 
   // --- Navigation State ---
   const [path, setPath] = useState<string[]>([])
@@ -66,6 +75,7 @@ export default function App() {
     confirmLabel?: string
   } | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [filterTag, setFilterTag] = useState<string | null>(null)
 
   // --- Active Tab (computed — stale ID falls back to first group) ---
   const activeTabId = useMemo(() => {
@@ -212,6 +222,25 @@ export default function App() {
   // --- Page transition key ---
   const pageKey = searchResults ? 'search' : `${activeTabId}/${path.join('/')}`
 
+  // --- Tag filter ---
+  const allTagsInFolder = useMemo(() => {
+    if (!currentFolder) return []
+    const tagSet = new Set<string>()
+    for (const item of currentFolder.items) {
+      const meta = allMeta[item.id]
+      if (meta?.tags) meta.tags.forEach((t) => tagSet.add(t))
+    }
+    return [...tagSet].sort()
+  }, [currentFolder, allMeta])
+
+  const filterItems = useCallback(
+    (items: SyncGridItem[]): SyncGridItem[] => {
+      if (!filterTag) return items
+      return items.filter((item) => allMeta[item.id]?.tags?.includes(filterTag))
+    },
+    [filterTag, allMeta],
+  )
+
   // --- Layout class ---
   const gridClass = [
     'sg-dial__grid',
@@ -328,12 +357,14 @@ export default function App() {
   )
 
   const handleSaveBookmark = useCallback(
-    async (id: string, title: string, url: string) => {
+    async (id: string, title: string, url: string, tags: string[]) => {
       await updateBookmark(id, { title, url })
+      const existingMeta = allMeta[id]
+      await saveMeta(id, { memo: existingMeta?.memo ?? '', tags, ogp: existingMeta?.ogp })
       setEditItem(null)
       await refresh()
     },
-    [refresh],
+    [refresh, allMeta],
   )
 
   const handleDeleteBookmark = useCallback(
@@ -351,12 +382,12 @@ export default function App() {
         x,
         y,
         items: [
-          { label: t.openNewTab, icon: '🔗', action: () => window.open(item.url, '_blank') },
-          { label: t.edit, icon: '✏️', action: () => setEditItem(item) },
+          { label: t.openNewTab, icon: 'link', action: () => window.open(item.url, '_blank') },
+          { label: t.edit, icon: 'edit', action: () => setEditItem(item) },
           { label: '---', action: () => {} },
           {
             label: t.delete,
-            icon: '🗑️',
+            icon: 'trash',
             danger: true,
             action: async () => {
               await removeBookmark(item.id)
@@ -375,10 +406,10 @@ export default function App() {
         x,
         y,
         items: [
-          { label: t.open, icon: '📂', action: () => handleOpenFolder(group) },
+          { label: t.open, icon: 'folder-open', action: () => handleOpenFolder(group) },
           {
             label: t.rename,
-            icon: '✏️',
+            icon: 'edit',
             action: () => {
               setRenamingTabId(group.id)
               setRenameValue(group.title)
@@ -387,7 +418,7 @@ export default function App() {
           { label: '---', action: () => {} },
           {
             label: t.delete,
-            icon: '🗑️',
+            icon: 'trash',
             danger: true,
             action: () => {
               setConfirmDialog({
@@ -429,7 +460,7 @@ export default function App() {
         items: [
           {
             label: t.rename,
-            icon: '✏️',
+            icon: 'edit',
             action: () => {
               setRenamingTabId(group.id)
               setRenameValue(group.title)
@@ -438,7 +469,7 @@ export default function App() {
           { label: '---', action: () => {} },
           {
             label: t.delete,
-            icon: '🗑️',
+            icon: 'trash',
             danger: true,
             action: () => {
               setConfirmDialog({
@@ -534,7 +565,7 @@ export default function App() {
           </div>
         ) : (
           <button className="sg-tab sg-tab--add" onClick={handleAddGroup} title={t.newGroup} aria-label={t.newGroup}>
-            ＋
+            <Icon name="plus" size={14} />
           </button>
         )}
       </div>
@@ -567,14 +598,14 @@ export default function App() {
               </div>
             ) : (
               <div className="sg-empty">
-                <div className="sg-empty__icon">🔍</div>
+                <div className="sg-empty__icon"><Icon name="search" size={48} /></div>
                 <p className="sg-empty__text">{t.noSearchResults}</p>
               </div>
             )}
           </div>
         ) : groups.length === 0 ? (
           <div className="sg-empty">
-            <div className="sg-empty__icon">📂</div>
+            <div className="sg-empty__icon"><Icon name="folder" size={48} /></div>
             <p className="sg-empty__text sg-preline">{t.noGroups}</p>
           </div>
         ) : currentFolder ? (
@@ -617,7 +648,7 @@ export default function App() {
                       aria-label={t.back}
                       {...getBreadcrumbDropHandlers(parentId)}
                     >
-                      ←
+                      <Icon name="arrow-left" size={14} />
                     </button>
                   ) : (
                     <button
@@ -626,7 +657,7 @@ export default function App() {
                       title={t.back}
                       aria-label={t.back}
                     >
-                      ←
+                      <Icon name="arrow-left" size={14} />
                     </button>
                   )
                 })()}
@@ -646,6 +677,25 @@ export default function App() {
                   <option value="domain">{t.sortDomain}</option>
                 </select>
               </div>
+              {allTagsInFolder.length > 0 && (
+                <div className="sg-tags">
+                  <button
+                    className={`sg-tag ${!filterTag ? 'sg-tag--active' : ''}`}
+                    onClick={() => setFilterTag(null)}
+                  >
+                    {t.allTags}
+                  </button>
+                  {allTagsInFolder.map((tag) => (
+                    <button
+                      key={tag}
+                      className={`sg-tag ${filterTag === tag ? 'sg-tag--active' : ''}`}
+                      onClick={() => setFilterTag(filterTag === tag ? null : tag)}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
               <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>
                 {showAddForm ? t.cancel : t.addBookmark('Ctrl')}
               </button>
@@ -692,7 +742,7 @@ export default function App() {
 
             {currentFolder.children.length === 0 && currentFolder.items.length === 0 ? (
               <div className="sg-empty">
-                <div className="sg-empty__icon">📌</div>
+                <div className="sg-empty__icon"><Icon name="pin" size={48} /></div>
                 <p className="sg-empty__text sg-preline">{t.emptyFolder}</p>
               </div>
             ) : (
@@ -712,7 +762,7 @@ export default function App() {
                     onToggleSelect={toggleSelect}
                   />
                 ))}
-                {sortItems(currentFolder.items).map((item) => (
+                {sortItems(filterItems(currentFolder.items)).map((item) => (
                   <BookmarkCard
                     key={item.id}
                     item={item}
@@ -727,6 +777,7 @@ export default function App() {
                     locale={settings.locale}
                     isSelected={selectedIds.has(item.id)}
                     onToggleSelect={toggleSelect}
+                    tags={allMeta[item.id]?.tags}
                   />
                 ))}
               </div>
@@ -742,6 +793,8 @@ export default function App() {
           onDelete={handleDeleteBookmark}
           onClose={() => setEditItem(null)}
           t={t}
+          initialTags={allMeta[editItem.id]?.tags}
+          aiSettings={settings.ai}
         />
       )}
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />}
