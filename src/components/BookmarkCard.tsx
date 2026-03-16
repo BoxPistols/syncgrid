@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, memo } from 'react'
 import { getFaviconUrl, getDomain } from '../utils/favicon'
 import { formatRelativeDate } from '../utils/date'
 import { UrlPreview } from './UrlPreview'
@@ -30,7 +30,7 @@ const STATUS_ICONS: Record<ReadStatus, { icon: 'check-circle' | 'sparkle' | 'pin
   starred: { icon: 'sparkle', cls: 'sg-status--starred' },
 }
 
-export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t, locale, isSelected, onToggleSelect, tags, status, onOpen }: Props) {
+export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t, locale, isSelected, onToggleSelect, tags, status, onOpen }: Props) {
   const [imgFailed, setImgFailed] = useState(false)
   const [preview, setPreview] = useState<{ x: number; y: number } | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -147,4 +147,4 @@ export function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, is
       )}
     </>
   )
-}
+})

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Icon } from './Icon'
 import { isComposing } from '../utils/keyboard'
 import type { SyncGridGroup } from '../types'
@@ -22,7 +22,7 @@ interface Props {
   onStartRename?: () => void
 }
 
-export function FolderCard({
+export const FolderCard = memo(function FolderCard({
   group,
   onClick,
   onContextMenu,
@@ -117,4 +117,4 @@ export function FolderCard({
       </button>
     </div>
   )
-}
+})
