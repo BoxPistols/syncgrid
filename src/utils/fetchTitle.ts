@@ -10,6 +10,10 @@ import type { OgpData } from '../types'
  * ページタイトルを取得（パーミッション確認済みの場合のみ）
  */
 export async function fetchPageTitle(url: string): Promise<string | null> {
+  // oEmbed対応サイト（YouTube等）を先に試す（パーミッション不要）
+  const oembed = await fetchOembedTitle(url)
+  if (oembed) return oembed
+
   const hasPermission = await hasTitleFetchPermission()
   if (!hasPermission) return null
   const html = await fetchHead(url)
@@ -21,6 +25,9 @@ export async function fetchPageTitle(url: string): Promise<string | null> {
  * パーミッションをリクエストしてからページタイトルを取得
  */
 export async function fetchPageTitleWithPermission(url: string): Promise<string | null> {
+  const oembed = await fetchOembedTitle(url)
+  if (oembed) return oembed
+
   const granted = await requestTitleFetchPermission()
   if (!granted) return null
   const html = await fetchHead(url)
@@ -32,11 +39,63 @@ export async function fetchPageTitleWithPermission(url: string): Promise<string 
  * OGP情報を取得（パーミッション確認済みの場合のみ）
  */
 export async function fetchOgp(url: string): Promise<OgpData | null> {
+  // oEmbed対応サイトはoEmbedから基本情報を取得
+  const oembedProviders: { pattern: RegExp; endpoint: string }[] = [
+    { pattern: /(?:youtube\.com\/watch|youtu\.be\/)/, endpoint: 'https://www.youtube.com/oembed' },
+    { pattern: /vimeo\.com\//, endpoint: 'https://vimeo.com/api/oembed.json' },
+  ]
+  for (const { pattern, endpoint } of oembedProviders) {
+    if (pattern.test(url)) {
+      try {
+        const res = await fetch(`${endpoint}?url=${encodeURIComponent(url)}&format=json`, {
+          signal: AbortSignal.timeout(5000),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          return {
+            title: data.title,
+            description: data.author_name ? `by ${data.author_name}` : undefined,
+            image: data.thumbnail_url,
+            siteName: data.provider_name,
+            fetchedAt: Date.now(),
+          }
+        }
+      } catch { /* fallthrough */ }
+    }
+  }
+
   const hasPermission = await hasTitleFetchPermission()
   if (!hasPermission) return null
   const html = await fetchHead(url)
   if (!html) return null
   return extractOgp(html)
+}
+
+/**
+ * oEmbed対応サイトからタイトルを取得（CORS不要・host_permissions不要）
+ * YouTube, Vimeo等に対応
+ */
+async function fetchOembedTitle(url: string): Promise<string | null> {
+  const oembedProviders: { pattern: RegExp; endpoint: string }[] = [
+    { pattern: /(?:youtube\.com\/watch|youtu\.be\/)/, endpoint: 'https://www.youtube.com/oembed' },
+    { pattern: /vimeo\.com\//, endpoint: 'https://vimeo.com/api/oembed.json' },
+  ]
+
+  for (const { pattern, endpoint } of oembedProviders) {
+    if (pattern.test(url)) {
+      try {
+        const res = await fetch(`${endpoint}?url=${encodeURIComponent(url)}&format=json`, {
+          signal: AbortSignal.timeout(5000),
+        })
+        if (!res.ok) continue
+        const data = await res.json()
+        if (data.title) return data.title as string
+      } catch {
+        continue
+      }
+    }
+  }
+  return null
 }
 
 /** ページの<head>部分をHTMLとして取得 */
