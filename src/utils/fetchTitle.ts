@@ -175,7 +175,8 @@ async function fetchHead(url: string): Promise<string | null> {
 function extractTitle(html: string): string | null {
   const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
   if (!match) return null
-  return decodeHtmlEntities(match[1].replace(/\s+/g, ' ').trim())
+  const title = decodeHtmlEntities(match[1].replace(/\s+/g, ' ').trim())
+  return title || null // 空文字はnull
 }
 
 /** HTMLからOGP情報を抽出 */
