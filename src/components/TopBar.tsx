@@ -65,13 +65,14 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
       <div className="sg-topbar__actions">
         {/* Layout switcher */}
         <div className="sg-layout-switcher" role="radiogroup" aria-label={t.layout}>
+          {/* Magazine: 小カードグリッド */}
           <button
-            className={`sg-layout-switcher__btn ${layout === 'card' ? 'sg-layout-switcher__btn--active' : ''}`}
-            onClick={() => onChangeLayout('card')}
-            title={`${t.layoutCard} (${MOD_LABEL}1)`}
-            aria-label={t.layoutCard}
+            className={`sg-layout-switcher__btn ${layout === 'magazine' ? 'sg-layout-switcher__btn--active' : ''}`}
+            onClick={() => onChangeLayout('magazine')}
+            title={`${t.layoutMagazine} (${MOD_LABEL}1)`}
+            aria-label={t.layoutMagazine}
             role="radio"
-            aria-checked={layout === 'card'}
+            aria-checked={layout === 'magazine'}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
               <rect x="0" y="0" width="6" height="6" rx="1" />
@@ -80,10 +81,25 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
               <rect x="8" y="8" width="6" height="6" rx="1" />
             </svg>
           </button>
+          {/* Card: 大カード */}
+          <button
+            className={`sg-layout-switcher__btn ${layout === 'card' ? 'sg-layout-switcher__btn--active' : ''}`}
+            onClick={() => onChangeLayout('card')}
+            title={`${t.layoutCard} (${MOD_LABEL}2)`}
+            aria-label={t.layoutCard}
+            role="radio"
+            aria-checked={layout === 'card'}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+              <rect x="0" y="0" width="14" height="6" rx="1" />
+              <rect x="0" y="8" width="14" height="6" rx="1" />
+            </svg>
+          </button>
+          {/* List: 横長行 */}
           <button
             className={`sg-layout-switcher__btn ${layout === 'list' ? 'sg-layout-switcher__btn--active' : ''}`}
             onClick={() => onChangeLayout('list')}
-            title={`${t.layoutList} (${MOD_LABEL}2)`}
+            title={`${t.layoutList} (${MOD_LABEL}3)`}
             aria-label={t.layoutList}
             role="radio"
             aria-checked={layout === 'list'}
@@ -94,25 +110,10 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
               <rect x="0" y="10" width="14" height="3" rx="1" />
             </svg>
           </button>
-          <button
-            className={`sg-layout-switcher__btn ${layout === 'compact' ? 'sg-layout-switcher__btn--active' : ''}`}
-            onClick={() => onChangeLayout('compact')}
-            title={`${t.layoutCompact} (${MOD_LABEL}3)`}
-            aria-label={t.layoutCompact}
-            role="radio"
-            aria-checked={layout === 'compact'}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <rect x="0" y="0.5" width="14" height="2" rx="0.5" />
-              <rect x="0" y="4" width="14" height="2" rx="0.5" />
-              <rect x="0" y="7.5" width="14" height="2" rx="0.5" />
-              <rect x="0" y="11" width="14" height="2" rx="0.5" />
-            </svg>
-          </button>
         </div>
 
         {/* Card size (カード表示時のみ) */}
-        {layout === 'card' && (
+        {(layout === 'card' || layout === 'magazine') && (
           <div className="sg-layout-switcher" role="radiogroup" aria-label="Card size">
             {(['sm', 'md', 'lg'] as const).map((size) => (
               <button

@@ -1,7 +1,7 @@
 import type { Locale } from '../i18n'
 
-/** レイアウトモード */
-export type LayoutMode = 'card' | 'list' | 'compact'
+/** レイアウトモード: magazine(小カードグリッド) / card(大カード) / list(横長行) */
+export type LayoutMode = 'magazine' | 'card' | 'list'
 
 /** カードサイズ */
 export type CardSize = 'sm' | 'md' | 'lg'
@@ -22,9 +22,9 @@ export interface KeyBinding {
 export interface ShortcutConfig {
   search: KeyBinding
   addBookmark: KeyBinding
+  layoutMagazine: KeyBinding
   layoutCard: KeyBinding
   layoutList: KeyBinding
-  layoutCompact: KeyBinding
   deleteSelected: KeyBinding
   selectAll: KeyBinding
 }
@@ -152,9 +152,9 @@ function kb(key: string, opts: { mod?: boolean; ctrl?: boolean; shift?: boolean;
 export const DEFAULT_SHORTCUTS: ShortcutConfig = {
   search: kb('k', { mod: true }),
   addBookmark: kb('n', { ctrl: true }),
-  layoutCard: kb('1', { mod: true }),
-  layoutList: kb('2', { mod: true }),
-  layoutCompact: kb('3', { mod: true }),
+  layoutMagazine: kb('1', { mod: true }),
+  layoutCard: kb('2', { mod: true }),
+  layoutList: kb('3', { mod: true }),
   deleteSelected: kb('Delete'),
   selectAll: kb('a', { mod: true }),
 }
@@ -166,7 +166,7 @@ export const DEFAULT_SETTINGS: SyncGridSettings = {
   lastPath: [],
   lastSyncedAt: '',
   ai: DEFAULT_AI_SETTINGS,
-  layout: 'list',
+  layout: 'list', // magazine | card | list
   cardSize: 'md',
   sort: 'manual',
   shortcuts: DEFAULT_SHORTCUTS,

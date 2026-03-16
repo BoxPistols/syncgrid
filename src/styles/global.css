@@ -564,12 +564,12 @@ button {
   white-space: nowrap;
 }
 
-/* 日付（card時は非表示、list/compactで表示） */
+/* 日付（card時は非表示、list/magazineで表示） */
 .sg-card__date {
   display: none;
 }
 .sg-dial__grid--list .sg-card__date,
-.sg-dial__grid--compact .sg-card__date {
+.sg-dial__grid--magazine .sg-card__date {
   display: block;
   font-size: 11px;
   color: var(--sg-text-tertiary);
@@ -620,11 +620,7 @@ button {
   text-overflow: ellipsis;
   font-size: 11px;
 }
-/* コンパクト表示: OGP画像/desc非表示 */
-.sg-dial__grid--compact .sg-card__ogp-image,
-.sg-dial__grid--compact .sg-card__desc {
-  display: none;
-}
+/* Magazine表示: OGP画像/desc表示（デフォルト） */
 
 .sg-card__domain {
   font-size: 10px;
@@ -1610,7 +1606,7 @@ button {
   color: var(--sg-accent);
   white-space: nowrap;
 }
-/* カード内タグ（card=非表示、list/compact=flex-shrink） */
+/* カード内タグ（card=非表示、list/magazine=flex-shrink） */
 .sg-card__tags {
   display: none;
 }
@@ -1724,59 +1720,59 @@ button {
 }
 
 /* =====================
-   LAYOUT: COMPACT
+   LAYOUT: MAGAZINE (小カードグリッド — Feedly Cards風)
    ===================== */
-.sg-dial__grid--compact {
-  display: flex;
-  flex-direction: column;
+.sg-dial__grid--magazine {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+.sg-dial__grid--magazine .sg-card {
+  padding: 0;
   gap: 0;
+  overflow: hidden;
 }
-.sg-dial__grid--compact .sg-card,
-.sg-dial__grid--compact .sg-folder-card {
-  flex-direction: row;
-  align-items: center;
-  padding: 6px 16px;
-  gap: 10px;
-  text-align: left;
+.sg-dial__grid--magazine .sg-card__ogp-image {
+  max-height: 140px;
   border-radius: 0;
-  box-shadow: none;
-  background: transparent;
+  margin-bottom: 0;
 }
-.sg-dial__grid--compact .sg-card:hover,
-.sg-dial__grid--compact .sg-folder-card:hover {
-  transform: none;
-  box-shadow: none;
-  background: var(--sg-bg-card-hover);
-}
-.sg-dial__grid--compact .sg-card__icon,
-.sg-dial__grid--compact .sg-card__domain {
+.sg-dial__grid--magazine .sg-card__icon {
   display: none;
 }
-.sg-dial__grid--compact .sg-folder-card__icon {
-  width: 16px;
-  height: 16px;
-  font-size: 12px;
-  border-radius: 4px;
-  background: none;
-  flex-shrink: 0;
+.sg-dial__grid--magazine .sg-card__title {
+  padding: 12px 12px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
-.sg-dial__grid--compact .sg-card__title,
-.sg-dial__grid--compact .sg-folder-card__title {
-  flex: 1;
-  min-width: 0;
-}
-.sg-dial__grid--compact .sg-folder-card__count {
-  flex-shrink: 0;
+.sg-dial__grid--magazine .sg-card__desc {
+  padding: 0 12px;
+  -webkit-line-clamp: 2;
   font-size: 11px;
 }
-.sg-dial__grid--compact .sg-card__menu,
-.sg-dial__grid--compact .sg-folder-card__menu {
-  position: static;
-  flex-shrink: 0;
+.sg-dial__grid--magazine .sg-card__date {
+  display: none;
 }
-/* list/compact animation override */
+.sg-dial__grid--magazine .sg-card__domain {
+  padding: 4px 12px 12px;
+  font-size: 10px;
+}
+.sg-dial__grid--magazine .sg-card__tags {
+  padding: 0 12px 8px;
+}
+.sg-dial__grid--magazine .sg-card__menu {
+  top: 8px;
+  right: 8px;
+}
+.sg-dial__grid--magazine .sg-folder-card {
+  padding: 16px 12px;
+}
+/* list/magazine animation override */
 .sg-dial__grid--list > *,
-.sg-dial__grid--compact > * {
+.sg-dial__grid--magazine > * {
   animation: none;
 }
 

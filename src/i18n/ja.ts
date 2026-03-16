@@ -105,9 +105,9 @@ export const ja = {
   sortDomain: 'ドメイン順',
   // Layout
   layout: 'レイアウト',
+  layoutMagazine: 'マガジン',
   layoutCard: 'カード',
   layoutList: 'リスト',
-  layoutCompact: 'コンパクト',
   // Chrome bookmark import
   importChrome: 'Chromeブックマークからインポート',
   importChromeDesc: '既存のChromeブックマークフォルダをSyncGridに取り込みます。',
@@ -125,9 +125,9 @@ export const ja = {
   shortcuts: 'キーボードショートカット',
   shortcutSearch: '検索',
   shortcutAddBookmark: 'ブックマーク追加',
+  shortcutLayoutMagazine: 'マガジン表示',
   shortcutLayoutCard: 'カード表示',
   shortcutLayoutList: 'リスト表示',
-  shortcutLayoutCompact: 'コンパクト表示',
   shortcutDeleteSelected: '選択削除',
   shortcutSelectAll: 'すべて選択',
   shortcutPressKey: 'キーを押してください…',

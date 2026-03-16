@@ -134,8 +134,8 @@ export default function App() {
   // --- Layout ---
   const gridClass = [
     'sg-dial__grid',
-    settings.layout !== 'card' && `sg-dial__grid--${settings.layout}`,
-    settings.layout === 'card' && settings.cardSize !== 'md' && `sg-dial__grid--size-${settings.cardSize}`,
+    `sg-dial__grid--${settings.layout}`,
+    (settings.layout === 'card' || settings.layout === 'magazine') && settings.cardSize !== 'md' && `sg-dial__grid--size-${settings.cardSize}`,
   ]
     .filter(Boolean)
     .join(' ')
@@ -304,9 +304,9 @@ export default function App() {
       if (isComposing(e)) return
       if (matchesBinding(e, sc.search)) { e.preventDefault(); document.querySelector<HTMLInputElement>('.sg-topbar__search-input')?.focus() }
       else if (matchesBinding(e, sc.addBookmark)) { e.preventDefault(); setShowAddForm(true) }
+      else if (matchesBinding(e, sc.layoutMagazine)) { e.preventDefault(); updateSettings({ layout: 'magazine' }) }
       else if (matchesBinding(e, sc.layoutCard)) { e.preventDefault(); updateSettings({ layout: 'card' }) }
       else if (matchesBinding(e, sc.layoutList)) { e.preventDefault(); updateSettings({ layout: 'list' }) }
-      else if (matchesBinding(e, sc.layoutCompact)) { e.preventDefault(); updateSettings({ layout: 'compact' }) }
       else if (matchesBinding(e, sc.deleteSelected) && selectedIds.size > 0) { e.preventDefault(); handleDeleteSelected() }
       else if (matchesBinding(e, sc.selectAll)) { e.preventDefault(); selectAll() }
       else if (e.key === 'Escape' && selectedIds.size > 0) clearSelection()

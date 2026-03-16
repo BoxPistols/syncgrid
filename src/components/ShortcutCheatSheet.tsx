@@ -23,7 +23,7 @@ const SECTIONS: { title: string; items: { key: keyof ShortcutConfig; labelKey: k
     items: [
       { key: 'layoutCard', labelKey: 'shortcutLayoutCard' },
       { key: 'layoutList', labelKey: 'shortcutLayoutList' },
-      { key: 'layoutCompact', labelKey: 'shortcutLayoutCompact' },
+      { key: 'layoutMagazine', labelKey: 'shortcutLayoutMagazine' },
     ],
   },
   {
