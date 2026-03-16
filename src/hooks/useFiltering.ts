@@ -1,5 +1,5 @@
 /**
- * 検索・フィルタリング・ソート
+ * 検索・フィルタリング・ソート・フラット表示
  */
 import { useState, useMemo, useCallback } from 'react'
 import type { SyncGridItem, SyncGridGroup, SortMode, ReadStatus, BookmarkMeta } from '../types'
@@ -13,9 +13,12 @@ export function useFiltering(
   sort: SortMode,
 ) {
   const [query, setQuery] = useState('')
+  const [localQuery, setLocalQuery] = useState('')
   const [filterTag, setFilterTag] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<ReadStatus | null>(null)
+  const [flatView, setFlatView] = useState(false)
 
+  // グローバル検索（全ブックマーク横断）
   const searchResults = useMemo(() => {
     if (!query.trim()) return null
     const q = query.toLowerCase()
@@ -29,13 +32,44 @@ export function useFiltering(
     return results
   }, [query, groups])
 
+  // フラット表示: currentFolder配下の全アイテムを再帰取得
+  const flatItems = useMemo(() => {
+    if (!flatView || !currentFolder) return null
+    const items: SyncGridItem[] = []
+    const collect = (group: SyncGridGroup) => {
+      items.push(...group.items)
+      for (const child of group.children) collect(child)
+    }
+    collect(currentFolder)
+    return items
+  }, [flatView, currentFolder])
+
+  // タブ内検索: currentFolder配下に絞った検索
+  const localSearchResults = useMemo(() => {
+    if (!localQuery.trim() || !currentFolder) return null
+    const q = localQuery.toLowerCase()
+    const items: SyncGridItem[] = []
+    const search = (group: SyncGridGroup) => {
+      for (const item of group.items) {
+        if (item.title.toLowerCase().includes(q) || item.url.toLowerCase().includes(q)) items.push(item)
+      }
+      for (const child of group.children) search(child)
+    }
+    search(currentFolder)
+    return items
+  }, [localQuery, currentFolder])
+
   const allTagsInFolder = useMemo(() => {
     if (!currentFolder) return []
     const tagSet = new Set<string>()
-    for (const item of currentFolder.items) {
-      const meta = allMeta[item.id]
-      if (meta?.tags) meta.tags.forEach((t) => tagSet.add(t))
+    const collect = (group: SyncGridGroup) => {
+      for (const item of group.items) {
+        const meta = allMeta[item.id]
+        if (meta?.tags) meta.tags.forEach((t) => tagSet.add(t))
+      }
+      for (const child of group.children) collect(child)
     }
+    collect(currentFolder)
     return [...tagSet].sort()
   }, [currentFolder, allMeta])
 
@@ -77,7 +111,6 @@ export function useFiltering(
     [sort, allMeta],
   )
 
-  /** フィルタ+ソートを適用した結果（useMemo） */
   const applyFiltersAndSort = useCallback(
     (items: SyncGridItem[]) => sortItems(filterItems(items)),
     [sortItems, filterItems],
@@ -86,7 +119,13 @@ export function useFiltering(
   return {
     query,
     setQuery,
+    localQuery,
+    setLocalQuery,
     searchResults,
+    localSearchResults,
+    flatView,
+    setFlatView,
+    flatItems,
     filterTag,
     setFilterTag,
     filterStatus,

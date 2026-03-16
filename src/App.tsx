@@ -46,8 +46,12 @@ export default function App() {
   // --- Extracted hooks ---
   const { allMeta, handleSetStatus, handleSaveMeta } = useMetadata(groups)
   const nav = useNavigation(groups, settings, loaded, updateSettings)
-  const { query, setQuery, searchResults, filterTag, setFilterTag, filterStatus, setFilterStatus, allTagsInFolder, applyFiltersAndSort } =
-    useFiltering(groups, nav.currentFolder, allMeta, settings.sort)
+  const {
+    query, setQuery, localQuery, setLocalQuery, searchResults, localSearchResults,
+    flatView, setFlatView, flatItems,
+    filterTag, setFilterTag, filterStatus, setFilterStatus,
+    allTagsInFolder, applyFiltersAndSort,
+  } = useFiltering(groups, nav.currentFolder, allMeta, settings.sort)
 
   // --- Auto Sync ---
   const handleSynced = useCallback(
@@ -468,6 +472,22 @@ export default function App() {
                 )
               })()}
               <span className="sg-toolbar__title">{nav.path.length === 0 ? '' : nav.currentFolder.title}</span>
+              <button
+                className={`sg-btn sg-btn--sm ${flatView ? 'sg-btn--primary' : 'sg-btn--ghost'}`}
+                onClick={() => setFlatView(!flatView)}
+                title={t.flatViewDesc}
+              >
+                {t.flatView}
+              </button>
+              <input
+                type="text"
+                className="sg-local-search"
+                placeholder={t.searchInTab}
+                value={localQuery}
+                onChange={(e) => setLocalQuery(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
               {statusFilterChips}
               {sortDropdown}
               {allTagsInFolder.length > 0 && (
@@ -488,18 +508,37 @@ export default function App() {
               </div></div>
             )}
 
-            {nav.currentFolder.children.length === 0 && nav.currentFolder.items.length === 0 ? (
-              <div className="sg-empty"><div className="sg-empty__icon"><Icon name="pin" size={48} /></div><p className="sg-empty__text sg-preline">{t.emptyFolder}</p></div>
-            ) : (
-              <div className={gridClass}>
-                {nav.currentFolder.children.map((child) => (
-                  <FolderCard key={child.id} group={child} onClick={handleOpenFolder} onContextMenu={handleFolderContext} t={t} dragHandlers={getDragHandlers(child.id, 'folder')} isDragging={dragState.draggingId === child.id} isDropTarget={dragState.dropTargetId === child.id} dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null} isSelected={selectedIds.has(child.id)} onToggleSelect={toggleSelect} isRenaming={renamingFolderId === child.id} onStartRename={() => setRenamingFolderId(child.id)} onRename={handleFolderRename} />
-                ))}
-                {applyFiltersAndSort(nav.currentFolder.items).map((item) => (
-                  <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} isSelected={selectedIds.has(item.id)} onToggleSelect={toggleSelect} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
-                ))}
-              </div>
-            )}
+            {(() => {
+              // タブ内検索結果 → フラット表示 → 通常表示の優先順
+              const displayItems = localSearchResults ?? (flatView && flatItems ? flatItems : null)
+
+              if (displayItems) {
+                // フラット or タブ内検索: フォルダなし、ブックマークのみ
+                return displayItems.length === 0 ? (
+                  <div className="sg-empty"><div className="sg-empty__icon"><Icon name="search" size={48} /></div><p className="sg-empty__text">{t.noSearchResults}</p></div>
+                ) : (
+                  <div className={gridClass}>
+                    {applyFiltersAndSort(displayItems).map((item) => (
+                      <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
+                    ))}
+                  </div>
+                )
+              }
+
+              // 通常表示（フォルダ + ブックマーク）
+              return nav.currentFolder.children.length === 0 && nav.currentFolder.items.length === 0 ? (
+                <div className="sg-empty"><div className="sg-empty__icon"><Icon name="pin" size={48} /></div><p className="sg-empty__text sg-preline">{t.emptyFolder}</p></div>
+              ) : (
+                <div className={gridClass}>
+                  {nav.currentFolder.children.map((child) => (
+                    <FolderCard key={child.id} group={child} onClick={handleOpenFolder} onContextMenu={handleFolderContext} t={t} dragHandlers={getDragHandlers(child.id, 'folder')} isDragging={dragState.draggingId === child.id} isDropTarget={dragState.dropTargetId === child.id} dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null} isSelected={selectedIds.has(child.id)} onToggleSelect={toggleSelect} isRenaming={renamingFolderId === child.id} onStartRename={() => setRenamingFolderId(child.id)} onRename={handleFolderRename} />
+                  ))}
+                  {applyFiltersAndSort(nav.currentFolder.items).map((item) => (
+                    <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} isSelected={selectedIds.has(item.id)} onToggleSelect={toggleSelect} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
+                  ))}
+                </div>
+              )
+            })()}
           </div>
         ) : null}
       </div>

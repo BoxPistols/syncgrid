@@ -1409,6 +1409,27 @@ button {
   margin-bottom: 2px;
 }
 
+/* --- Local search (in-tab) --- */
+.sg-local-search {
+  height: 28px;
+  width: 160px;
+  padding: 0 8px;
+  border: 1px solid var(--sg-border);
+  border-radius: var(--sg-radius-sm);
+  background: var(--sg-bg-input);
+  color: var(--sg-text);
+  font-size: 12px;
+  outline: none;
+  transition: border-color var(--sg-transition);
+}
+.sg-local-search:focus {
+  border-color: var(--sg-accent);
+  width: 240px;
+}
+.sg-local-search::placeholder {
+  color: var(--sg-text-tertiary);
+}
+
 /* --- Read Status --- */
 .sg-status--read { color: var(--sg-text-tertiary); }
 .sg-status--later { color: #f59e0b; }
