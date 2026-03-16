@@ -8,6 +8,8 @@ import {
   type SortMode,
 } from '../types'
 
+import type { ShortcutConfig } from '../types'
+
 const SETTINGS_KEY = 'syncgrid_settings'
 const META_PREFIX = 'meta_'
 
@@ -29,8 +31,23 @@ export async function loadSettings(): Promise<SyncGridSettings> {
     ai: { ...DEFAULT_AI_SETTINGS, ...(s.ai ?? {}) },
     layout: VALID_LAYOUTS.includes(s.layout as LayoutMode) ? (s.layout as LayoutMode) : DEFAULT_SETTINGS.layout,
     sort: VALID_SORTS.includes(s.sort as SortMode) ? (s.sort as SortMode) : DEFAULT_SETTINGS.sort,
-    shortcuts: { ...DEFAULT_SHORTCUTS, ...(s.shortcuts ?? {}) },
+    shortcuts: migrateShortcuts(s.shortcuts),
   }
+}
+
+/** ショートカット設定のマイグレーション（旧compact→magazine） */
+function migrateShortcuts(stored: Partial<ShortcutConfig> | undefined): ShortcutConfig {
+  if (!stored) return DEFAULT_SHORTCUTS
+  const result = { ...DEFAULT_SHORTCUTS }
+  for (const key of Object.keys(DEFAULT_SHORTCUTS) as (keyof ShortcutConfig)[]) {
+    if (stored[key]) result[key] = stored[key]
+  }
+  if (!stored.layoutMagazine && (stored as Record<string, unknown>).layoutCompact) {
+    result.layoutMagazine = DEFAULT_SHORTCUTS.layoutMagazine
+    result.layoutCard = DEFAULT_SHORTCUTS.layoutCard
+    result.layoutList = DEFAULT_SHORTCUTS.layoutList
+  }
+  return result
 }
 
 /**
