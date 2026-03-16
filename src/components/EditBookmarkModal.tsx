@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useFocusTrap } from '../hooks/useFocusTrap'
-import { fetchPageTitleWithPermission } from '../utils/fetchTitle'
+import { refetchTitle } from '../utils/fetchTitle'
 import { generateTags } from '../utils/ai'
 import { isComposing } from '../utils/keyboard'
 import { Icon } from './Icon'
@@ -43,7 +43,7 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialT
     if (!targetUrl) return
     setFetching(true)
     try {
-      const pageTitle = await fetchPageTitleWithPermission(targetUrl)
+      const pageTitle = await refetchTitle(targetUrl)
       if (pageTitle) setTitle(pageTitle)
     } finally {
       setFetching(false)

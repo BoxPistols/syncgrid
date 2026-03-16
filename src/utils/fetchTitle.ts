@@ -7,10 +7,10 @@ import { hasTitleFetchPermission, requestTitleFetchPermission } from './permissi
 import type { OgpData } from '../types'
 
 /**
- * ページタイトルを取得（パーミッション確認済みの場合のみ）
+ * ページタイトルを取得
+ * 優先順: oEmbed → HTMLフェッチ → null
  */
 export async function fetchPageTitle(url: string): Promise<string | null> {
-  // oEmbed対応サイト（YouTube等）を先に試す（パーミッション不要）
   const oembed = await fetchOembedTitle(url)
   if (oembed) return oembed
 
@@ -23,6 +23,7 @@ export async function fetchPageTitle(url: string): Promise<string | null> {
 
 /**
  * パーミッションをリクエストしてからページタイトルを取得
+ * oEmbed → permission request → HTMLフェッチ
  */
 export async function fetchPageTitleWithPermission(url: string): Promise<string | null> {
   const oembed = await fetchOembedTitle(url)
@@ -33,6 +34,34 @@ export async function fetchPageTitleWithPermission(url: string): Promise<string 
   const html = await fetchHead(url)
   if (!html) return null
   return extractTitle(html)
+}
+
+/**
+ * タイトル強制再取得 — キャッシュやパーミッション状態に関わらず全手段を試す
+ */
+export async function refetchTitle(url: string): Promise<string | null> {
+  // 1. oEmbed（パーミッション不要）
+  const oembed = await fetchOembedTitle(url)
+  if (oembed) return oembed
+
+  // 2. HTMLフェッチ（パーミッションがあれば）
+  const hasPermission = await hasTitleFetchPermission()
+  if (hasPermission) {
+    const html = await fetchHead(url)
+    if (html) {
+      const title = extractTitle(html)
+      if (title) return title
+    }
+  }
+
+  // 3. パーミッションリクエスト（ユーザージェスチャーコンテキスト）
+  const granted = await requestTitleFetchPermission()
+  if (granted) {
+    const html = await fetchHead(url)
+    if (html) return extractTitle(html)
+  }
+
+  return null
 }
 
 /**
@@ -79,6 +108,7 @@ async function fetchOembedTitle(url: string): Promise<string | null> {
   const oembedProviders: { pattern: RegExp; endpoint: string }[] = [
     { pattern: /(?:youtube\.com\/watch|youtu\.be\/)/, endpoint: 'https://www.youtube.com/oembed' },
     { pattern: /vimeo\.com\//, endpoint: 'https://vimeo.com/api/oembed.json' },
+    { pattern: /(?:x\.com|twitter\.com)\//, endpoint: 'https://publish.twitter.com/oembed' },
   ]
 
   for (const { pattern, endpoint } of oembedProviders) {
