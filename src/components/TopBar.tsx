@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import type { Messages } from '../i18n'
-import type { LayoutMode, CardSize } from '../types'
+import type { LayoutMode, CardSize, GridColumns } from '../types'
 import { MOD_LABEL } from '../utils/keyboard'
 import { Icon } from './Icon'
 
@@ -12,12 +12,14 @@ interface Props {
   onOpenSettings: () => void
   layout: LayoutMode
   cardSize: CardSize
+  gridColumns: GridColumns
   onChangeLayout: (layout: LayoutMode) => void
   onChangeCardSize: (size: CardSize) => void
+  onChangeGridColumns: (cols: GridColumns) => void
   t: Messages
 }
 
-export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSettings, layout, cardSize, onChangeLayout, onChangeCardSize, t }: Props) {
+export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSettings, layout, cardSize, gridColumns, onChangeLayout, onChangeCardSize, onChangeGridColumns, t }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   return (
@@ -130,6 +132,26 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
               </button>
             ))}
           </div>
+        )}
+
+        {/* 列数セレクト（card/magazine表示時のみ） */}
+        {layout !== 'list' && (
+          <select
+            className="sg-cols-select"
+            value={String(gridColumns)}
+            onChange={(e) => {
+              const v = e.target.value
+              onChangeGridColumns(v === 'auto' ? 'auto' : (Number(v) as GridColumns))
+            }}
+            aria-label="Grid columns"
+          >
+            <option value="auto">Auto</option>
+            <option value="2">2列</option>
+            <option value="3">3列</option>
+            <option value="4">4列</option>
+            <option value="5">5列</option>
+            <option value="6">6列</option>
+          </select>
         )}
 
         <button className="sg-btn--icon" onClick={onToggleTheme} title={t.toggleTheme}>

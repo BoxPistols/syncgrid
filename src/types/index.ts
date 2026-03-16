@@ -6,6 +6,9 @@ export type LayoutMode = 'magazine' | 'card' | 'list'
 /** カードサイズ */
 export type CardSize = 'sm' | 'md' | 'lg'
 
+/** グリッド列数 (auto=自動, 2-6=固定列数) */
+export type GridColumns = 'auto' | 2 | 3 | 4 | 5 | 6
+
 /** ソートモード */
 export type SortMode = 'manual' | 'name-asc' | 'name-desc' | 'date-new' | 'date-old' | 'domain' | 'last-read'
 
@@ -128,6 +131,8 @@ export interface SyncGridSettings {
   layout: LayoutMode
   /** カードサイズ */
   cardSize: CardSize
+  /** グリッド列数 */
+  gridColumns: GridColumns
   /** ソートモード */
   sort: SortMode
   /** キーボードショートカット */
@@ -168,6 +173,7 @@ export const DEFAULT_SETTINGS: SyncGridSettings = {
   ai: DEFAULT_AI_SETTINGS,
   layout: 'list', // magazine | card | list
   cardSize: 'md',
+  gridColumns: 'auto' as GridColumns,
   sort: 'manual',
   shortcuts: DEFAULT_SHORTCUTS,
 }

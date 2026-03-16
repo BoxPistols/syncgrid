@@ -136,6 +136,7 @@ export default function App() {
     'sg-dial__grid',
     `sg-dial__grid--${settings.layout}`,
     (settings.layout === 'card' || settings.layout === 'magazine') && settings.cardSize !== 'md' && `sg-dial__grid--size-${settings.cardSize}`,
+    settings.layout !== 'list' && settings.gridColumns !== 'auto' && `sg-dial__grid--cols-${settings.gridColumns}`,
   ]
     .filter(Boolean)
     .join(' ')
@@ -377,7 +378,7 @@ export default function App() {
 
   return (
     <>
-      <TopBar query={query} onQueryChange={setQuery} theme={settings.theme} onToggleTheme={handleToggleTheme} onOpenSettings={() => setShowSettings(true)} layout={settings.layout} cardSize={settings.cardSize} onChangeLayout={handleChangeLayout} onChangeCardSize={(size) => updateSettings({ cardSize: size })} t={t} />
+      <TopBar query={query} onQueryChange={setQuery} theme={settings.theme} onToggleTheme={handleToggleTheme} onOpenSettings={() => setShowSettings(true)} layout={settings.layout} cardSize={settings.cardSize} gridColumns={settings.gridColumns} onChangeLayout={handleChangeLayout} onChangeCardSize={(size) => updateSettings({ cardSize: size })} onChangeGridColumns={(cols) => updateSettings({ gridColumns: cols })} t={t} />
 
       {/* Tab Bar */}
       <div className="sg-tabbar" role="tablist">

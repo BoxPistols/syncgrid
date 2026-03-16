@@ -454,6 +454,30 @@ button {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
 }
+/* 固定列数 */
+/* 列数セレクト */
+.sg-cols-select {
+  appearance: none;
+  height: 28px;
+  padding: 0 24px 0 8px;
+  border: 1px solid var(--sg-border);
+  border-radius: var(--sg-radius-sm);
+  background: var(--sg-bg-input);
+  color: var(--sg-text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.sg-cols-select:focus { border-color: var(--sg-accent); }
+
+.sg-dial__grid--cols-2 { grid-template-columns: repeat(2, 1fr); }
+.sg-dial__grid--cols-3 { grid-template-columns: repeat(3, 1fr); }
+.sg-dial__grid--cols-4 { grid-template-columns: repeat(4, 1fr); }
+.sg-dial__grid--cols-5 { grid-template-columns: repeat(5, 1fr); }
+.sg-dial__grid--cols-6 { grid-template-columns: repeat(6, 1fr); }
 
 /* --- Bookmark Card --- */
 .sg-card {
