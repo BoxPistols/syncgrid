@@ -1,9 +1,13 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useBookmarks } from './hooks/useBookmarks'
 import { useSettings } from './hooks/useSettings'
 import { useTheme } from './hooks/useTheme'
 import { useI18n } from './hooks/useI18n'
 import { useAutoSync } from './hooks/useAutoSync'
+import { useNavigation } from './hooks/useNavigation'
+import { useSelection } from './hooks/useSelection'
+import { useFiltering } from './hooks/useFiltering'
+import { useMetadata } from './hooks/useMetadata'
 import { useDragReorder } from './hooks/useDragReorder'
 import { TopBar } from './components/TopBar'
 import { BookmarkCard } from './components/BookmarkCard'
@@ -28,12 +32,8 @@ import {
   flattenGroups,
   countAll,
 } from './utils/bookmarks'
-import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode, BookmarkMeta, ReadStatus } from './types'
+import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
 import { isComposing, matchesBinding } from './utils/keyboard'
-import { getDomain } from './utils/favicon'
-import { loadAllMeta, saveMeta } from './utils/storage'
-import { addMultipleToTrash } from './utils/trash'
-import type { TrashItem } from './types'
 
 import './styles/global.css'
 
@@ -43,25 +43,20 @@ export default function App() {
   useTheme(settings.theme)
   const t = useI18n(settings.locale)
 
+  // --- Extracted hooks ---
+  const { allMeta, handleSetStatus, handleSaveMeta } = useMetadata(groups)
+  const nav = useNavigation(groups, settings, loaded, updateSettings)
+  const { query, setQuery, searchResults, filterTag, setFilterTag, filterStatus, setFilterStatus, allTagsInFolder, applyFiltersAndSort } =
+    useFiltering(groups, nav.currentFolder, allMeta, settings.sort)
+
   // --- Auto Sync ---
   const handleSynced = useCallback(
-    (syncedAt: string) => {
-      updateSettings({ lastSyncedAt: syncedAt })
-    },
+    (syncedAt: string) => updateSettings({ lastSyncedAt: syncedAt }),
     [updateSettings],
   )
   useAutoSync(groups, handleSynced)
 
-  // --- Metadata (tags, ogp cache) ---
-  const [allMeta, setAllMeta] = useState<Record<string, BookmarkMeta>>({})
-
-  useEffect(() => {
-    loadAllMeta().then(setAllMeta)
-  }, [groups])
-
-  // --- Navigation State ---
-  const [path, setPath] = useState<string[]>([])
-  const [query, setQuery] = useState('')
+  // --- UI State ---
   const [editItem, setEditItem] = useState<SyncGridItem | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -70,25 +65,46 @@ export default function App() {
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null)
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
-  const [ctxMenu, setCtxMenu] = useState<{
-    x: number
-    y: number
-    items: MenuItem[]
-  } | null>(null)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null)
   const [confirmDialog, setConfirmDialog] = useState<{
     message: string
     onConfirm: () => void
     confirmLabel?: string
   } | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [filterTag, setFilterTag] = useState<string | null>(null)
-  const [filterStatus, setFilterStatus] = useState<ReadStatus | null>(null)
   const [showTrash, setShowTrash] = useState(false)
   const [showCheatSheet, setShowCheatSheet] = useState(false)
   const [showTour, setShowTour] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
 
-  // 初回起動チェック
+  // --- Selection ---
+  const { selectedIds, toggleSelect, clearSelection, handleDeleteSelected, handleMoveSelected, selectAll } =
+    useSelection(nav.currentFolder, refresh, t, setConfirmDialog)
+
+  // --- Drag & Drop ---
+  const { dragState, getDragHandlers, getTabHandlers, getBreadcrumbDropHandlers } = useDragReorder(
+    nav.currentFolder,
+    selectedIds,
+  )
+
+  // Tab/Folder切替時に選択解除をラップ
+  const handleSelectTab = useCallback(
+    (id: string) => {
+      clearSelection()
+      setQuery('')
+      nav.handleSelectTab(id)
+    },
+    [clearSelection, setQuery, nav],
+  )
+
+  const handleOpenFolder = useCallback(
+    (group: SyncGridGroup) => {
+      clearSelection()
+      nav.handleOpenFolder(group)
+    },
+    [clearSelection, nav],
+  )
+
+  // --- Onboarding ---
   useEffect(() => {
     chrome.storage.local.get('syncgrid_onboarded').then((r) => {
       if (!r.syncgrid_onboarded) setShowWelcome(true)
@@ -111,223 +127,7 @@ export default function App() {
     chrome.storage.local.set({ syncgrid_onboarded: true })
   }, [])
 
-  // --- Active Tab (computed — stale ID falls back to first group) ---
-  const activeTabId = useMemo(() => {
-    const stored = settings.activeTabId
-    if (stored === '__all__') return '__all__'
-    if (stored && groups.find((g) => g.id === stored)) return stored
-    return groups[0]?.id || ''
-  }, [settings.activeTabId, groups])
-
-  const activeGroup = activeTabId === '__all__' ? null : (groups.find((g) => g.id === activeTabId) ?? groups[0])
-
-  // ALLタブ用: 全ブックマークをフラット化
-  const allItems = useMemo(() => {
-    if (activeTabId !== '__all__') return null
-    const items: SyncGridItem[] = []
-    for (const g of flattenGroups(groups)) {
-      items.push(...g.items)
-    }
-    return items
-  }, [activeTabId, groups])
-
-  // Persist fallback to storage so it stays consistent
-  useEffect(() => {
-    if (loaded && groups.length > 0 && settings.activeTabId !== activeTabId && activeTabId !== '__all__') {
-      updateSettings({ activeTabId, lastPath: [] })
-    }
-  }, [loaded, groups, settings.activeTabId, activeTabId, updateSettings])
-
-  // --- Current folder ---
-  const currentFolder = useMemo(() => {
-    if (!activeGroup) return null
-    if (path.length === 0) return activeGroup
-    let folder: SyncGridGroup | undefined = activeGroup
-    for (const id of path) {
-      folder = folder?.children.find((c) => c.id === id)
-      if (!folder) break
-    }
-    return folder ?? activeGroup
-  }, [activeGroup, path])
-
-  // --- Drag & Drop ---
-  const { dragState, getDragHandlers, getTabHandlers, getBreadcrumbDropHandlers } = useDragReorder(
-    currentFolder,
-    selectedIds,
-  )
-
-  // --- Breadcrumb ---
-  const breadcrumb = useMemo(() => {
-    if (!activeGroup) return []
-    const crumbs: { id: string; title: string }[] = [{ id: '', title: activeGroup.title }]
-    let folder: SyncGridGroup | undefined = activeGroup
-    for (const id of path) {
-      const next: SyncGridGroup | undefined = folder?.children.find((c) => c.id === id)
-      if (!next) break
-      crumbs.push({ id: next.id, title: next.title })
-      folder = next
-    }
-    return crumbs
-  }, [activeGroup, path])
-
-  // --- Search ---
-  const searchResults = useMemo(() => {
-    if (!query.trim()) return null
-    const q = query.toLowerCase()
-    const all = flattenGroups(groups)
-    const results: SyncGridItem[] = []
-    for (const g of all) {
-      for (const item of g.items) {
-        if (item.title.toLowerCase().includes(q) || item.url.toLowerCase().includes(q)) results.push(item)
-      }
-    }
-    return results
-  }, [query, groups])
-
-  // --- Selection handlers ---
-  const toggleSelect = useCallback((id: string, e: React.MouseEvent) => {
-    if (e.metaKey || e.ctrlKey) {
-      // Cmd/Ctrl+Click → トグル選択
-      e.preventDefault()
-      e.stopPropagation()
-      setSelectedIds((prev) => {
-        const next = new Set(prev)
-        if (next.has(id)) next.delete(id)
-        else next.add(id)
-        return next
-      })
-      return true
-    }
-    return false
-  }, [])
-
-  const handleDeleteSelected = useCallback(async () => {
-    if (selectedIds.size === 0) return
-    setConfirmDialog({
-      message: t.selected(selectedIds.size),
-      confirmLabel: t.delete,
-      onConfirm: async () => {
-        setConfirmDialog(null)
-        // ゴミ箱に入れてからChrome Bookmarksから削除
-        const trashItems: TrashItem[] = []
-        for (const id of selectedIds) {
-          const item = currentFolder?.items.find((i) => i.id === id)
-          if (item) {
-            trashItems.push({
-              id: `trash_${Date.now()}_${item.id}`,
-              title: item.title,
-              url: item.url,
-              parentId: item.parentId,
-              parentTitle: currentFolder?.title ?? '',
-              deletedAt: Date.now(),
-            })
-          }
-        }
-        if (trashItems.length > 0) await addMultipleToTrash(trashItems)
-        for (const id of selectedIds) {
-          try {
-            await removeBookmark(id)
-          } catch {
-            try {
-              await deleteGroup(id)
-            } catch { /* skip */ }
-          }
-        }
-        setSelectedIds(new Set())
-        refresh()
-      },
-    })
-  }, [selectedIds, refresh, t, currentFolder])
-
-  // --- 一括移動 ---
-  const handleMoveSelected = useCallback(
-    async (targetGroupId: string) => {
-      for (const id of selectedIds) {
-        try {
-          await chrome.bookmarks.move(id, { parentId: targetGroupId })
-        } catch { /* skip */ }
-      }
-      setSelectedIds(new Set())
-      refresh()
-    },
-    [selectedIds, refresh],
-  )
-
-  // --- Global keyboard shortcuts (設定ベース) ---
-  useEffect(() => {
-    const sc = settings.shortcuts
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (isComposing(e)) return
-
-      if (matchesBinding(e, sc.search)) {
-        e.preventDefault()
-        document.querySelector<HTMLInputElement>('.sg-topbar__search-input')?.focus()
-      } else if (matchesBinding(e, sc.addBookmark)) {
-        e.preventDefault()
-        setShowAddForm(true)
-      } else if (matchesBinding(e, sc.layoutCard)) {
-        e.preventDefault()
-        updateSettings({ layout: 'card' })
-      } else if (matchesBinding(e, sc.layoutList)) {
-        e.preventDefault()
-        updateSettings({ layout: 'list' })
-      } else if (matchesBinding(e, sc.layoutCompact)) {
-        e.preventDefault()
-        updateSettings({ layout: 'compact' })
-      } else if (matchesBinding(e, sc.deleteSelected)) {
-        if (selectedIds.size > 0) {
-          e.preventDefault()
-          handleDeleteSelected()
-        }
-      } else if (matchesBinding(e, sc.selectAll)) {
-        if (currentFolder) {
-          e.preventDefault()
-          const allIds = new Set([
-            ...currentFolder.items.map((i) => i.id),
-            ...currentFolder.children.map((c) => c.id),
-          ])
-          setSelectedIds(allIds)
-        }
-      } else if (e.key === 'Escape' && selectedIds.size > 0) {
-        setSelectedIds(new Set())
-      } else if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
-        setShowCheatSheet((v) => !v)
-      }
-    }
-
-    document.addEventListener('keydown', handleGlobalKeyDown)
-    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, currentFolder])
-
-  // --- Page transition key ---
-  const pageKey = searchResults ? 'search' : `${activeTabId}/${path.join('/')}`
-
-  // --- Tag filter ---
-  const allTagsInFolder = useMemo(() => {
-    if (!currentFolder) return []
-    const tagSet = new Set<string>()
-    for (const item of currentFolder.items) {
-      const meta = allMeta[item.id]
-      if (meta?.tags) meta.tags.forEach((t) => tagSet.add(t))
-    }
-    return [...tagSet].sort()
-  }, [currentFolder, allMeta])
-
-  const filterItems = useCallback(
-    (items: SyncGridItem[]): SyncGridItem[] => {
-      let result = items
-      if (filterTag) {
-        result = result.filter((item) => allMeta[item.id]?.tags?.includes(filterTag))
-      }
-      if (filterStatus) {
-        result = result.filter((item) => (allMeta[item.id]?.status ?? 'unread') === filterStatus)
-      }
-      return result
-    },
-    [filterTag, filterStatus, allMeta],
-  )
-
-  // --- Layout class ---
+  // --- Layout ---
   const gridClass = [
     'sg-dial__grid',
     settings.layout !== 'card' && `sg-dial__grid--${settings.layout}`,
@@ -336,123 +136,60 @@ export default function App() {
     .filter(Boolean)
     .join(' ')
 
-  // --- Sort ---
-  const sortItems = useCallback(
-    (items: SyncGridItem[]): SyncGridItem[] => {
-      if (settings.sort === 'manual') return items
-      const sorted = [...items]
-      switch (settings.sort) {
-        case 'name-asc':
-          return sorted.sort((a, b) => a.title.localeCompare(b.title))
-        case 'name-desc':
-          return sorted.sort((a, b) => b.title.localeCompare(a.title))
-        case 'date-new':
-          return sorted.sort((a, b) => (b.dateAdded ?? 0) - (a.dateAdded ?? 0))
-        case 'date-old':
-          return sorted.sort((a, b) => (a.dateAdded ?? 0) - (b.dateAdded ?? 0))
-        case 'domain':
-          return sorted.sort((a, b) => getDomain(a.url).localeCompare(getDomain(b.url)))
-        case 'last-read':
-          return sorted.sort((a, b) => (allMeta[b.id]?.lastReadAt ?? 0) - (allMeta[a.id]?.lastReadAt ?? 0))
-        default:
-          return items
-      }
-    },
-    [settings.sort, allMeta],
+  const handleChangeLayout = useCallback(
+    (layout: LayoutMode) => updateSettings({ layout }),
+    [updateSettings],
   )
 
   const handleChangeSort = useCallback(
-    (sort: SortMode) => {
-      updateSettings({ sort })
-    },
+    (sort: SortMode) => updateSettings({ sort }),
     [updateSettings],
   )
 
-  // --- Handlers ---
-  const handleSelectTab = useCallback(
-    (id: string) => {
-      setPath([])
-      setSelectedIds(new Set())
-      updateSettings({ activeTabId: id, lastPath: [] })
-      setQuery('')
-    },
+  const handleToggleTheme = useCallback(
+    () => updateSettings((prev) => ({ theme: prev.theme === 'dark' ? 'light' : prev.theme === 'light' ? 'dark' : 'dark' })),
     [updateSettings],
   )
 
-  const handleOpenFolder = useCallback((group: SyncGridGroup) => {
-    setPath((prev) => [...prev, group.id])
-    setSelectedIds(new Set())
-  }, [])
+  // --- Group/Folder CRUD ---
+  const handleAddGroup = useCallback(() => { setCreatingGroup('tab'); setNewGroupName('') }, [])
 
-  const handleBreadcrumbClick = useCallback((index: number) => {
-    setPath((prev) => prev.slice(0, index))
-  }, [])
-
-  const handleChangeLayout = useCallback(
-    (layout: LayoutMode) => {
-      updateSettings({ layout })
-    },
-    [updateSettings],
-  )
-
-  const handleToggleTheme = useCallback(() => {
-    updateSettings((prev) => ({
-      theme: prev.theme === 'dark' ? 'light' : prev.theme === 'light' ? 'dark' : 'dark',
-    }))
-  }, [updateSettings])
-
-  const handleAddGroup = useCallback(() => {
-    setCreatingGroup('tab')
-    setNewGroupName('')
-  }, [])
-
-  // タブバー「＋」→ 常にSyncGridルート直下にグループ（タブ）作成
   const handleCreateGroup = useCallback(async () => {
     const name = newGroupName.trim()
-    if (!name) {
-      setCreatingGroup(false)
-      return
-    }
-    const rootId = await getRootId()
-    await createGroup(name, rootId)
+    if (!name) { setCreatingGroup(false); return }
+    await createGroup(name, await getRootId())
     setCreatingGroup(false)
     setNewGroupName('')
     await refresh()
   }, [newGroupName, refresh])
 
-  // ツールバー「新規フォルダ」→ 現在のフォルダ内にサブフォルダ作成
   const handleCreateSubfolder = useCallback(async () => {
     const name = newGroupName.trim()
-    if (!name) {
-      setCreatingGroup(false)
-      return
-    }
-    const parentId = currentFolder?.id || (await getRootId())
-    await createGroup(name, parentId)
+    if (!name) { setCreatingGroup(false); return }
+    await createGroup(name, nav.currentFolder?.id || (await getRootId()))
     setCreatingGroup(false)
     setNewGroupName('')
     await refresh()
-  }, [newGroupName, currentFolder, refresh])
+  }, [newGroupName, nav.currentFolder, refresh])
 
   const handleAddBookmark = useCallback(
     async (url: string, title: string) => {
-      if (!currentFolder) return
-      await addBookmark(currentFolder.id, title, url)
+      if (!nav.currentFolder) return
+      await addBookmark(nav.currentFolder.id, title, url)
       setShowAddForm(false)
       await refresh()
     },
-    [currentFolder, refresh],
+    [nav.currentFolder, refresh],
   )
 
   const handleSaveBookmark = useCallback(
     async (id: string, title: string, url: string, tags: string[]) => {
       await updateBookmark(id, { title, url })
-      const existingMeta = allMeta[id]
-      await saveMeta(id, { memo: existingMeta?.memo ?? '', tags, ogp: existingMeta?.ogp })
+      await handleSaveMeta(id, tags)
       setEditItem(null)
       await refresh()
     },
-    [refresh, allMeta],
+    [refresh, handleSaveMeta],
   )
 
   const handleDeleteBookmark = useCallback(
@@ -462,98 +199,6 @@ export default function App() {
       await refresh()
     },
     [refresh],
-  )
-
-  const handleSetStatus = useCallback(
-    async (id: string, newStatus: ReadStatus) => {
-      const meta = allMeta[id]
-      await saveMeta(id, {
-        memo: meta?.memo ?? '',
-        tags: meta?.tags,
-        ogp: meta?.ogp,
-        status: newStatus,
-        lastReadAt: newStatus === 'read' ? Date.now() : meta?.lastReadAt,
-      })
-      loadAllMeta().then(setAllMeta)
-    },
-    [allMeta],
-  )
-
-  const handleBookmarkContext = useCallback(
-    (item: SyncGridItem, x: number, y: number) => {
-      setCtxMenu({
-        x,
-        y,
-        items: [
-          {
-            label: t.openNewTab,
-            icon: 'link',
-            action: () => {
-              window.open(item.url, '_blank')
-              handleSetStatus(item.id, 'read')
-            },
-          },
-          { label: t.edit, icon: 'edit', action: () => setEditItem(item) },
-          { label: '---', action: () => {} },
-          { label: t.statusUnread, icon: 'sparkle', action: () => handleSetStatus(item.id, 'unread') },
-          { label: t.statusLater, icon: 'pin', action: () => handleSetStatus(item.id, 'later') },
-          { label: t.statusStarred, icon: 'sparkle', action: () => handleSetStatus(item.id, 'starred') },
-          { label: t.statusRead, icon: 'check-circle', action: () => handleSetStatus(item.id, 'read') },
-          { label: '---', action: () => {} },
-          {
-            label: t.delete,
-            icon: 'trash',
-            danger: true,
-            action: async () => {
-              await removeBookmark(item.id)
-              refresh()
-            },
-          },
-        ],
-      })
-    },
-    [refresh, t, handleSetStatus],
-  )
-
-  const handleFolderContext = useCallback(
-    (group: SyncGridGroup, x: number, y: number) => {
-      setCtxMenu({
-        x,
-        y,
-        items: [
-          { label: t.open, icon: 'folder-open', action: () => handleOpenFolder(group) },
-          {
-            label: t.rename,
-            icon: 'edit',
-            action: () => {
-              setRenamingFolderId(group.id)
-            },
-          },
-          { label: '---', action: () => {} },
-          {
-            label: t.delete,
-            icon: 'trash',
-            danger: true,
-            action: () => {
-              setConfirmDialog({
-                message: t.confirmDeleteFolder(group.title),
-                confirmLabel: t.delete,
-                onConfirm: async () => {
-                  setConfirmDialog(null)
-                  await deleteGroup(group.id)
-                  setPath((prev) => {
-                    const idx = prev.indexOf(group.id)
-                    return idx >= 0 ? prev.slice(0, idx) : prev
-                  })
-                  refresh()
-                },
-              })
-            },
-          },
-        ],
-      })
-    },
-    [refresh, handleOpenFolder, t],
   )
 
   const handleFolderRename = useCallback(
@@ -575,52 +220,126 @@ export default function App() {
     await refresh()
   }, [renamingTabId, renameValue, refresh])
 
-  const handleTabContext = useCallback(
-    (group: SyncGridGroup, e: React.MouseEvent) => {
-      e.preventDefault()
+  // --- Context menus ---
+  const handleBookmarkContext = useCallback(
+    (item: SyncGridItem, x: number, y: number) => {
       setCtxMenu({
-        x: e.clientX,
-        y: e.clientY,
+        x, y,
         items: [
-          {
-            label: t.rename,
-            icon: 'edit',
-            action: () => {
-              setRenamingTabId(group.id)
-              setRenameValue(group.title)
-            },
-          },
+          { label: t.openNewTab, icon: 'link', action: () => { window.open(item.url, '_blank'); handleSetStatus(item.id, 'read') } },
+          { label: t.edit, icon: 'edit', action: () => setEditItem(item) },
+          { label: '---', action: () => {} },
+          { label: t.statusUnread, icon: 'sparkle', action: () => handleSetStatus(item.id, 'unread') },
+          { label: t.statusLater, icon: 'pin', action: () => handleSetStatus(item.id, 'later') },
+          { label: t.statusStarred, icon: 'sparkle', action: () => handleSetStatus(item.id, 'starred') },
+          { label: t.statusRead, icon: 'check-circle', action: () => handleSetStatus(item.id, 'read') },
+          { label: '---', action: () => {} },
+          { label: t.delete, icon: 'trash', danger: true, action: async () => { await removeBookmark(item.id); refresh() } },
+        ],
+      })
+    },
+    [refresh, t, handleSetStatus],
+  )
+
+  const handleFolderContext = useCallback(
+    (group: SyncGridGroup, x: number, y: number) => {
+      setCtxMenu({
+        x, y,
+        items: [
+          { label: t.open, icon: 'folder-open', action: () => handleOpenFolder(group) },
+          { label: t.rename, icon: 'edit', action: () => setRenamingFolderId(group.id) },
           { label: '---', action: () => {} },
           {
-            label: t.delete,
-            icon: 'trash',
-            danger: true,
-            action: () => {
-              setConfirmDialog({
-                message: t.confirmDeleteTab(group.title),
-                confirmLabel: t.delete,
-                onConfirm: async () => {
-                  setConfirmDialog(null)
-                  await deleteGroup(group.id)
-                  if (activeTabId === group.id) {
-                    const rem = groups.filter((g) => g.id !== group.id)
-                    if (rem.length > 0) updateSettings({ activeTabId: rem[0].id })
-                  }
-                  refresh()
-                },
-              })
-            },
+            label: t.delete, icon: 'trash', danger: true,
+            action: () => setConfirmDialog({
+              message: t.confirmDeleteFolder(group.title),
+              confirmLabel: t.delete,
+              onConfirm: async () => { setConfirmDialog(null); await deleteGroup(group.id); nav.setPath((prev) => { const idx = prev.indexOf(group.id); return idx >= 0 ? prev.slice(0, idx) : prev }); refresh() },
+            }),
           },
         ],
       })
     },
-    [groups, activeTabId, updateSettings, refresh, t],
+    [refresh, handleOpenFolder, t, nav],
+  )
+
+  const handleTabContext = useCallback(
+    (group: SyncGridGroup, e: React.MouseEvent) => {
+      e.preventDefault()
+      setCtxMenu({
+        x: e.clientX, y: e.clientY,
+        items: [
+          { label: t.rename, icon: 'edit', action: () => { setRenamingTabId(group.id); setRenameValue(group.title) } },
+          { label: '---', action: () => {} },
+          {
+            label: t.delete, icon: 'trash', danger: true,
+            action: () => setConfirmDialog({
+              message: t.confirmDeleteTab(group.title),
+              confirmLabel: t.delete,
+              onConfirm: async () => {
+                setConfirmDialog(null)
+                await deleteGroup(group.id)
+                if (nav.activeTabId === group.id) {
+                  const rem = groups.filter((g) => g.id !== group.id)
+                  if (rem.length > 0) updateSettings({ activeTabId: rem[0].id })
+                }
+                refresh()
+              },
+            }),
+          },
+        ],
+      })
+    },
+    [groups, nav.activeTabId, updateSettings, refresh, t],
+  )
+
+  // --- Global keyboard shortcuts ---
+  useEffect(() => {
+    const sc = settings.shortcuts
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (isComposing(e)) return
+      if (matchesBinding(e, sc.search)) { e.preventDefault(); document.querySelector<HTMLInputElement>('.sg-topbar__search-input')?.focus() }
+      else if (matchesBinding(e, sc.addBookmark)) { e.preventDefault(); setShowAddForm(true) }
+      else if (matchesBinding(e, sc.layoutCard)) { e.preventDefault(); updateSettings({ layout: 'card' }) }
+      else if (matchesBinding(e, sc.layoutList)) { e.preventDefault(); updateSettings({ layout: 'list' }) }
+      else if (matchesBinding(e, sc.layoutCompact)) { e.preventDefault(); updateSettings({ layout: 'compact' }) }
+      else if (matchesBinding(e, sc.deleteSelected) && selectedIds.size > 0) { e.preventDefault(); handleDeleteSelected() }
+      else if (matchesBinding(e, sc.selectAll)) { e.preventDefault(); selectAll() }
+      else if (e.key === 'Escape' && selectedIds.size > 0) clearSelection()
+      else if (e.key === '?' && !e.ctrlKey && !e.metaKey) setShowCheatSheet((v) => !v)
+    }
+    document.addEventListener('keydown', handleGlobalKeyDown)
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, selectAll, clearSelection])
+
+  // --- UI helper fragments ---
+  const statusFilterChips = (
+    <div className="sg-status-filter">
+      {([null, 'unread', 'later', 'starred', 'read'] as const).map((s) => (
+        <button key={s ?? 'all'} className={`sg-status-filter__btn ${filterStatus === s ? 'sg-status-filter__btn--active' : ''}`} onClick={() => setFilterStatus(s)}>
+          {s === null ? t.statusAll : s === 'unread' ? t.statusUnread : s === 'later' ? t.statusLater : s === 'starred' ? t.statusStarred : t.statusRead}
+        </button>
+      ))}
+    </div>
+  )
+
+  const sortDropdown = (
+    <div className="sg-sort">
+      <select className="sg-sort__select" value={settings.sort} onChange={(e) => handleChangeSort(e.target.value as SortMode)} aria-label={t.sort}>
+        <option value="manual">{t.sortManual}</option>
+        <option value="name-asc">{t.sortNameAsc}</option>
+        <option value="name-desc">{t.sortNameDesc}</option>
+        <option value="date-new">{t.sortDateNew}</option>
+        <option value="date-old">{t.sortDateOld}</option>
+        <option value="domain">{t.sortDomain}</option>
+        <option value="last-read">{t.sortLastRead}</option>
+      </select>
+    </div>
   )
 
   // --- Render ---
   if (loading || !loaded) return <div className="sg-loading">{t.loading}</div>
 
-  // ウェルカムスクリーン（初回 + グループなし）
   if (showWelcome && groups.length === 0) {
     return (
       <div className="sg-welcome">
@@ -628,22 +347,10 @@ export default function App() {
         <h1 className="sg-welcome__title">{t.welcomeTitle}</h1>
         <p className="sg-welcome__desc">{t.welcomeDesc}</p>
         <div className="sg-welcome__features">
-          <div className="sg-welcome__feature">
-            <div className="sg-welcome__feature-icon"><Icon name="search" size={20} /></div>
-            <div className="sg-welcome__feature-text"><strong>{t.featureSearch}</strong>{t.featureSearchDesc}</div>
-          </div>
-          <div className="sg-welcome__feature">
-            <div className="sg-welcome__feature-icon"><Icon name="sparkle" size={20} /></div>
-            <div className="sg-welcome__feature-text"><strong>{t.featureAi}</strong>{t.featureAiDesc}</div>
-          </div>
-          <div className="sg-welcome__feature">
-            <div className="sg-welcome__feature-icon"><Icon name="folder" size={20} /></div>
-            <div className="sg-welcome__feature-text"><strong>{t.featureLayout}</strong>{t.featureLayoutDesc}</div>
-          </div>
-          <div className="sg-welcome__feature">
-            <div className="sg-welcome__feature-icon"><Icon name="refresh" size={20} /></div>
-            <div className="sg-welcome__feature-text"><strong>{t.featureSync}</strong>{t.featureSyncDesc}</div>
-          </div>
+          <div className="sg-welcome__feature"><div className="sg-welcome__feature-icon"><Icon name="search" size={20} /></div><div className="sg-welcome__feature-text"><strong>{t.featureSearch}</strong>{t.featureSearchDesc}</div></div>
+          <div className="sg-welcome__feature"><div className="sg-welcome__feature-icon"><Icon name="sparkle" size={20} /></div><div className="sg-welcome__feature-text"><strong>{t.featureAi}</strong>{t.featureAiDesc}</div></div>
+          <div className="sg-welcome__feature"><div className="sg-welcome__feature-icon"><Icon name="folder" size={20} /></div><div className="sg-welcome__feature-text"><strong>{t.featureLayout}</strong>{t.featureLayoutDesc}</div></div>
+          <div className="sg-welcome__feature"><div className="sg-welcome__feature-icon"><Icon name="refresh" size={20} /></div><div className="sg-welcome__feature-text"><strong>{t.featureSync}</strong>{t.featureSyncDesc}</div></div>
         </div>
         <div className="sg-welcome__actions">
           <button className="sg-btn sg-btn--primary" onClick={handleStartTour}>{t.startTour}</button>
@@ -655,222 +362,84 @@ export default function App() {
 
   return (
     <>
-      <TopBar
-        query={query}
-        onQueryChange={setQuery}
-        theme={settings.theme}
-        onToggleTheme={handleToggleTheme}
-        onOpenSettings={() => setShowSettings(true)}
-        layout={settings.layout}
-        cardSize={settings.cardSize}
-        onChangeLayout={handleChangeLayout}
-        onChangeCardSize={(size) => updateSettings({ cardSize: size })}
-        t={t}
-      />
+      <TopBar query={query} onQueryChange={setQuery} theme={settings.theme} onToggleTheme={handleToggleTheme} onOpenSettings={() => setShowSettings(true)} layout={settings.layout} cardSize={settings.cardSize} onChangeLayout={handleChangeLayout} onChangeCardSize={(size) => updateSettings({ cardSize: size })} t={t} />
 
       {/* Tab Bar */}
       <div className="sg-tabbar" role="tablist">
-        <button
-          className={`sg-tab ${activeTabId === '__all__' ? 'sg-tab--active' : ''}`}
-          role="tab"
-          aria-selected={activeTabId === '__all__'}
-          onClick={() => handleSelectTab('__all__')}
-        >
+        <button className={`sg-tab ${nav.activeTabId === '__all__' ? 'sg-tab--active' : ''}`} role="tab" aria-selected={nav.activeTabId === '__all__'} onClick={() => handleSelectTab('__all__')}>
           {t.allBookmarks}
           <span className="sg-tab__count">{flattenGroups(groups).reduce((sum, g) => sum + g.items.length, 0)}</span>
         </button>
         {groups.map((g) => (
-          <button
-            key={g.id}
-            className={`sg-tab ${g.id === activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id && dragState.draggingId !== g.id ? 'sg-tab--drop-target' : ''} ${dragState.draggingId === g.id ? 'sg-tab--dragging' : ''}`}
-            role="tab"
-            aria-selected={g.id === activeTabId}
-            onClick={() => handleSelectTab(g.id)}
-            onContextMenu={(e) => handleTabContext(g, e)}
-            onDoubleClick={() => {
-              setRenamingTabId(g.id)
-              setRenameValue(g.title)
-            }}
-            {...getTabHandlers(g.id)}
-          >
+          <button key={g.id} className={`sg-tab ${g.id === nav.activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id && dragState.draggingId !== g.id ? 'sg-tab--drop-target' : ''} ${dragState.draggingId === g.id ? 'sg-tab--dragging' : ''}`} role="tab" aria-selected={g.id === nav.activeTabId} onClick={() => handleSelectTab(g.id)} onContextMenu={(e) => handleTabContext(g, e)} onDoubleClick={() => { setRenamingTabId(g.id); setRenameValue(g.title) }} {...getTabHandlers(g.id)}>
             {renamingTabId === g.id ? (
-              <input
-                className="sg-tab__rename"
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                onBlur={handleRenameSubmit}
-                onKeyDown={(e) => {
-                  if (isComposing(e)) return
-                  if (e.key === 'Enter') handleRenameSubmit()
-                  if (e.key === 'Escape') setRenamingTabId(null)
-                }}
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <>
-                {g.title}
-                <span className="sg-tab__count">{countAll(g)}</span>
-              </>
-            )}
+              <input className="sg-tab__rename" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={handleRenameSubmit} onKeyDown={(e) => { if (isComposing(e)) return; if (e.key === 'Enter') handleRenameSubmit(); if (e.key === 'Escape') setRenamingTabId(null) }} autoFocus onClick={(e) => e.stopPropagation()} />
+            ) : (<>{g.title}<span className="sg-tab__count">{countAll(g)}</span></>)}
           </button>
         ))}
         {creatingGroup === 'tab' ? (
           <div className="sg-tab sg-tab--creating">
-            <input
-              className="sg-tab__rename"
-              placeholder={t.groupNamePlaceholder}
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-              onBlur={handleCreateGroup}
-              onKeyDown={(e) => {
-                if (isComposing(e)) return
-                if (e.key === 'Enter') handleCreateGroup()
-                if (e.key === 'Escape') setCreatingGroup(false)
-              }}
-              autoFocus
-            />
+            <input className="sg-tab__rename" placeholder={t.groupNamePlaceholder} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} onBlur={handleCreateGroup} onKeyDown={(e) => { if (isComposing(e)) return; if (e.key === 'Enter') handleCreateGroup(); if (e.key === 'Escape') setCreatingGroup(false) }} autoFocus />
           </div>
         ) : (
-          <button className="sg-tab sg-tab--add" onClick={handleAddGroup} title={t.newGroup} aria-label={t.newGroup}>
-            <Icon name="plus" size={14} />
-          </button>
+          <button className="sg-tab sg-tab--add" onClick={handleAddGroup} title={t.newGroup} aria-label={t.newGroup}><Icon name="plus" size={14} /></button>
         )}
-        <button className="sg-tab sg-tab--add" onClick={() => setShowTrash(true)} title={t.trash} aria-label={t.trash}>
-          <Icon name="trash" size={14} />
-        </button>
+        <button className="sg-tab sg-tab--add" onClick={() => setShowTrash(true)} title={t.trash} aria-label={t.trash}><Icon name="trash" size={14} /></button>
       </div>
 
-      {/* Content */}
       {/* Selection bar */}
       {selectedIds.size > 0 && (
         <div className="sg-selection-bar">
           <span>{t.selected(selectedIds.size)}</span>
-          <select
-            className="sg-sort__select"
-            value=""
-            onChange={(e) => {
-              if (e.target.value) handleMoveSelected(e.target.value)
-            }}
-          >
-            <option value="" disabled>
-              {t.moveSelected}
-            </option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.title}
-              </option>
-            ))}
-            {currentFolder &&
-              currentFolder.children
-                .filter((c) => !selectedIds.has(c.id))
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {'  └ ' + c.title}
-                  </option>
-                ))}
+          <select className="sg-sort__select" value="" onChange={(e) => { if (e.target.value) handleMoveSelected(e.target.value) }}>
+            <option value="" disabled>{t.moveSelected}</option>
+            {groups.map((g) => (<option key={g.id} value={g.id}>{g.title}</option>))}
+            {nav.currentFolder?.children.filter((c) => !selectedIds.has(c.id)).map((c) => (<option key={c.id} value={c.id}>{'  └ ' + c.title}</option>))}
           </select>
-          <button className="sg-btn sg-btn--sm sg-btn--danger" onClick={handleDeleteSelected}>
-            <Icon name="trash" size={12} /> {t.deleteSelected}
-          </button>
-          <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setSelectedIds(new Set())}>
-            {t.clearSelection}
-          </button>
+          <button className="sg-btn sg-btn--sm sg-btn--danger" onClick={handleDeleteSelected}><Icon name="trash" size={12} /> {t.deleteSelected}</button>
+          <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={clearSelection}>{t.clearSelection}</button>
         </div>
       )}
 
-      <div key={pageKey} className="sg-page-transition">
+      {/* Content */}
+      <div key={nav.pageKey} className="sg-page-transition">
         {searchResults ? (
           <div className="sg-dial">
-            <div className="sg-toolbar">
-              <span className="sg-toolbar__title">{t.searchResults(query, searchResults.length)}</span>
-            </div>
+            <div className="sg-toolbar"><span className="sg-toolbar__title">{t.searchResults(query, searchResults.length)}</span></div>
             {searchResults.length > 0 ? (
-              <div className={gridClass}>
-                {searchResults.map((item) => (
-                  <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} />
-                ))}
-              </div>
+              <div className={gridClass}>{searchResults.map((item) => (<BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} />))}</div>
             ) : (
-              <div className="sg-empty">
-                <div className="sg-empty__icon"><Icon name="search" size={48} /></div>
-                <p className="sg-empty__text">{t.noSearchResults}</p>
-              </div>
+              <div className="sg-empty"><div className="sg-empty__icon"><Icon name="search" size={48} /></div><p className="sg-empty__text">{t.noSearchResults}</p></div>
             )}
           </div>
-        ) : allItems ? (
-          /* ALLタブ: 全ブックマーク表示 */
+        ) : nav.allItems ? (
           <div className="sg-dial">
             <div className="sg-toolbar">
-              <span className="sg-toolbar__title">{t.allBookmarks} ({allItems.length})</span>
-              <div className="sg-status-filter">
-                {([null, 'unread', 'later', 'starred', 'read'] as const).map((s) => (
-                  <button
-                    key={s ?? 'all'}
-                    className={`sg-status-filter__btn ${filterStatus === s ? 'sg-status-filter__btn--active' : ''}`}
-                    onClick={() => setFilterStatus(s)}
-                  >
-                    {s === null ? t.statusAll : s === 'unread' ? t.statusUnread : s === 'later' ? t.statusLater : s === 'starred' ? t.statusStarred : t.statusRead}
-                  </button>
-                ))}
-              </div>
-              <div className="sg-sort">
-                <select
-                  className="sg-sort__select"
-                  value={settings.sort}
-                  onChange={(e) => handleChangeSort(e.target.value as SortMode)}
-                  aria-label={t.sort}
-                >
-                  <option value="manual">{t.sortManual}</option>
-                  <option value="name-asc">{t.sortNameAsc}</option>
-                  <option value="date-new">{t.sortDateNew}</option>
-                  <option value="date-old">{t.sortDateOld}</option>
-                  <option value="domain">{t.sortDomain}</option>
-                  <option value="last-read">{t.sortLastRead}</option>
-                </select>
-              </div>
+              <span className="sg-toolbar__title">{t.allBookmarks} ({nav.allItems.length})</span>
+              {statusFilterChips}
+              {sortDropdown}
             </div>
             <div className={gridClass}>
-              {sortItems(filterItems(allItems)).map((item) => (
-                <BookmarkCard
-                  key={item.id}
-                  item={item}
-                  onContextMenu={handleBookmarkContext}
-                  t={t}
-                  locale={settings.locale}
-                  tags={allMeta[item.id]?.tags}
-                  status={allMeta[item.id]?.status}
-                  onOpen={(id) => handleSetStatus(id, 'read')}
-                />
+              {applyFiltersAndSort(nav.allItems).map((item) => (
+                <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} onOpen={(id) => handleSetStatus(id, 'read')} />
               ))}
             </div>
           </div>
         ) : groups.length === 0 ? (
-          <div className="sg-empty">
-            <div className="sg-empty__icon"><Icon name="folder" size={48} /></div>
-            <p className="sg-empty__text sg-preline">{t.noGroups}</p>
-          </div>
-        ) : currentFolder ? (
+          <div className="sg-empty"><div className="sg-empty__icon"><Icon name="folder" size={48} /></div><p className="sg-empty__text sg-preline">{t.noGroups}</p></div>
+        ) : nav.currentFolder ? (
           <div className="sg-dial">
-            {path.length > 0 && (
+            {nav.path.length > 0 && (
               <nav className="sg-breadcrumb" aria-label="breadcrumb">
-                {breadcrumb.map((crumb, i) => {
-                  const crumbParentId = i === 0 ? activeGroup?.id : breadcrumb[i]?.id
+                {nav.breadcrumb.map((crumb, i) => {
+                  const crumbParentId = i === 0 ? nav.activeGroup?.id : nav.breadcrumb[i]?.id
                   return (
                     <span key={crumb.id || 'root'}>
                       {i > 0 && <span className="sg-breadcrumb__sep"> › </span>}
-                      {i < breadcrumb.length - 1 && crumbParentId ? (
-                        <button
-                          className={`sg-breadcrumb__item ${dragState.dropBreadcrumbId === crumbParentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
-                          onClick={() => handleBreadcrumbClick(i)}
-                          {...getBreadcrumbDropHandlers(crumbParentId)}
-                        >
-                          {crumb.title}
-                        </button>
+                      {i < nav.breadcrumb.length - 1 && crumbParentId ? (
+                        <button className={`sg-breadcrumb__item ${dragState.dropBreadcrumbId === crumbParentId ? 'sg-breadcrumb__item--drop-target' : ''}`} onClick={() => nav.handleBreadcrumbClick(i)} {...getBreadcrumbDropHandlers(crumbParentId)}>{crumb.title}</button>
                       ) : (
-                        <span className="sg-breadcrumb__current" aria-current="page">
-                          {crumb.title}
-                        </span>
+                        <span className="sg-breadcrumb__current" aria-current="page">{crumb.title}</span>
                       )}
                     </span>
                   )
@@ -879,166 +448,44 @@ export default function App() {
             )}
 
             <div className="sg-toolbar">
-              {path.length > 0 &&
-                (() => {
-                  const parentId = path.length >= 2 ? path[path.length - 2] : activeGroup?.id
-                  return parentId ? (
-                    <button
-                      className={`sg-btn--icon ${dragState.dropBreadcrumbId === parentId ? 'sg-breadcrumb__item--drop-target' : ''}`}
-                      onClick={() => setPath((p) => p.slice(0, -1))}
-                      title={t.back}
-                      aria-label={t.back}
-                      {...getBreadcrumbDropHandlers(parentId)}
-                    >
-                      <Icon name="arrow-left" size={14} />
-                    </button>
-                  ) : (
-                    <button
-                      className="sg-btn--icon"
-                      onClick={() => setPath((p) => p.slice(0, -1))}
-                      title={t.back}
-                      aria-label={t.back}
-                    >
-                      <Icon name="arrow-left" size={14} />
-                    </button>
-                  )
-                })()}
-              <span className="sg-toolbar__title">{path.length === 0 ? '' : currentFolder.title}</span>
-              <div className="sg-status-filter">
-                {([null, 'unread', 'later', 'starred', 'read'] as const).map((s) => (
-                  <button
-                    key={s ?? 'all'}
-                    className={`sg-status-filter__btn ${filterStatus === s ? 'sg-status-filter__btn--active' : ''}`}
-                    onClick={() => setFilterStatus(s)}
-                  >
-                    {s === null ? t.statusAll : s === 'unread' ? t.statusUnread : s === 'later' ? t.statusLater : s === 'starred' ? t.statusStarred : t.statusRead}
-                  </button>
-                ))}
-              </div>
-              <div className="sg-sort">
-                <select
-                  className="sg-sort__select"
-                  value={settings.sort}
-                  onChange={(e) => handleChangeSort(e.target.value as SortMode)}
-                  aria-label={t.sort}
-                >
-                  <option value="manual">{t.sortManual}</option>
-                  <option value="name-asc">{t.sortNameAsc}</option>
-                  <option value="name-desc">{t.sortNameDesc}</option>
-                  <option value="date-new">{t.sortDateNew}</option>
-                  <option value="date-old">{t.sortDateOld}</option>
-                  <option value="domain">{t.sortDomain}</option>
-                  <option value="last-read">{t.sortLastRead}</option>
-                </select>
-              </div>
+              {nav.path.length > 0 && (() => {
+                const parentId = nav.path.length >= 2 ? nav.path[nav.path.length - 2] : nav.activeGroup?.id
+                return parentId ? (
+                  <button className={`sg-btn--icon ${dragState.dropBreadcrumbId === parentId ? 'sg-breadcrumb__item--drop-target' : ''}`} onClick={() => nav.setPath((p) => p.slice(0, -1))} title={t.back} aria-label={t.back} {...getBreadcrumbDropHandlers(parentId)}><Icon name="arrow-left" size={14} /></button>
+                ) : (
+                  <button className="sg-btn--icon" onClick={() => nav.setPath((p) => p.slice(0, -1))} title={t.back} aria-label={t.back}><Icon name="arrow-left" size={14} /></button>
+                )
+              })()}
+              <span className="sg-toolbar__title">{nav.path.length === 0 ? '' : nav.currentFolder.title}</span>
+              {statusFilterChips}
+              {sortDropdown}
               {allTagsInFolder.length > 0 && (
                 <div className="sg-tags">
-                  <button
-                    className={`sg-tag ${!filterTag ? 'sg-tag--active' : ''}`}
-                    onClick={() => setFilterTag(null)}
-                  >
-                    {t.allTags}
-                  </button>
-                  {allTagsInFolder.map((tag) => (
-                    <button
-                      key={tag}
-                      className={`sg-tag ${filterTag === tag ? 'sg-tag--active' : ''}`}
-                      onClick={() => setFilterTag(filterTag === tag ? null : tag)}
-                    >
-                      {tag}
-                    </button>
-                  ))}
+                  <button className={`sg-tag ${!filterTag ? 'sg-tag--active' : ''}`} onClick={() => setFilterTag(null)}>{t.allTags}</button>
+                  {allTagsInFolder.map((tag) => (<button key={tag} className={`sg-tag ${filterTag === tag ? 'sg-tag--active' : ''}`} onClick={() => setFilterTag(filterTag === tag ? null : tag)}>{tag}</button>))}
                 </div>
               )}
-              <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>
-                {showAddForm ? t.cancel : t.addBookmark('Ctrl')}
-              </button>
-              <button
-                className="sg-btn sg-btn--sm sg-btn--ghost"
-                onClick={() => {
-                  setCreatingGroup('subfolder')
-                  setNewGroupName('')
-                }}
-              >
-                {t.newFolder}
-              </button>
+              <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>{showAddForm ? t.cancel : t.addBookmark('Ctrl')}</button>
+              <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => { setCreatingGroup('subfolder'); setNewGroupName('') }}>{t.newFolder}</button>
             </div>
 
-            {showAddForm && (
-              <div className="sg-add-form-wrapper">
-                <AddBookmarkForm
-                  onAdd={handleAddBookmark}
-                  onCancel={() => setShowAddForm(false)}
-                  t={t}
-                  aiSettings={settings.ai}
-                />
-              </div>
-            )}
+            {showAddForm && (<div className="sg-add-form-wrapper"><AddBookmarkForm onAdd={handleAddBookmark} onCancel={() => setShowAddForm(false)} t={t} aiSettings={settings.ai} /></div>)}
 
             {creatingGroup === 'subfolder' && (
-              <div className="sg-add-form-wrapper">
-                <div className="sg-add-form">
-                  <input
-                    className="sg-add-form__input"
-                    placeholder={t.groupNamePlaceholder}
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    onBlur={handleCreateSubfolder}
-                    onKeyDown={(e) => {
-                      if (isComposing(e)) return
-                      if (e.key === 'Enter') handleCreateSubfolder()
-                      if (e.key === 'Escape') setCreatingGroup(false)
-                    }}
-                    autoFocus
-                  />
-                </div>
-              </div>
+              <div className="sg-add-form-wrapper"><div className="sg-add-form">
+                <input className="sg-add-form__input" placeholder={t.groupNamePlaceholder} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} onBlur={handleCreateSubfolder} onKeyDown={(e) => { if (isComposing(e)) return; if (e.key === 'Enter') handleCreateSubfolder(); if (e.key === 'Escape') setCreatingGroup(false) }} autoFocus />
+              </div></div>
             )}
 
-            {currentFolder.children.length === 0 && currentFolder.items.length === 0 ? (
-              <div className="sg-empty">
-                <div className="sg-empty__icon"><Icon name="pin" size={48} /></div>
-                <p className="sg-empty__text sg-preline">{t.emptyFolder}</p>
-              </div>
+            {nav.currentFolder.children.length === 0 && nav.currentFolder.items.length === 0 ? (
+              <div className="sg-empty"><div className="sg-empty__icon"><Icon name="pin" size={48} /></div><p className="sg-empty__text sg-preline">{t.emptyFolder}</p></div>
             ) : (
               <div className={gridClass}>
-                {currentFolder.children.map((child) => (
-                  <FolderCard
-                    key={child.id}
-                    group={child}
-                    onClick={handleOpenFolder}
-                    onContextMenu={handleFolderContext}
-                    t={t}
-                    dragHandlers={getDragHandlers(child.id, 'folder')}
-                    isDragging={dragState.draggingId === child.id}
-                    isDropTarget={dragState.dropTargetId === child.id}
-                    dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null}
-                    isSelected={selectedIds.has(child.id)}
-                    onToggleSelect={toggleSelect}
-                    isRenaming={renamingFolderId === child.id}
-                    onStartRename={() => setRenamingFolderId(child.id)}
-                    onRename={handleFolderRename}
-                  />
+                {nav.currentFolder.children.map((child) => (
+                  <FolderCard key={child.id} group={child} onClick={handleOpenFolder} onContextMenu={handleFolderContext} t={t} dragHandlers={getDragHandlers(child.id, 'folder')} isDragging={dragState.draggingId === child.id} isDropTarget={dragState.dropTargetId === child.id} dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null} isSelected={selectedIds.has(child.id)} onToggleSelect={toggleSelect} isRenaming={renamingFolderId === child.id} onStartRename={() => setRenamingFolderId(child.id)} onRename={handleFolderRename} />
                 ))}
-                {sortItems(filterItems(currentFolder.items)).map((item) => (
-                  <BookmarkCard
-                    key={item.id}
-                    item={item}
-                    onContextMenu={handleBookmarkContext}
-                    dragHandlers={getDragHandlers(item.id, 'bookmark')}
-                    isDragging={dragState.draggingId === item.id}
-                    isDropTarget={dragState.dropTargetId === item.id}
-                    dropMode={
-                      dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null
-                    }
-                    t={t}
-                    locale={settings.locale}
-                    isSelected={selectedIds.has(item.id)}
-                    onToggleSelect={toggleSelect}
-                    tags={allMeta[item.id]?.tags}
-                    status={allMeta[item.id]?.status}
-                    onOpen={(id) => handleSetStatus(id, 'read')}
-                  />
+                {applyFiltersAndSort(nav.currentFolder.items).map((item) => (
+                  <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} isSelected={selectedIds.has(item.id)} onToggleSelect={toggleSelect} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} onOpen={(id) => handleSetStatus(id, 'read')} />
                 ))}
               </div>
             )}
@@ -1046,64 +493,19 @@ export default function App() {
         ) : null}
       </div>
 
-      {editItem && (
-        <EditBookmarkModal
-          item={editItem}
-          onSave={handleSaveBookmark}
-          onDelete={handleDeleteBookmark}
-          onClose={() => setEditItem(null)}
-          t={t}
-          initialTags={allMeta[editItem.id]?.tags}
-          aiSettings={settings.ai}
-        />
-      )}
+      {/* Modals */}
+      {editItem && (<EditBookmarkModal item={editItem} onSave={handleSaveBookmark} onDelete={handleDeleteBookmark} onClose={() => setEditItem(null)} t={t} initialTags={allMeta[editItem.id]?.tags} aiSettings={settings.ai} />)}
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />}
-      {showSettings && (
-        <SettingsPanel
-          settings={settings}
-          groups={groups}
-          t={t}
-          onUpdateSettings={updateSettings}
-          onClose={() => setShowSettings(false)}
-          onRefresh={refresh}
-        />
-      )}
-      {confirmDialog && (
-        <ConfirmDialog
-          message={confirmDialog.message}
-          onConfirm={confirmDialog.onConfirm}
-          onCancel={() => setConfirmDialog(null)}
-          confirmLabel={confirmDialog.confirmLabel}
-          t={t}
-        />
-      )}
-      {showTrash && (
-        <TrashPanel
-          onClose={() => setShowTrash(false)}
-          onRestored={refresh}
-          t={t}
-          locale={settings.locale}
-        />
-      )}
-      {showCheatSheet && (
-        <ShortcutCheatSheet
-          shortcuts={settings.shortcuts}
-          onClose={() => setShowCheatSheet(false)}
-          t={t}
-        />
-      )}
-      {showTour && (
-        <OnboardingTour
-          steps={[
-            { target: '.sg-topbar__search', title: t.featureSearch, description: t.tourSearch },
-            { target: '.sg-layout-switcher', title: t.featureLayout, description: t.tourLayout, position: 'bottom' },
-            { target: '.sg-tab--add', title: t.addBookmark('Ctrl'), description: t.tourAdd },
-            { target: '.sg-btn--icon:last-child', title: t.settings, description: t.tourSettings },
-          ]}
-          onComplete={handleCompleteTour}
-          t={t}
-        />
-      )}
+      {showSettings && (<SettingsPanel settings={settings} groups={groups} t={t} onUpdateSettings={updateSettings} onClose={() => setShowSettings(false)} onRefresh={refresh} />)}
+      {confirmDialog && (<ConfirmDialog message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog(null)} confirmLabel={confirmDialog.confirmLabel} t={t} />)}
+      {showTrash && (<TrashPanel onClose={() => setShowTrash(false)} onRestored={refresh} t={t} locale={settings.locale} />)}
+      {showCheatSheet && (<ShortcutCheatSheet shortcuts={settings.shortcuts} onClose={() => setShowCheatSheet(false)} t={t} />)}
+      {showTour && (<OnboardingTour steps={[
+        { target: '.sg-topbar__search', title: t.featureSearch, description: t.tourSearch },
+        { target: '.sg-layout-switcher', title: t.featureLayout, description: t.tourLayout, position: 'bottom' },
+        { target: '.sg-tab--add', title: t.addBookmark('Ctrl'), description: t.tourAdd },
+        { target: '.sg-btn--icon:last-child', title: t.settings, description: t.tourSettings },
+      ]} onComplete={handleCompleteTour} t={t} />)}
     </>
   )
 }
