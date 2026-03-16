@@ -3,7 +3,7 @@
  * OGPはバックグラウンドでfetch + 24hキャッシュ
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { SyncGridGroup, BookmarkMeta, ReadStatus, SyncGridItem } from '../types'
+import type { SyncGridGroup, BookmarkMeta, ReadStatus, SyncGridItem, OgpData } from '../types'
 import { loadAllMeta, saveMeta } from '../utils/storage'
 import { fetchOgp } from '../utils/fetchTitle'
 import { flattenGroups } from '../utils/bookmarks'
@@ -26,12 +26,15 @@ export function useMetadata(groups: SyncGridGroup[]) {
     }
 
     // OGP未取得 or キャッシュ切れのアイテムを抽出（最大5件ずつ）
+    const RETRY_TTL = 60 * 60 * 1000 // 1h — 取得失敗時の再試行間隔
     const needsFetch = allItems
       .filter((item) => {
         const meta = allMeta[item.id]
         if (fetchingRef.current.has(item.id)) return false
         if (!meta?.ogp) return true
-        return Date.now() - meta.ogp.fetchedAt > OGP_CACHE_TTL
+        // 内容が空（取得失敗キャッシュ）なら短いTTLで再試行
+        const ttl = meta.ogp.image || meta.ogp.description ? OGP_CACHE_TTL : RETRY_TTL
+        return Date.now() - meta.ogp.fetchedAt > ttl
       })
       .slice(0, 5) // 同時5件まで（負荷制限）
 
@@ -41,10 +44,11 @@ export function useMetadata(groups: SyncGridGroup[]) {
       fetchingRef.current.add(item.id)
       fetchOgp(item.url).then((ogp) => {
         fetchingRef.current.delete(item.id)
-        if (!ogp) return
+        // 取得失敗でも fetchedAt を記録して無限リトライを防止（1時間後に再試行）
+        const result: OgpData = ogp ?? { fetchedAt: Date.now() }
         const existing = allMeta[item.id]
-        saveMeta(item.id, { memo: existing?.memo ?? '', tags: existing?.tags, ogp, status: existing?.status, lastReadAt: existing?.lastReadAt })
-        setAllMeta((prev) => ({ ...prev, [item.id]: { ...prev[item.id], memo: prev[item.id]?.memo ?? '', ogp } }))
+        saveMeta(item.id, { memo: existing?.memo ?? '', tags: existing?.tags, ogp: result, status: existing?.status, lastReadAt: existing?.lastReadAt })
+        setAllMeta((prev) => ({ ...prev, [item.id]: { ...prev[item.id], memo: prev[item.id]?.memo ?? '', ogp: result } }))
       })
     }
   }, [groups, allMeta])

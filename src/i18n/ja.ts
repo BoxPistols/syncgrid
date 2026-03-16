@@ -88,6 +88,12 @@ export const ja = {
   connectionFailed: '接続失敗',
   syncTestOk: 'フォルダへの読み書きを確認しました',
   syncTestFailed: 'フォルダへのアクセスに失敗しました',
+  // OGP権限
+  ogpPermission: 'リッチプレビュー',
+  ogpPermissionDesc: 'サイトのOGP画像・説明文を自動取得します。ホストへのアクセス権限が必要です。',
+  ogpPermissionGrant: '権限を許可',
+  ogpPermissionGranted: '許可済み',
+  ogpPermissionRefresh: 'OGPを再取得',
   // Security
   security: 'セキュリティ',
   securityDesc:
@@ -130,6 +136,7 @@ export const ja = {
   shortcutLayoutList: 'リスト表示',
   shortcutDeleteSelected: '選択削除',
   shortcutSelectAll: 'すべて選択',
+  shortcutGoBack: '親フォルダに戻る',
   shortcutPressKey: 'キーを押してください…',
   shortcutReset: '初期化',
   // Tags

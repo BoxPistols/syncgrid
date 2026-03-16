@@ -473,11 +473,11 @@ button {
 }
 .sg-cols-select:focus { border-color: var(--sg-accent); }
 
-.sg-dial__grid--cols-2 { grid-template-columns: repeat(2, 1fr); }
-.sg-dial__grid--cols-3 { grid-template-columns: repeat(3, 1fr); }
-.sg-dial__grid--cols-4 { grid-template-columns: repeat(4, 1fr); }
-.sg-dial__grid--cols-5 { grid-template-columns: repeat(5, 1fr); }
-.sg-dial__grid--cols-6 { grid-template-columns: repeat(6, 1fr); }
+.sg-dial__grid.sg-dial__grid--cols-2 { grid-template-columns: repeat(2, 1fr); }
+.sg-dial__grid.sg-dial__grid--cols-3 { grid-template-columns: repeat(3, 1fr); }
+.sg-dial__grid.sg-dial__grid--cols-4 { grid-template-columns: repeat(4, 1fr); }
+.sg-dial__grid.sg-dial__grid--cols-5 { grid-template-columns: repeat(5, 1fr); }
+.sg-dial__grid.sg-dial__grid--cols-6 { grid-template-columns: repeat(6, 1fr); }
 
 /* --- Bookmark Card --- */
 .sg-card {
@@ -646,10 +646,16 @@ button {
 }
 /* Magazine表示: OGP画像/desc表示（デフォルト） */
 
+.sg-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
 .sg-card__domain {
   font-size: 10px;
   color: var(--sg-text-tertiary);
-  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1052,6 +1058,15 @@ button {
   background: rgba(239, 68, 68, 0.08);
 }
 
+.sg-context-menu__label {
+  flex: 1;
+}
+.sg-context-menu__kbd {
+  font-size: 11px;
+  color: var(--sg-text-tertiary);
+  font-family: inherit;
+  margin-left: auto;
+}
 .sg-context-menu__sep {
   height: 1px;
   background: var(--sg-border);
@@ -1149,6 +1164,9 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.sg-settings__row > .sg-label {
+  margin: 0;
 }
 .sg-settings__row--btns {
   flex-wrap: wrap;
@@ -1616,7 +1634,11 @@ button {
 .sg-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
+  align-items: center;
+}
+.sg-settings__row + .sg-tags {
+  margin-top: 0;
 }
 .sg-tag {
   display: inline-flex;
@@ -1655,13 +1677,14 @@ button {
 }
 .sg-tag-input {
   height: 20px;
-  padding: 0 6px;
+  padding: 0 8px;
   border: 1px solid var(--sg-border);
   border-radius: 10px;
   background: var(--sg-bg-input);
   color: var(--sg-text);
   font-size: 10px;
-  width: 80px;
+  min-width: 80px;
+  flex: 1;
   outline: none;
 }
 .sg-tag-input:focus {
@@ -1732,6 +1755,10 @@ button {
   flex: 1;
   min-width: 0;
 }
+.sg-dial__grid--list .sg-card__meta {
+  flex-shrink: 0;
+  gap: 6px;
+}
 .sg-dial__grid--list .sg-card__domain,
 .sg-dial__grid--list .sg-folder-card__count {
   flex-shrink: 0;
@@ -1754,34 +1781,61 @@ button {
   padding: 0;
   gap: 0;
   overflow: hidden;
+  text-align: left;
+  align-items: stretch;
+  height: 300px;
 }
 .sg-dial__grid--magazine .sg-card__ogp-image {
-  max-height: 140px;
+  height: 140px;
+  max-height: none;
   border-radius: 0;
   margin-bottom: 0;
+  flex-shrink: 0;
+}
+.sg-dial__grid--magazine .sg-card__ogp-image img {
+  height: 100%;
+  object-fit: cover;
 }
 .sg-dial__grid--magazine .sg-card__icon {
-  display: none;
+  width: 100%;
+  height: 140px;
+  border-radius: 0;
+  background: var(--sg-bg-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .sg-dial__grid--magazine .sg-card__title {
-  padding: 12px 12px 4px;
+  padding: 10px 12px 4px;
   font-size: 13px;
   font-weight: 600;
   white-space: normal;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
 .sg-dial__grid--magazine .sg-card__desc {
-  padding: 0 12px;
-  -webkit-line-clamp: 2;
+  padding: 2px 12px 0;
+  -webkit-line-clamp: 3;
   font-size: 11px;
+  line-height: 1.4;
+}
+.sg-dial__grid--magazine .sg-card__meta {
+  padding: 4px 12px 10px;
+  gap: 4px;
+  margin-top: auto;
 }
 .sg-dial__grid--magazine .sg-card__date {
-  display: none;
+  display: block;
+  padding: 0;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.sg-dial__grid--magazine .sg-card__date::before {
+  content: '· ';
 }
 .sg-dial__grid--magazine .sg-card__domain {
-  padding: 4px 12px 12px;
   font-size: 10px;
 }
 .sg-dial__grid--magazine .sg-card__tags {
@@ -1793,6 +1847,9 @@ button {
 }
 .sg-dial__grid--magazine .sg-folder-card {
   padding: 16px 12px;
+  height: 300px;
+  justify-content: center;
+  align-items: center;
 }
 /* list/magazine animation override */
 .sg-dial__grid--list > *,

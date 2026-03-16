@@ -5,6 +5,7 @@ export interface MenuItem {
   label: string
   icon?: IconName
   danger?: boolean
+  shortcut?: string
   action: () => void
 }
 
@@ -23,7 +24,15 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose()
     }
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') { onClose(); return }
+      // ショートカットキーでメニュー項目を実行
+      const key = e.key.toLowerCase()
+      const match = items.find((item) => item.shortcut && item.shortcut.toLowerCase() === key)
+      if (match) {
+        e.preventDefault()
+        match.action()
+        onClose()
+      }
     }
     document.addEventListener('mousedown', handle)
     document.addEventListener('keydown', handleKey)
@@ -31,7 +40,7 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
       document.removeEventListener('mousedown', handle)
       document.removeEventListener('keydown', handleKey)
     }
-  }, [onClose])
+  }, [onClose, items])
 
   useEffect(() => {
     const firstBtn = ref.current?.querySelector<HTMLButtonElement>('.sg-context-menu__item')
@@ -61,7 +70,8 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
             }}
           >
             {item.icon && <Icon name={item.icon} size={14} />}
-            {item.label}
+            <span className="sg-context-menu__label">{item.label}</span>
+            {item.shortcut && <kbd className="sg-context-menu__kbd">{item.shortcut}</kbd>}
           </button>
         ),
       )}

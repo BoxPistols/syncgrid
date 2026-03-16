@@ -231,13 +231,13 @@ export default function App() {
       setCtxMenu({
         x, y,
         items: [
-          { label: t.openNewTab, icon: 'link', action: () => { window.open(item.url, '_blank'); handleSetStatus(item.id, 'read') } },
-          { label: t.edit, icon: 'edit', action: () => setEditItem(item) },
+          { label: t.openNewTab, icon: 'link', shortcut: 'O', action: () => { window.open(item.url, '_blank'); handleSetStatus(item.id, 'read') } },
+          { label: t.edit, icon: 'edit', shortcut: 'E', action: () => setEditItem(item) },
           { label: '---', action: () => {} },
-          { label: t.statusUnread, icon: 'sparkle', action: () => handleSetStatus(item.id, 'unread') },
-          { label: t.statusLater, icon: 'pin', action: () => handleSetStatus(item.id, 'later') },
-          { label: t.statusStarred, icon: 'sparkle', action: () => handleSetStatus(item.id, 'starred') },
-          { label: t.statusRead, icon: 'check-circle', action: () => handleSetStatus(item.id, 'read') },
+          { label: t.statusUnread, icon: 'sparkle', shortcut: 'U', action: () => handleSetStatus(item.id, 'unread') },
+          { label: t.statusLater, icon: 'pin', shortcut: 'L', action: () => handleSetStatus(item.id, 'later') },
+          { label: t.statusStarred, icon: 'sparkle', shortcut: 'S', action: () => handleSetStatus(item.id, 'starred') },
+          { label: t.statusRead, icon: 'check-circle', shortcut: 'R', action: () => handleSetStatus(item.id, 'read') },
           { label: '---', action: () => {} },
           { label: t.delete, icon: 'trash', danger: true, action: async () => { await removeBookmark(item.id); refresh() } },
         ],
@@ -311,6 +311,8 @@ export default function App() {
       else if (matchesBinding(e, sc.deleteSelected) && selectedIds.size > 0) { e.preventDefault(); handleDeleteSelected() }
       else if (matchesBinding(e, sc.selectAll)) { e.preventDefault(); selectAll() }
       else if (e.key === 'Escape' && selectedIds.size > 0) clearSelection()
+      // Cmd+← (Mac) / Alt+← で親フォルダに戻る
+      else if (e.key === 'ArrowLeft' && (e.metaKey || e.altKey) && !e.shiftKey && nav.path.length > 0) { e.preventDefault(); nav.setPath((p) => p.slice(0, -1)) }
       else if (e.key === '?' && !e.ctrlKey && !e.metaKey) setShowCheatSheet((v) => !v)
       // 数字キー 1-9 でタブ切替、0 で最後のタブ（修飾キーなし、入力欄以外）
       else if (/^[0-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -326,7 +328,7 @@ export default function App() {
     }
     document.addEventListener('keydown', handleGlobalKeyDown)
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, selectAll, clearSelection, groups, handleSelectTab])
+  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, selectAll, clearSelection, groups, handleSelectTab, nav.path, nav.setPath])
 
   // --- UI helper fragments ---
   const statusFilterChips = (

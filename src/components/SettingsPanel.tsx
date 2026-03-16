@@ -19,6 +19,7 @@ import {
   testSyncConnection,
 } from '../utils/localSync'
 import { testAiConnection } from '../utils/ai'
+import { hasTitleFetchPermission, requestTitleFetchPermission } from '../utils/permissions'
 
 interface Props {
   settings: SyncGridSettings
@@ -45,9 +46,11 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
     onConfirm: () => void
   } | null>(null)
   const [showImport, setShowImport] = useState(false)
+  const [ogpPermGranted, setOgpPermGranted] = useState(false)
 
   useEffect(() => {
     getSyncFolderName().then(setSyncFolderName)
+    hasTitleFetchPermission().then(setOgpPermGranted)
     return () => {
       clearTimeout(aiTestTimerRef.current)
       clearTimeout(syncTestTimerRef.current)
@@ -436,6 +439,47 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
                 onChange={(shortcuts) => onUpdateSettings({ shortcuts })}
                 t={t}
               />
+            </div>
+
+            <hr className="sg-settings__divider" />
+
+            {/* OGP Permission */}
+            <div className="sg-settings__section">
+              <h3 className="sg-settings__label"><Icon name="link" size={14} /> {t.ogpPermission}</h3>
+              <p className="sg-settings__desc">{t.ogpPermissionDesc}</p>
+              <div className="sg-settings__row sg-settings__row--btns">
+                {ogpPermGranted ? (
+                  <span className="sg-settings__status sg-settings__status--ok">
+                    <Icon name="check-circle" size={14} /> {t.ogpPermissionGranted}
+                  </span>
+                ) : (
+                  <button
+                    className="sg-btn sg-btn--sm sg-btn--primary"
+                    onClick={async () => {
+                      const granted = await requestTitleFetchPermission()
+                      setOgpPermGranted(granted)
+                    }}
+                  >
+                    <Icon name="lock" size={14} /> {t.ogpPermissionGrant}
+                  </button>
+                )}
+                <button
+                  className="sg-btn sg-btn--sm sg-btn--ghost"
+                  onClick={async () => {
+                    // OGPキャッシュをクリアして再取得を促す
+                    const { loadAllMeta, saveMeta } = await import('../utils/storage')
+                    const meta = await loadAllMeta()
+                    for (const [id, m] of Object.entries(meta)) {
+                      if (m.ogp) {
+                        await saveMeta(id, { ...m, ogp: undefined })
+                      }
+                    }
+                    onRefresh()
+                  }}
+                >
+                  <Icon name="refresh" size={14} /> {t.ogpPermissionRefresh}
+                </button>
+              </div>
             </div>
 
             <hr className="sg-settings__divider" />

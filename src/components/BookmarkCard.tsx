@@ -139,8 +139,10 @@ export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dr
             ))}
           </div>
         )}
-        <span className="sg-card__date">{formatRelativeDate(item.dateAdded, locale ?? 'ja')}</span>
-        <span className="sg-card__domain">{domain}</span>
+        <span className="sg-card__meta">
+          <span className="sg-card__domain">{domain}</span>
+          <span className="sg-card__date">{formatRelativeDate(item.dateAdded, locale ?? 'ja')}</span>
+        </span>
         <button
           className="sg-card__menu"
           onClick={(e) => {

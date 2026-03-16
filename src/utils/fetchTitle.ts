@@ -65,7 +65,8 @@ export async function refetchTitle(url: string): Promise<string | null> {
 }
 
 /**
- * OGP情報を取得（パーミッション確認済みの場合のみ）
+ * OGP情報を取得
+ * 優先順: oEmbed → HTMLフェッチ（権限有無に関わらず試行）
  */
 export async function fetchOgp(url: string): Promise<OgpData | null> {
   // oEmbed対応サイトはoEmbedから基本情報を取得
@@ -93,8 +94,7 @@ export async function fetchOgp(url: string): Promise<OgpData | null> {
     }
   }
 
-  const hasPermission = await hasTitleFetchPermission()
-  if (!hasPermission) return null
+  // 権限有無に関わらずHTMLフェッチを試行（CORS許可サイトでも取得可能）
   const html = await fetchHead(url)
   if (!html) return null
   return extractOgp(html)

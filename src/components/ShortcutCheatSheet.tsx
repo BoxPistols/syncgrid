@@ -73,6 +73,10 @@ export function ShortcutCheatSheet({ shortcuts, onClose, t }: Props) {
           <div className="sg-cheat__section">
             <h4 className="sg-cheat__heading">Other</h4>
             <div className="sg-cheat__row">
+              <span className="sg-cheat__label">{t.shortcutGoBack}</span>
+              <kbd className="sg-cheat__kbd">⌘ / Alt + ←</kbd>
+            </div>
+            <div className="sg-cheat__row">
               <span className="sg-cheat__label">Show this sheet</span>
               <kbd className="sg-cheat__kbd">?</kbd>
             </div>
