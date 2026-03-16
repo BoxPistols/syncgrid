@@ -307,14 +307,13 @@ export default function App() {
       else if (matchesBinding(e, sc.selectAll)) { e.preventDefault(); selectAll() }
       else if (e.key === 'Escape' && selectedIds.size > 0) clearSelection()
       else if (e.key === '?' && !e.ctrlKey && !e.metaKey) setShowCheatSheet((v) => !v)
-      // 数字キー 1-9 でタブ切替（修飾キーなし、入力欄以外）
-      else if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // 数字キー 1-9 でタブ切替、0 で最後のタブ（修飾キーなし、入力欄以外）
+      else if (/^[0-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const target = e.target as HTMLElement
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return
-        const idx = parseInt(e.key, 10) - 1
-        // 0=ALL, 1-N=groups
         const allTabs = ['__all__', ...groups.map((g) => g.id)]
-        if (idx < allTabs.length) {
+        const idx = e.key === '0' ? allTabs.length - 1 : parseInt(e.key, 10) - 1
+        if (idx >= 0 && idx < allTabs.length) {
           e.preventDefault()
           handleSelectTab(allTabs[idx])
         }
