@@ -64,24 +64,35 @@ export function UrlPreview({ url, bookmarkId, x, y }: Props) {
     )
   }
 
-  if (!ogp || (!ogp.title && !ogp.description && !ogp.image)) {
-    return null // OGP情報なし → 表示しない
+  // OGPがなくても基本情報でプレビュー表示
+  const title = ogp?.title
+  const description = ogp?.description
+  const image = ogp?.image
+  const siteName = ogp?.siteName
+  let domain = ''
+  try {
+    domain = new URL(url).hostname
+  } catch {
+    domain = url
   }
 
   return (
     <div ref={ref} className="sg-preview" style={style}>
-      {ogp.image && (
+      {image && (
         <div className="sg-preview__image">
-          <img src={ogp.image} alt="" loading="lazy" onError={(e) => (e.currentTarget.style.display = 'none')} />
+          <img src={image} alt="" loading="lazy" onError={(e) => (e.currentTarget.style.display = 'none')} />
         </div>
       )}
       <div className="sg-preview__body">
-        {ogp.title && <div className="sg-preview__title">{ogp.title}</div>}
-        {ogp.description && <div className="sg-preview__desc">{ogp.description}</div>}
+        {title && <div className="sg-preview__title">{title}</div>}
+        {description && <div className="sg-preview__desc">{description}</div>}
         <div className="sg-preview__url">
-          {ogp.siteName && <span className="sg-preview__site">{ogp.siteName}</span>}
-          <span className="sg-preview__domain">{new URL(url).hostname}</span>
+          {siteName && <span className="sg-preview__site">{siteName}</span>}
+          <span className="sg-preview__domain">{domain}</span>
         </div>
+        {!title && !description && !image && (
+          <div className="sg-preview__title">{domain}</div>
+        )}
       </div>
     </div>
   )
