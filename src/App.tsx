@@ -68,6 +68,7 @@ export default function App() {
   const [creatingGroup, setCreatingGroup] = useState<'tab' | 'subfolder' | false>(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null)
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [ctxMenu, setCtxMenu] = useState<{
     x: number
@@ -525,8 +526,7 @@ export default function App() {
             label: t.rename,
             icon: 'edit',
             action: () => {
-              setRenamingTabId(group.id)
-              setRenameValue(group.title)
+              setRenamingFolderId(group.id)
             },
           },
           { label: '---', action: () => {} },
@@ -554,6 +554,16 @@ export default function App() {
       })
     },
     [refresh, handleOpenFolder, t],
+  )
+
+  const handleFolderRename = useCallback(
+    async (id: string, name: string) => {
+      const trimmed = name.trim()
+      if (trimmed) await renameGroup(id, trimmed)
+      setRenamingFolderId(null)
+      await refresh()
+    },
+    [refresh],
   )
 
   const handleRenameSubmit = useCallback(async () => {
@@ -690,6 +700,7 @@ export default function App() {
                 onChange={(e) => setRenameValue(e.target.value)}
                 onBlur={handleRenameSubmit}
                 onKeyDown={(e) => {
+                  if (isComposing(e)) return
                   if (e.key === 'Enter') handleRenameSubmit()
                   if (e.key === 'Escape') setRenamingTabId(null)
                 }}
@@ -713,6 +724,7 @@ export default function App() {
               onChange={(e) => setNewGroupName(e.target.value)}
               onBlur={handleCreateGroup}
               onKeyDown={(e) => {
+                if (isComposing(e)) return
                 if (e.key === 'Enter') handleCreateGroup()
                 if (e.key === 'Escape') setCreatingGroup(false)
               }}
@@ -973,6 +985,7 @@ export default function App() {
                     onChange={(e) => setNewGroupName(e.target.value)}
                     onBlur={handleCreateSubfolder}
                     onKeyDown={(e) => {
+                      if (isComposing(e)) return
                       if (e.key === 'Enter') handleCreateSubfolder()
                       if (e.key === 'Escape') setCreatingGroup(false)
                     }}
@@ -1002,6 +1015,9 @@ export default function App() {
                     dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null}
                     isSelected={selectedIds.has(child.id)}
                     onToggleSelect={toggleSelect}
+                    isRenaming={renamingFolderId === child.id}
+                    onStartRename={() => setRenamingFolderId(child.id)}
+                    onRename={handleFolderRename}
                   />
                 ))}
                 {sortItems(filterItems(currentFolder.items)).map((item) => (

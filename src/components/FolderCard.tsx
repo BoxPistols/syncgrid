@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Icon } from './Icon'
+import { isComposing } from '../utils/keyboard'
 import type { SyncGridGroup } from '../types'
 import type { Messages } from '../i18n'
 import type { DragHandlers } from '../hooks/useDragReorder'
@@ -8,6 +10,7 @@ interface Props {
   group: SyncGridGroup
   onClick: (group: SyncGridGroup) => void
   onContextMenu: (group: SyncGridGroup, x: number, y: number) => void
+  onRename?: (id: string, name: string) => void
   t: Messages
   dragHandlers?: DragHandlers
   isDragging?: boolean
@@ -15,12 +18,15 @@ interface Props {
   dropMode?: 'before' | 'after' | 'into' | null
   isSelected?: boolean
   onToggleSelect?: (id: string, e: React.MouseEvent) => boolean
+  isRenaming?: boolean
+  onStartRename?: () => void
 }
 
 export function FolderCard({
   group,
   onClick,
   onContextMenu,
+  onRename,
   t,
   dragHandlers,
   isDragging,
@@ -28,8 +34,18 @@ export function FolderCard({
   dropMode,
   isSelected,
   onToggleSelect,
+  isRenaming,
+  onStartRename,
 }: Props) {
   const totalItems = countAll(group)
+  const [editValue, setEditValue] = useState(group.title)
+
+  const handleSubmitRename = () => {
+    const name = editValue.trim()
+    if (name && name !== group.title) {
+      onRename?.(group.id, name)
+    }
+  }
 
   const className = [
     'sg-folder-card',
@@ -49,13 +65,20 @@ export function FolderCard({
       tabIndex={0}
       onClick={(e) => {
         if (onToggleSelect?.(group.id, e)) return
+        if (isRenaming) return
         onClick(group)
       }}
       onKeyDown={(e) => {
+        if (isRenaming) return
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
           onClick(group)
         }
+      }}
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        setEditValue(group.title)
+        onStartRename?.()
       }}
       onContextMenu={(e) => {
         e.preventDefault()
@@ -64,7 +87,23 @@ export function FolderCard({
       {...dragHandlers}
     >
       <div className="sg-folder-card__icon"><Icon name="folder" size={24} /></div>
-      <span className="sg-folder-card__title">{group.title}</span>
+      {isRenaming ? (
+        <input
+          className="sg-tab__rename"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleSubmitRename}
+          onKeyDown={(e) => {
+            if (isComposing(e)) return
+            if (e.key === 'Enter') handleSubmitRename()
+            if (e.key === 'Escape') onRename?.(group.id, group.title) // キャンセル
+          }}
+          autoFocus
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <span className="sg-folder-card__title">{group.title}</span>
+      )}
       <span className="sg-folder-card__count">{t.items(totalItems)}</span>
       <button
         className="sg-folder-card__menu"
