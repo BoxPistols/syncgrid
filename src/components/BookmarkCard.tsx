@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, memo } from 'react'
 import { getFaviconUrl, getDomain } from '../utils/favicon'
 import { formatRelativeDate } from '../utils/date'
 import { UrlPreview } from './UrlPreview'
-import type { SyncGridItem, ReadStatus } from '../types'
+import type { SyncGridItem, ReadStatus, OgpData } from '../types'
 import { Icon } from './Icon'
 import type { DragHandlers } from '../hooks/useDragReorder'
 import type { Messages } from '../i18n'
@@ -21,6 +21,7 @@ interface Props {
   tags?: string[]
   status?: ReadStatus
   onOpen?: (id: string) => void
+  ogp?: OgpData
 }
 
 const STATUS_ICONS: Record<ReadStatus, { icon: 'check-circle' | 'sparkle' | 'pin'; cls: string }> = {
@@ -30,7 +31,7 @@ const STATUS_ICONS: Record<ReadStatus, { icon: 'check-circle' | 'sparkle' | 'pin
   starred: { icon: 'sparkle', cls: 'sg-status--starred' },
 }
 
-export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t, locale, isSelected, onToggleSelect, tags, status, onOpen }: Props) {
+export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t, locale, isSelected, onToggleSelect, tags, status, onOpen, ogp }: Props) {
   const [imgFailed, setImgFailed] = useState(false)
   const [preview, setPreview] = useState<{ x: number; y: number } | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -101,27 +102,36 @@ export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dr
         onMouseLeave={handleMouseLeave}
         {...dragHandlers}
       >
-        <div className="sg-card__icon">
-          {imgFailed ? (
-            <div className="sg-favicon sg-favicon--lg">{initial}</div>
-          ) : (
-            <img
-              src={getFaviconUrl(item.url, 64)}
-              alt=""
-              width={48}
-              height={48}
-              loading="lazy"
-              draggable={false}
-              onError={() => setImgFailed(true)}
-            />
-          )}
-        </div>
+        {ogp?.image ? (
+          <div className="sg-card__ogp-image">
+            <img src={ogp.image} alt="" loading="lazy" draggable={false} onError={(e) => (e.currentTarget.style.display = 'none')} />
+          </div>
+        ) : (
+          <div className="sg-card__icon">
+            {imgFailed ? (
+              <div className="sg-favicon sg-favicon--lg">{initial}</div>
+            ) : (
+              <img
+                src={getFaviconUrl(item.url, 64)}
+                alt=""
+                width={48}
+                height={48}
+                loading="lazy"
+                draggable={false}
+                onError={() => setImgFailed(true)}
+              />
+            )}
+          </div>
+        )}
         <span className="sg-card__title">
           {status && status !== 'unread' && (
             <Icon name={STATUS_ICONS[status].icon} size={12} className={STATUS_ICONS[status].cls} />
           )}{' '}
           {item.title}
         </span>
+        {ogp?.description && (
+          <p className="sg-card__desc">{ogp.description}</p>
+        )}
         {tags && tags.length > 0 && (
           <div className="sg-tags sg-card__tags">
             {tags.map((tag) => (

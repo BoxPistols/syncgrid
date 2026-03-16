@@ -432,7 +432,7 @@ export default function App() {
             </div>
             <div className={gridClass}>
               {applyFiltersAndSort(nav.allItems).map((item) => (
-                <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} onOpen={(id) => handleSetStatus(id, 'read')} />
+                <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
               ))}
             </div>
           </div>
@@ -496,7 +496,7 @@ export default function App() {
                   <FolderCard key={child.id} group={child} onClick={handleOpenFolder} onContextMenu={handleFolderContext} t={t} dragHandlers={getDragHandlers(child.id, 'folder')} isDragging={dragState.draggingId === child.id} isDropTarget={dragState.dropTargetId === child.id} dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null} isSelected={selectedIds.has(child.id)} onToggleSelect={toggleSelect} isRenaming={renamingFolderId === child.id} onStartRename={() => setRenamingFolderId(child.id)} onRename={handleFolderRename} />
                 ))}
                 {applyFiltersAndSort(nav.currentFolder.items).map((item) => (
-                  <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} isSelected={selectedIds.has(item.id)} onToggleSelect={toggleSelect} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} onOpen={(id) => handleSetStatus(id, 'read')} />
+                  <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} isSelected={selectedIds.has(item.id)} onToggleSelect={toggleSelect} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
                 ))}
               </div>
             )}
