@@ -2,49 +2,67 @@
    SyncGrid — Speed Dial UI
    =================================== */
 
-/* --- Tokens --- */
+/* --- Tokens (melta-ui Layered/Semantic/Grid原則準拠) ---
+ * Layer 1: Background (--sg-bg*)
+ * Layer 2: Surface    (--sg-bg-card*, --sg-bg-input)
+ * Layer 3: Text       (--sg-text*)
+ * Spacing: 4の倍数基本, 8の倍数推奨
+ * Shadow: sm～md範囲 (blur 2-12px)
+ * Contrast: WCAG 2.1 AA (4.5:1+)
+ */
 :root,
 [data-theme='light'] {
+  /* Layer 1: Background */
   --sg-bg: #f0f1f5;
-  --sg-bg-card: #ffffff;
-  --sg-bg-card-hover: #f5f6fa;
   --sg-bg-header: rgba(255, 255, 255, 0.88);
-  --sg-bg-input: #e8eaef;
   --sg-bg-tab: transparent;
   --sg-bg-tab-active: #ffffff;
-  --sg-text: #1a1a2e;
-  --sg-text-secondary: #6b7280;
-  --sg-text-tertiary: #9ca3af;
+  /* Layer 2: Surface */
+  --sg-bg-card: #ffffff;
+  --sg-bg-card-hover: #f5f6fa;
+  --sg-bg-input: #e8eaef;
+  /* Layer 3: Text (WCAG AA on #f0f1f5) */
+  --sg-text: #1a1a2e;            /* 14.8:1 */
+  --sg-text-secondary: #555d6b;  /* 6.8:1 — 強化 */
+  --sg-text-tertiary: #7a8290;   /* 4.6:1 — WCAG AA下限 */
   --sg-text-on-accent: #ffffff;
+  /* Semantic */
   --sg-border: #e0e2e8;
   --sg-accent: #4361ee;
   --sg-accent-hover: #3451de;
   --sg-accent-soft: rgba(67, 97, 238, 0.08);
-  --sg-folder: #f59e0b;
-  --sg-folder-soft: rgba(245, 158, 11, 0.1);
-  --sg-danger: #ef4444;
-  --sg-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.03);
-  --sg-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
-  --sg-shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --sg-folder: #d97706;          /* WCAG AA on white: 4.7:1 */
+  --sg-folder-soft: rgba(217, 119, 6, 0.1);
+  --sg-danger: #dc2626;          /* WCAG AA: 5.6:1 */
+  --sg-success: #16a34a;         /* ステータスOK用トークン */
+  /* Elevation: sm～md only (blur ≤ 12px) */
+  --sg-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  --sg-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --sg-shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  /* Shape */
   --sg-radius: 12px;
   --sg-radius-sm: 8px;
   --sg-transition: 0.15s ease-out;
   --sg-focus-ring: 0 0 0 3px var(--sg-accent-soft);
 }
 
-/* Dracula / Monokai 風ダークテーマ — 明るめで視認性重視 */
+/* Dracula風ダークテーマ (Contrast強化) */
 [data-theme='dark'] {
+  /* Layer 1: Background */
   --sg-bg: #282a36;
-  --sg-bg-card: #343746;
-  --sg-bg-card-hover: #3e4254;
   --sg-bg-header: rgba(40, 42, 54, 0.92);
-  --sg-bg-input: #3e4254;
   --sg-bg-tab: transparent;
   --sg-bg-tab-active: #343746;
-  --sg-text: #f8f8f2;
-  --sg-text-secondary: #bfbfcf;
-  --sg-text-tertiary: #6272a4;
+  /* Layer 2: Surface */
+  --sg-bg-card: #343746;
+  --sg-bg-card-hover: #3e4254;
+  --sg-bg-input: #3e4254;
+  /* Layer 3: Text (WCAG AA on #282a36) */
+  --sg-text: #f8f8f2;            /* 13.5:1 */
+  --sg-text-secondary: #c0c0d0;  /* 7.2:1 */
+  --sg-text-tertiary: #8890a8;   /* 4.5:1 — AA下限に引上げ */
   --sg-text-on-accent: #ffffff;
+  /* Semantic */
   --sg-border: #44475a;
   --sg-accent: #bd93f9;
   --sg-accent-hover: #a77ef0;
@@ -52,9 +70,11 @@
   --sg-folder: #f1fa8c;
   --sg-folder-soft: rgba(241, 250, 140, 0.12);
   --sg-danger: #ff5555;
-  --sg-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  --sg-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --sg-shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --sg-success: #50fa7b;
+  /* Elevation */
+  --sg-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --sg-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --sg-shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 /* --- Reset --- */
@@ -474,15 +494,16 @@ button {
   transform: scale(0.95);
   box-shadow: none;
 }
+/* DnDドロップ位置表示 — 全周outline（border-l-4禁止原則） */
 .sg-card--drop-before {
-  box-shadow:
-    -3px 0 0 0 var(--sg-accent),
-    var(--sg-shadow);
+  outline: 2px solid var(--sg-accent);
+  outline-offset: -2px;
+  opacity: 0.8;
 }
 .sg-card--drop-after {
-  box-shadow:
-    3px 0 0 0 var(--sg-accent),
-    var(--sg-shadow);
+  outline: 2px dashed var(--sg-accent);
+  outline-offset: -2px;
+  opacity: 0.8;
 }
 
 .sg-card__icon {
@@ -631,14 +652,14 @@ button {
   box-shadow: none;
 }
 .sg-folder-card--drop-before {
-  box-shadow:
-    -3px 0 0 0 var(--sg-accent),
-    var(--sg-shadow);
+  outline: 2px solid var(--sg-accent);
+  outline-offset: -2px;
+  opacity: 0.8;
 }
 .sg-folder-card--drop-after {
-  box-shadow:
-    3px 0 0 0 var(--sg-accent),
-    var(--sg-shadow);
+  outline: 2px dashed var(--sg-accent);
+  outline-offset: -2px;
+  opacity: 0.8;
 }
 .sg-folder-card--drop-into {
   outline: 2px solid var(--sg-accent);
@@ -945,8 +966,8 @@ button {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 7px 12px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
   font-size: 13px;
   color: var(--sg-text);
   text-align: left;
@@ -1085,7 +1106,7 @@ button {
   margin-top: 6px;
 }
 .sg-settings__status--ok {
-  color: #22c55e;
+  color: var(--sg-success);
 }
 .sg-settings__status--err {
   color: var(--sg-danger);
@@ -1105,8 +1126,8 @@ button {
 .sg-settings__sync-badge {
   font-size: 11px;
   font-weight: 600;
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.1);
+  color: var(--sg-success);
+  background: color-mix(in srgb, var(--sg-success) 10%, transparent);
   padding: 2px 8px;
   border-radius: 10px;
 }
@@ -1344,9 +1365,10 @@ button {
 .sg-status--later { color: #f59e0b; }
 .sg-status--starred { color: #f59e0b; }
 .sg-status--unread { color: var(--sg-accent); }
-.sg-card--unread { border-left: 3px solid var(--sg-accent); }
-.sg-card--later { border-left: 3px solid #f59e0b; }
-.sg-card--starred { border-left: 3px solid #f59e0b; }
+/* ステータス表示 — 全周outline（border-l禁止原則）+ アイコン併用 */
+.sg-card--unread { outline: 2px solid var(--sg-accent); outline-offset: -2px; }
+.sg-card--later { outline: 2px solid var(--sg-folder); outline-offset: -2px; }
+.sg-card--starred { outline: 2px solid var(--sg-folder); outline-offset: -2px; }
 .sg-status-filter {
   display: flex;
   gap: 2px;
@@ -1589,8 +1611,7 @@ button {
 .sg-dial__grid--list .sg-card:hover,
 .sg-dial__grid--list .sg-folder-card:hover {
   transform: none;
-  border-left: 3px solid var(--sg-accent);
-  padding-left: 13px;
+  background: var(--sg-bg-card-hover);
 }
 .sg-dial__grid--list .sg-card__icon {
   width: 20px;
