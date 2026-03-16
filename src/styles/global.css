@@ -1176,6 +1176,169 @@ button {
   }
 }
 
+/* =====================
+   ONBOARDING TOUR
+   ===================== */
+.sg-tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.6);
+}
+.sg-tour-spotlight {
+  position: fixed;
+  border-radius: var(--sg-radius);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+  z-index: 501;
+  pointer-events: none;
+}
+.sg-tour-tooltip {
+  position: fixed;
+  z-index: 502;
+  width: 320px;
+  background: var(--sg-bg-card);
+  border: 1px solid var(--sg-border);
+  border-radius: var(--sg-radius);
+  box-shadow: var(--sg-shadow-modal);
+  padding: 20px;
+  animation: sg-fade-in 0.2s ease;
+}
+.sg-tour-tooltip__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.sg-tour-tooltip__step {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sg-accent);
+}
+.sg-tour-tooltip__close {
+  color: var(--sg-text-tertiary);
+}
+.sg-tour-tooltip__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--sg-text);
+  margin-bottom: 6px;
+}
+.sg-tour-tooltip__desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--sg-text-secondary);
+  margin-bottom: 16px;
+}
+.sg-tour-tooltip__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* =====================
+   SHORTCUT CHEAT SHEET
+   ===================== */
+.sg-cheat__section {
+  margin-bottom: 16px;
+}
+.sg-cheat__section:last-child {
+  margin-bottom: 0;
+}
+.sg-cheat__heading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sg-text-tertiary);
+  margin-bottom: 8px;
+}
+.sg-cheat__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+.sg-cheat__label {
+  font-size: 13px;
+  color: var(--sg-text);
+}
+.sg-cheat__kbd {
+  font-family: monospace;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--sg-bg-input);
+  border: 1px solid var(--sg-border);
+  color: var(--sg-text-secondary);
+}
+
+/* =====================
+   WELCOME SCREEN
+   ===================== */
+.sg-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 80px 24px;
+  text-align: center;
+}
+.sg-welcome__logo {
+  font-size: 48px;
+  color: var(--sg-accent);
+}
+.sg-welcome__title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--sg-text);
+  letter-spacing: -0.02em;
+}
+.sg-welcome__desc {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--sg-text-secondary);
+  max-width: 480px;
+}
+.sg-welcome__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+.sg-welcome__features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  max-width: 640px;
+  margin-top: 12px;
+}
+.sg-welcome__feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--sg-radius-sm);
+  background: var(--sg-bg-card);
+  border: 1px solid var(--sg-border);
+  text-align: left;
+}
+.sg-welcome__feature-icon {
+  color: var(--sg-accent);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.sg-welcome__feature-text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--sg-text-secondary);
+}
+.sg-welcome__feature-text strong {
+  display: block;
+  font-size: 13px;
+  color: var(--sg-text);
+  margin-bottom: 2px;
+}
+
 /* --- Read Status --- */
 .sg-status--read { color: var(--sg-text-tertiary); }
 .sg-status--later { color: #f59e0b; }

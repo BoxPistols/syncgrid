@@ -15,6 +15,8 @@ import { SettingsPanel } from './components/SettingsPanel'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { TrashPanel } from './components/TrashPanel'
 import { Icon } from './components/Icon'
+import { OnboardingTour } from './components/OnboardingTour'
+import { ShortcutCheatSheet } from './components/ShortcutCheatSheet'
 import {
   addBookmark,
   removeBookmark,
@@ -81,6 +83,32 @@ export default function App() {
   const [filterTag, setFilterTag] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<ReadStatus | null>(null)
   const [showTrash, setShowTrash] = useState(false)
+  const [showCheatSheet, setShowCheatSheet] = useState(false)
+  const [showTour, setShowTour] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
+
+  // 初回起動チェック
+  useEffect(() => {
+    chrome.storage.local.get('syncgrid_onboarded').then((r) => {
+      if (!r.syncgrid_onboarded) setShowWelcome(true)
+    })
+  }, [])
+
+  const handleCompleteTour = useCallback(() => {
+    setShowTour(false)
+    chrome.storage.local.set({ syncgrid_onboarded: true })
+  }, [])
+
+  const handleStartTour = useCallback(() => {
+    setShowWelcome(false)
+    chrome.storage.local.set({ syncgrid_onboarded: true })
+    setShowTour(true)
+  }, [])
+
+  const handleSkipWelcome = useCallback(() => {
+    setShowWelcome(false)
+    chrome.storage.local.set({ syncgrid_onboarded: true })
+  }, [])
 
   // --- Active Tab (computed — stale ID falls back to first group) ---
   const activeTabId = useMemo(() => {
@@ -261,6 +289,8 @@ export default function App() {
         }
       } else if (e.key === 'Escape' && selectedIds.size > 0) {
         setSelectedIds(new Set())
+      } else if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        setShowCheatSheet((v) => !v)
       }
     }
 
@@ -579,6 +609,39 @@ export default function App() {
 
   // --- Render ---
   if (loading || !loaded) return <div className="sg-loading">{t.loading}</div>
+
+  // ウェルカムスクリーン（初回 + グループなし）
+  if (showWelcome && groups.length === 0) {
+    return (
+      <div className="sg-welcome">
+        <div className="sg-welcome__logo"><Icon name="zap" size={48} /></div>
+        <h1 className="sg-welcome__title">{t.welcomeTitle}</h1>
+        <p className="sg-welcome__desc">{t.welcomeDesc}</p>
+        <div className="sg-welcome__features">
+          <div className="sg-welcome__feature">
+            <div className="sg-welcome__feature-icon"><Icon name="search" size={20} /></div>
+            <div className="sg-welcome__feature-text"><strong>{t.featureSearch}</strong>{t.featureSearchDesc}</div>
+          </div>
+          <div className="sg-welcome__feature">
+            <div className="sg-welcome__feature-icon"><Icon name="sparkle" size={20} /></div>
+            <div className="sg-welcome__feature-text"><strong>{t.featureAi}</strong>{t.featureAiDesc}</div>
+          </div>
+          <div className="sg-welcome__feature">
+            <div className="sg-welcome__feature-icon"><Icon name="folder" size={20} /></div>
+            <div className="sg-welcome__feature-text"><strong>{t.featureLayout}</strong>{t.featureLayoutDesc}</div>
+          </div>
+          <div className="sg-welcome__feature">
+            <div className="sg-welcome__feature-icon"><Icon name="refresh" size={20} /></div>
+            <div className="sg-welcome__feature-text"><strong>{t.featureSync}</strong>{t.featureSyncDesc}</div>
+          </div>
+        </div>
+        <div className="sg-welcome__actions">
+          <button className="sg-btn sg-btn--primary" onClick={handleStartTour}>{t.startTour}</button>
+          <button className="sg-btn sg-btn--ghost" onClick={handleSkipWelcome}>{t.skipTour}</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -1004,6 +1067,25 @@ export default function App() {
           onRestored={refresh}
           t={t}
           locale={settings.locale}
+        />
+      )}
+      {showCheatSheet && (
+        <ShortcutCheatSheet
+          shortcuts={settings.shortcuts}
+          onClose={() => setShowCheatSheet(false)}
+          t={t}
+        />
+      )}
+      {showTour && (
+        <OnboardingTour
+          steps={[
+            { target: '.sg-topbar__search', title: t.featureSearch, description: t.tourSearch },
+            { target: '.sg-layout-switcher', title: t.featureLayout, description: t.tourLayout, position: 'bottom' },
+            { target: '.sg-tab--add', title: t.addBookmark('Ctrl'), description: t.tourAdd },
+            { target: '.sg-btn--icon:last-child', title: t.settings, description: t.tourSettings },
+          ]}
+          onComplete={handleCompleteTour}
+          t={t}
         />
       )}
     </>
