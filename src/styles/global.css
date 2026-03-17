@@ -492,6 +492,8 @@ button {
   cursor: pointer;
   position: relative;
   text-align: center;
+  min-width: 0;
+  overflow: hidden;
   transition:
     box-shadow var(--sg-transition),
     transform var(--sg-transition),
@@ -584,8 +586,10 @@ button {
   color: var(--sg-text);
   max-width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
 }
 
 /* 日付（card時は非表示、list/magazineで表示） */
@@ -1754,6 +1758,10 @@ button {
 .sg-dial__grid--list .sg-folder-card__title {
   flex: 1;
   min-width: 0;
+  display: block;
+  -webkit-line-clamp: unset;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .sg-dial__grid--list .sg-card__meta {
   flex-shrink: 0;
