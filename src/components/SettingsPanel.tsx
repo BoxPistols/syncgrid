@@ -3,7 +3,6 @@ import { Icon } from './Icon'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { ConfirmDialog } from './ConfirmDialog'
 import { BookmarkImport } from './BookmarkImport'
-import { ShortcutEditor } from './ShortcutEditor'
 import type { SyncGridSettings, SyncGridGroup, AIProvider } from '../types'
 import { OPENAI_MODELS, GEMINI_MODELS } from '../types'
 import type { Messages } from '../i18n'
@@ -431,18 +430,6 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
 
             <hr className="sg-settings__divider" />
 
-            {/* Shortcuts */}
-            <div className="sg-settings__section">
-              <h3 className="sg-settings__label"><Icon name="keyboard" size={14} /> {t.shortcuts}</h3>
-              <ShortcutEditor
-                shortcuts={settings.shortcuts}
-                onChange={(shortcuts) => onUpdateSettings({ shortcuts })}
-                t={t}
-              />
-            </div>
-
-            <hr className="sg-settings__divider" />
-
             {/* OGP Permission */}
             <div className="sg-settings__section">
               <h3 className="sg-settings__label"><Icon name="link" size={14} /> {t.ogpPermission}</h3>
@@ -482,13 +469,6 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
               </div>
             </div>
 
-            <hr className="sg-settings__divider" />
-
-            {/* Security */}
-            <div className="sg-settings__section">
-              <h3 className="sg-settings__label"><Icon name="lock" size={14} /> {t.security}</h3>
-              <p className="sg-settings__desc sg-settings__desc--pre">{t.securityDesc}</p>
-            </div>
           </div>
 
           <div className="sg-modal__footer">

@@ -117,6 +117,12 @@ export const en = {
   shortcutGoBack: 'Go to parent folder',
   shortcutPressKey: 'Press a key…',
   shortcutReset: 'Reset',
+  shortcutsCustom: 'Customizable',
+  shortcutsOther: 'Other',
+  shortcutTabSwitch: 'Switch tabs (number keys)',
+  shortcutMultiSelect: 'Multi-select',
+  shortcutShowShortcuts: 'Show shortcuts',
+  shortcutEscape: 'Cancel / Close',
   tags: 'Tags',
   tagPlaceholder: 'Add tag…',
   filterByTag: 'Filter by tag',
@@ -161,4 +167,9 @@ export const en = {
   allBookmarks: 'ALL',
   sortLastRead: 'Last read',
   sortDateAdded: 'Date added',
+  // Help
+  help: 'Help',
+  helpTagline: 'Bookmarks,',
+  helpTaglineAccent: 'reimagined.',
+  helpPrivacy: 'Security & Privacy',
 } as const

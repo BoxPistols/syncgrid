@@ -20,7 +20,8 @@ import { ConfirmDialog } from './components/ConfirmDialog'
 import { TrashPanel } from './components/TrashPanel'
 import { Icon } from './components/Icon'
 import { OnboardingTour } from './components/OnboardingTour'
-import { ShortcutCheatSheet } from './components/ShortcutCheatSheet'
+import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel'
+import { HelpPanel } from './components/HelpPanel'
 import {
   addBookmark,
   removeBookmark,
@@ -76,7 +77,8 @@ export default function App() {
     confirmLabel?: string
   } | null>(null)
   const [showTrash, setShowTrash] = useState(false)
-  const [showCheatSheet, setShowCheatSheet] = useState(false)
+  const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const [showTour, setShowTour] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
 
@@ -313,7 +315,7 @@ export default function App() {
       else if (e.key === 'Escape' && selectedIds.size > 0) clearSelection()
       // Cmd+← (Mac) / Alt+← で親フォルダに戻る
       else if (e.key === 'ArrowLeft' && (e.metaKey || e.altKey) && !e.shiftKey && nav.path.length > 0) { e.preventDefault(); nav.setPath((p) => p.slice(0, -1)) }
-      else if (e.key === '?' && !e.ctrlKey && !e.metaKey) setShowCheatSheet((v) => !v)
+      else if (e.key === '?' && !e.ctrlKey && !e.metaKey) setShowShortcutsPanel((v) => !v)
       // 数字キー 1-9 でタブ切替、0 で最後のタブ（修飾キーなし、入力欄以外）
       else if (/^[0-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const target = e.target as HTMLElement
@@ -380,7 +382,7 @@ export default function App() {
 
   return (
     <>
-      <TopBar query={query} onQueryChange={setQuery} theme={settings.theme} onToggleTheme={handleToggleTheme} onOpenSettings={() => setShowSettings(true)} layout={settings.layout} cardSize={settings.cardSize} gridColumns={settings.gridColumns} onChangeLayout={handleChangeLayout} onChangeCardSize={(size) => updateSettings({ cardSize: size })} onChangeGridColumns={(cols) => updateSettings({ gridColumns: cols })} t={t} />
+      <TopBar query={query} onQueryChange={setQuery} theme={settings.theme} onToggleTheme={handleToggleTheme} onOpenSettings={() => setShowSettings(true)} onOpenShortcuts={() => setShowShortcutsPanel(true)} onOpenHelp={() => setShowHelp(true)} layout={settings.layout} cardSize={settings.cardSize} gridColumns={settings.gridColumns} onChangeLayout={handleChangeLayout} onChangeCardSize={(size) => updateSettings({ cardSize: size })} onChangeGridColumns={(cols) => updateSettings({ gridColumns: cols })} t={t} />
 
       {/* Tab Bar */}
       <div className="sg-tabbar" role="tablist">
@@ -552,7 +554,8 @@ export default function App() {
       {showSettings && (<SettingsPanel settings={settings} groups={groups} t={t} onUpdateSettings={updateSettings} onClose={() => setShowSettings(false)} onRefresh={refresh} />)}
       {confirmDialog && (<ConfirmDialog message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog(null)} confirmLabel={confirmDialog.confirmLabel} t={t} />)}
       {showTrash && (<TrashPanel onClose={() => setShowTrash(false)} onRestored={refresh} t={t} locale={settings.locale} />)}
-      {showCheatSheet && (<ShortcutCheatSheet shortcuts={settings.shortcuts} onClose={() => setShowCheatSheet(false)} t={t} />)}
+      {showShortcutsPanel && (<KeyboardShortcutsPanel settings={settings} onUpdateSettings={updateSettings} onClose={() => setShowShortcutsPanel(false)} t={t} />)}
+      {showHelp && (<HelpPanel onClose={() => setShowHelp(false)} t={t} />)}
       {showTour && (<OnboardingTour steps={[
         { target: '.sg-topbar__search', title: t.featureSearch, description: t.tourSearch },
         { target: '.sg-layout-switcher', title: t.featureLayout, description: t.tourLayout, position: 'bottom' },

@@ -89,9 +89,11 @@ export function ShortcutEditor({ shortcuts, onChange, t }: Props) {
           ))}
         </tbody>
       </table>
-      <button className="sg-btn sg-btn--sm sg-btn--ghost sg-settings__row--mt" onClick={handleReset}>
-        {t.shortcutReset}
-      </button>
+      <div className="sg-shortcut-table__footer">
+        <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleReset}>
+          {t.shortcutReset}
+        </button>
+      </div>
     </div>
   )
 }

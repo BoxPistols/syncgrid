@@ -10,6 +10,8 @@ interface Props {
   theme: string
   onToggleTheme: () => void
   onOpenSettings: () => void
+  onOpenShortcuts: () => void
+  onOpenHelp: () => void
   layout: LayoutMode
   cardSize: CardSize
   gridColumns: GridColumns
@@ -19,7 +21,7 @@ interface Props {
   t: Messages
 }
 
-export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSettings, layout, cardSize, gridColumns, onChangeLayout, onChangeCardSize, onChangeGridColumns, t }: Props) {
+export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSettings, onOpenShortcuts, onOpenHelp, layout, cardSize, gridColumns, onChangeLayout, onChangeCardSize, onChangeGridColumns, t }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   return (
@@ -156,6 +158,12 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
 
         <button className="sg-btn--icon" onClick={onToggleTheme} title={t.toggleTheme}>
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
+        </button>
+        <button className="sg-btn--icon" onClick={onOpenShortcuts} title={t.shortcuts}>
+          <Icon name="keyboard" size={16} />
+        </button>
+        <button className="sg-btn--icon" onClick={onOpenHelp} title={t.help}>
+          <Icon name="help-circle" size={16} />
         </button>
         <button className="sg-btn--icon" onClick={onOpenSettings} title={t.settings}>
           <svg

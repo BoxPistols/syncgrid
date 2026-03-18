@@ -139,6 +139,12 @@ export const ja = {
   shortcutGoBack: '親フォルダに戻る',
   shortcutPressKey: 'キーを押してください…',
   shortcutReset: '初期化',
+  shortcutsCustom: 'カスタマイズ可能',
+  shortcutsOther: 'その他',
+  shortcutTabSwitch: 'タブ切替（数字キー）',
+  shortcutMultiSelect: 'マルチセレクト',
+  shortcutShowShortcuts: 'ショートカット表示',
+  shortcutEscape: 'キャンセル / 閉じる',
   // Tags
   tags: 'タグ',
   tagPlaceholder: 'タグを入力…',
@@ -187,4 +193,9 @@ export const ja = {
   allBookmarks: 'ALL',
   sortLastRead: '最終閲覧順',
   sortDateAdded: '追加順',
+  // Help
+  help: 'ヘルプ',
+  helpTagline: 'ブックマークを、',
+  helpTaglineAccent: 'もっとスマートに。',
+  helpPrivacy: 'セキュリティ & プライバシー',
 } as const

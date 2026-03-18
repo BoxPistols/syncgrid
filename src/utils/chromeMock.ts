@@ -8,6 +8,15 @@
 
 const IS_EXTENSION = typeof chrome !== 'undefined' && !!chrome.runtime?.id
 
+/** manifest.json からバージョンを取得（dev環境はフォールバック） */
+export function getAppVersion(): string {
+  try {
+    return chrome.runtime.getManifest().version
+  } catch {
+    return '1.2.0'
+  }
+}
+
 if (!IS_EXTENSION) {
   // --- Mock Data ---
   let nextId = 100
