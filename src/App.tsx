@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useBookmarks } from './hooks/useBookmarks'
 import { useSettings } from './hooks/useSettings'
 import { useTheme } from './hooks/useTheme'
@@ -8,10 +8,11 @@ import { useNavigation } from './hooks/useNavigation'
 import { useSelection } from './hooks/useSelection'
 import { useFiltering } from './hooks/useFiltering'
 import { useMetadata } from './hooks/useMetadata'
+import { useCollapse } from './hooks/useCollapse'
 import { useDragReorder } from './hooks/useDragReorder'
 import { TopBar } from './components/TopBar'
 import { BookmarkCard } from './components/BookmarkCard'
-import { FolderCard } from './components/FolderCard'
+import { FolderSection } from './components/FolderSection'
 import { EditBookmarkModal } from './components/EditBookmarkModal'
 import { ContextMenu, type MenuItem } from './components/ContextMenu'
 import { AddBookmarkForm } from './components/AddBookmarkForm'
@@ -49,10 +50,22 @@ export default function App() {
   const nav = useNavigation(groups, settings, loaded, updateSettings)
   const {
     query, setQuery, localQuery, setLocalQuery, searchResults, localSearchResults,
-    flatView, setFlatView, flatItems,
     filterTag, setFilterTag, filterStatus, setFilterStatus,
     allTagsInFolder, applyFiltersAndSort,
   } = useFiltering(groups, nav.currentFolder, allMeta, settings.sort)
+  const { collapsedIds, toggleCollapse, expandAll, collapseAll } = useCollapse()
+
+  // 全フォルダIDを再帰収集（一括折りたたみ用）
+  const allFolderIds = useMemo(() => {
+    if (!nav.currentFolder) return []
+    const ids: string[] = []
+    const collect = (group: SyncGridGroup) => {
+      ids.push(group.id)
+      for (const child of group.children) collect(child)
+    }
+    for (const child of nav.currentFolder.children) collect(child)
+    return ids
+  }, [nav.currentFolder])
 
   // --- Auto Sync ---
   const handleSynced = useCallback(
@@ -87,12 +100,12 @@ export default function App() {
     useSelection(nav.currentFolder, refresh, t, setConfirmDialog)
 
   // --- Drag & Drop ---
-  const { dragState, getDragHandlers, getTabHandlers, getBreadcrumbDropHandlers } = useDragReorder(
+  const { dragState, getDragHandlers, getTabHandlers } = useDragReorder(
     nav.currentFolder,
     selectedIds,
   )
 
-  // Tab/Folder切替時に選択解除をラップ
+  // Tab切替時に選択解除をラップ
   const handleSelectTab = useCallback(
     (id: string) => {
       clearSelection()
@@ -100,14 +113,6 @@ export default function App() {
       nav.handleSelectTab(id)
     },
     [clearSelection, setQuery, nav],
-  )
-
-  const handleOpenFolder = useCallback(
-    (group: SyncGridGroup) => {
-      clearSelection()
-      nav.handleOpenFolder(group)
-    },
-    [clearSelection, nav],
   )
 
   // --- Onboarding ---
@@ -265,7 +270,6 @@ export default function App() {
       setCtxMenu({
         x, y,
         items: [
-          { label: t.open, icon: 'folder-open', action: () => handleOpenFolder(group) },
           { label: t.rename, icon: 'edit', action: () => setRenamingFolderId(group.id) },
           { label: '---', action: () => {} },
           {
@@ -273,13 +277,13 @@ export default function App() {
             action: () => setConfirmDialog({
               message: t.confirmDeleteFolder(group.title),
               confirmLabel: t.delete,
-              onConfirm: async () => { setConfirmDialog(null); await deleteGroup(group.id); nav.setPath((prev) => { const idx = prev.indexOf(group.id); return idx >= 0 ? prev.slice(0, idx) : prev }); refresh() },
+              onConfirm: async () => { setConfirmDialog(null); await deleteGroup(group.id); refresh() },
             }),
           },
         ],
       })
     },
-    [refresh, handleOpenFolder, t, nav],
+    [refresh, t],
   )
 
   const handleTabContext = useCallback(
@@ -325,8 +329,6 @@ export default function App() {
       else if (matchesBinding(e, sc.deleteSelected) && selectedIds.size > 0) { e.preventDefault(); handleDeleteSelected() }
       else if (matchesBinding(e, sc.selectAll)) { e.preventDefault(); selectAll() }
       else if (e.key === 'Escape' && selectedIds.size > 0) clearSelection()
-      // Cmd+← (Mac) / Alt+← で親フォルダに戻る
-      else if (e.key === 'ArrowLeft' && (e.metaKey || e.altKey) && !e.shiftKey && nav.path.length > 0) { e.preventDefault(); nav.setPath((p) => p.slice(0, -1)) }
       else if (e.key === '?' && !e.ctrlKey && !e.metaKey) setShowShortcutsPanel((v) => !v)
       // 数字キー 1-9 でタブ切替、0 で最後のタブ（修飾キーなし、入力欄以外）
       else if (/^[0-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -342,7 +344,7 @@ export default function App() {
     }
     document.addEventListener('keydown', handleGlobalKeyDown)
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, selectAll, clearSelection, groups, handleSelectTab, nav.path, nav.setPath])
+  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, selectAll, clearSelection, groups, handleSelectTab])
 
   // --- UI helper fragments ---
   const statusFilterChips = (
@@ -368,6 +370,25 @@ export default function App() {
       </select>
     </div>
   )
+
+  // FolderSection共通props
+  const folderSectionProps = {
+    collapsedIds,
+    onToggleCollapse: toggleCollapse,
+    gridClass,
+    onBookmarkContext: handleBookmarkContext,
+    onFolderContext: handleFolderContext,
+    applyFiltersAndSort,
+    allMeta,
+    handleSetStatus,
+    selectedIds,
+    toggleSelect,
+    t,
+    locale: settings.locale,
+    renamingFolderId,
+    onStartRename: (id: string) => setRenamingFolderId(id),
+    onFolderRename: handleFolderRename,
+  }
 
   // --- Render ---
   if (loading || !loaded) return <div className="sg-loading">{t.loading}</div>
@@ -461,41 +482,7 @@ export default function App() {
           <div className="sg-empty"><div className="sg-empty__icon"><Icon name="folder" size={48} /></div><p className="sg-empty__text sg-preline">{t.noGroups}</p></div>
         ) : nav.currentFolder ? (
           <div className="sg-dial">
-            {nav.path.length > 0 && (
-              <nav className="sg-breadcrumb" aria-label="breadcrumb">
-                {nav.breadcrumb.map((crumb, i) => {
-                  const crumbParentId = i === 0 ? nav.activeGroup?.id : nav.breadcrumb[i]?.id
-                  return (
-                    <span key={crumb.id || 'root'}>
-                      {i > 0 && <span className="sg-breadcrumb__sep"> › </span>}
-                      {i < nav.breadcrumb.length - 1 && crumbParentId ? (
-                        <button className={`sg-breadcrumb__item ${dragState.dropBreadcrumbId === crumbParentId ? 'sg-breadcrumb__item--drop-target' : ''}`} onClick={() => nav.handleBreadcrumbClick(i)} {...getBreadcrumbDropHandlers(crumbParentId)}>{crumb.title}</button>
-                      ) : (
-                        <span className="sg-breadcrumb__current" aria-current="page">{crumb.title}</span>
-                      )}
-                    </span>
-                  )
-                })}
-              </nav>
-            )}
-
             <div className="sg-toolbar">
-              {nav.path.length > 0 && (() => {
-                const parentId = nav.path.length >= 2 ? nav.path[nav.path.length - 2] : nav.activeGroup?.id
-                return parentId ? (
-                  <button className={`sg-btn--icon ${dragState.dropBreadcrumbId === parentId ? 'sg-breadcrumb__item--drop-target' : ''}`} onClick={() => nav.setPath((p) => p.slice(0, -1))} title={t.back} aria-label={t.back} {...getBreadcrumbDropHandlers(parentId)}><Icon name="arrow-left" size={14} /></button>
-                ) : (
-                  <button className="sg-btn--icon" onClick={() => nav.setPath((p) => p.slice(0, -1))} title={t.back} aria-label={t.back}><Icon name="arrow-left" size={14} /></button>
-                )
-              })()}
-              <span className="sg-toolbar__title">{nav.path.length === 0 ? '' : nav.currentFolder.title}</span>
-              <button
-                className={`sg-btn sg-btn--sm ${flatView ? 'sg-btn--primary' : 'sg-btn--ghost'}`}
-                onClick={() => setFlatView(!flatView)}
-                title={t.flatViewDesc}
-              >
-                {t.flatView}
-              </button>
               <input
                 type="text"
                 className="sg-local-search"
@@ -513,6 +500,15 @@ export default function App() {
                   {allTagsInFolder.map((tag) => (<button key={tag} className={`sg-tag ${filterTag === tag ? 'sg-tag--active' : ''}`} onClick={() => setFilterTag(filterTag === tag ? null : tag)}>{tag}</button>))}
                 </div>
               )}
+              {allFolderIds.length > 0 && (
+                <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => {
+                  const allCollapsed = allFolderIds.every((id) => collapsedIds.has(id))
+                  if (allCollapsed) expandAll()
+                  else collapseAll(allFolderIds)
+                }}>
+                  {allFolderIds.every((id) => collapsedIds.has(id)) ? t.expandAll : t.collapseAll}
+                </button>
+              )}
               <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>{showAddForm ? t.cancel : t.addBookmark('Ctrl')}</button>
               <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => { setCreatingGroup('subfolder'); setNewGroupName('') }}>{t.newFolder}</button>
             </div>
@@ -525,37 +521,36 @@ export default function App() {
               </div></div>
             )}
 
-            {(() => {
-              // タブ内検索結果 → フラット表示 → 通常表示の優先順
-              const displayItems = localSearchResults ?? (flatView && flatItems ? flatItems : null)
-
-              if (displayItems) {
-                // フラット or タブ内検索: フォルダなし、ブックマークのみ
-                return displayItems.length === 0 ? (
-                  <div className="sg-empty"><div className="sg-empty__icon"><Icon name="search" size={48} /></div><p className="sg-empty__text">{t.noSearchResults}</p></div>
-                ) : (
-                  <div className={gridClass}>
-                    {applyFiltersAndSort(displayItems).map((item) => (
-                      <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
-                    ))}
-                  </div>
-                )
-              }
-
-              // 通常表示（フォルダ + ブックマーク）
-              return nav.currentFolder.children.length === 0 && nav.currentFolder.items.length === 0 ? (
-                <div className="sg-empty"><div className="sg-empty__icon"><Icon name="pin" size={48} /></div><p className="sg-empty__text sg-preline">{t.emptyFolder}</p></div>
+            {/* タブ内検索結果 */}
+            {localSearchResults ? (
+              localSearchResults.length === 0 ? (
+                <div className="sg-empty"><div className="sg-empty__icon"><Icon name="search" size={48} /></div><p className="sg-empty__text">{t.noSearchResults}</p></div>
               ) : (
                 <div className={gridClass}>
-                  {nav.currentFolder.children.map((child) => (
-                    <FolderCard key={child.id} group={child} onClick={handleOpenFolder} onContextMenu={handleFolderContext} t={t} dragHandlers={getDragHandlers(child.id, 'folder')} isDragging={dragState.draggingId === child.id} isDropTarget={dragState.dropTargetId === child.id} dropMode={dragState.dropTargetId === child.id ? dragState.dropMode : null} isSelected={selectedIds.has(child.id)} onToggleSelect={toggleSelect} isRenaming={renamingFolderId === child.id} onStartRename={() => setRenamingFolderId(child.id)} onRename={handleFolderRename} />
-                  ))}
-                  {applyFiltersAndSort(nav.currentFolder.items).map((item) => (
-                    <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} isSelected={selectedIds.has(item.id)} onToggleSelect={toggleSelect} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
+                  {applyFiltersAndSort(localSearchResults).map((item) => (
+                    <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
                   ))}
                 </div>
               )
-            })()}
+            ) : nav.currentFolder.children.length === 0 && nav.currentFolder.items.length === 0 ? (
+              <div className="sg-empty"><div className="sg-empty__icon"><Icon name="pin" size={48} /></div><p className="sg-empty__text sg-preline">{t.emptyFolder}</p></div>
+            ) : (
+              <>
+                {/* ルート直下のブックマーク */}
+                {nav.currentFolder.items.length > 0 && (
+                  <div className={gridClass}>
+                    {applyFiltersAndSort(nav.currentFolder.items).map((item) => (
+                      <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} isSelected={selectedIds.has(item.id)} onToggleSelect={toggleSelect} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
+                    ))}
+                  </div>
+                )}
+
+                {/* フォルダをアコーディオンセクションとして表示 */}
+                {nav.currentFolder.children.map((child) => (
+                  <FolderSection key={child.id} group={child} depth={0} {...folderSectionProps} />
+                ))}
+              </>
+            )}
           </div>
         ) : null}
       </div>

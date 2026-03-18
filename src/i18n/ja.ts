@@ -145,6 +145,8 @@ export const ja = {
   shortcutMultiSelect: 'マルチセレクト',
   shortcutShowShortcuts: 'ショートカット表示',
   shortcutEscape: 'キャンセル / 閉じる',
+  collapseAll: 'すべて折りたたむ',
+  expandAll: 'すべて展開',
   // Tags
   tags: 'タグ',
   tagPlaceholder: 'タグを入力…',

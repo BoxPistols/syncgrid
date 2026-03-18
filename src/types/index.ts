@@ -122,7 +122,6 @@ export interface SyncGridSettings {
   theme: 'light' | 'dark' | 'system'
   locale: Locale
   activeTabId: string
-  lastPath: string[]
   /** 最終同期日時 (ISO string) */
   lastSyncedAt: string
   /** AI設定 */
@@ -168,7 +167,6 @@ export const DEFAULT_SETTINGS: SyncGridSettings = {
   theme: 'system',
   locale: 'ja',
   activeTabId: '',
-  lastPath: [],
   lastSyncedAt: '',
   ai: DEFAULT_AI_SETTINGS,
   layout: 'list', // magazine | card | list

@@ -123,6 +123,8 @@ export const en = {
   shortcutMultiSelect: 'Multi-select',
   shortcutShowShortcuts: 'Show shortcuts',
   shortcutEscape: 'Cancel / Close',
+  collapseAll: 'Collapse all',
+  expandAll: 'Expand all',
   tags: 'Tags',
   tagPlaceholder: 'Add tag…',
   filterByTag: 'Filter by tag',

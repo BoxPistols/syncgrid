@@ -16,8 +16,6 @@ export function useFiltering(
   const [localQuery, setLocalQuery] = useState('')
   const [filterTag, setFilterTag] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<ReadStatus | null>(null)
-  const [flatView, setFlatView] = useState(false)
-
   // グローバル検索（全ブックマーク横断）
   const searchResults = useMemo(() => {
     if (!query.trim()) return null
@@ -31,18 +29,6 @@ export function useFiltering(
     }
     return results
   }, [query, groups])
-
-  // フラット表示: currentFolder配下の全アイテムを再帰取得
-  const flatItems = useMemo(() => {
-    if (!flatView || !currentFolder) return null
-    const items: SyncGridItem[] = []
-    const collect = (group: SyncGridGroup) => {
-      items.push(...group.items)
-      for (const child of group.children) collect(child)
-    }
-    collect(currentFolder)
-    return items
-  }, [flatView, currentFolder])
 
   // タブ内検索: currentFolder配下に絞った検索
   const localSearchResults = useMemo(() => {
@@ -123,9 +109,6 @@ export function useFiltering(
     setLocalQuery,
     searchResults,
     localSearchResults,
-    flatView,
-    setFlatView,
-    flatItems,
     filterTag,
     setFilterTag,
     filterStatus,

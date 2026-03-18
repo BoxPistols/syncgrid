@@ -1,7 +1,8 @@
 /**
- * ナビゲーション状態管理 — タブ切替、フォルダ遷移、パンくず
+ * ナビゲーション状態管理 — タブ切替
+ * フォルダはアコーディオンセクションでインライン表示するため、ドリルダウン不要
  */
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useMemo, useEffect, useCallback } from 'react'
 import type { SyncGridGroup, SyncGridItem, SyncGridSettings } from '../types'
 import { flattenGroups } from '../utils/bookmarks'
 
@@ -11,8 +12,6 @@ export function useNavigation(
   loaded: boolean,
   updateSettings: (patch: Partial<SyncGridSettings>) => void,
 ) {
-  const [path, setPath] = useState<string[]>([])
-
   const activeTabId = useMemo(() => {
     const stored = settings.activeTabId
     if (stored === '__all__') return '__all__'
@@ -35,63 +34,25 @@ export function useNavigation(
   // Persist fallback
   useEffect(() => {
     if (loaded && groups.length > 0 && settings.activeTabId !== activeTabId && activeTabId !== '__all__') {
-      updateSettings({ activeTabId, lastPath: [] })
+      updateSettings({ activeTabId })
     }
   }, [loaded, groups, settings.activeTabId, activeTabId, updateSettings])
 
-  const currentFolder = useMemo(() => {
-    if (!activeGroup) return null
-    if (path.length === 0) return activeGroup
-    let folder: SyncGridGroup | undefined = activeGroup
-    for (const id of path) {
-      folder = folder?.children.find((c) => c.id === id)
-      if (!folder) break
-    }
-    return folder ?? activeGroup
-  }, [activeGroup, path])
-
-  const breadcrumb = useMemo(() => {
-    if (!activeGroup) return []
-    const crumbs: { id: string; title: string }[] = [{ id: '', title: activeGroup.title }]
-    let folder: SyncGridGroup | undefined = activeGroup
-    for (const id of path) {
-      const next: SyncGridGroup | undefined = folder?.children.find((c) => c.id === id)
-      if (!next) break
-      crumbs.push({ id: next.id, title: next.title })
-      folder = next
-    }
-    return crumbs
-  }, [activeGroup, path])
-
   const handleSelectTab = useCallback(
     (id: string) => {
-      setPath([])
-      updateSettings({ activeTabId: id, lastPath: [] })
+      updateSettings({ activeTabId: id })
     },
     [updateSettings],
   )
 
-  const handleOpenFolder = useCallback((group: SyncGridGroup) => {
-    setPath((prev) => [...prev, group.id])
-  }, [])
-
-  const handleBreadcrumbClick = useCallback((index: number) => {
-    setPath((prev) => prev.slice(0, index))
-  }, [])
-
-  const pageKey = activeTabId === '__all__' ? 'all' : `${activeTabId}/${path.join('/')}`
+  const pageKey = activeTabId
 
   return {
-    path,
-    setPath,
     activeTabId,
     activeGroup,
     allItems,
-    currentFolder,
-    breadcrumb,
+    currentFolder: activeGroup,
     pageKey,
     handleSelectTab,
-    handleOpenFolder,
-    handleBreadcrumbClick,
   }
 }

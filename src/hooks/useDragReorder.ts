@@ -353,4 +353,5 @@ export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?
   )
 
   return { dragState, getDragHandlers, getTabDropHandlers, getTabHandlers, getBreadcrumbDropHandlers }
+  // NOTE: getBreadcrumbDropHandlers はパンくず廃止後も互換性のため残す
 }

@@ -1355,6 +1355,87 @@ button {
 }
 
 /* =====================
+   FOLDER SECTION (Accordion)
+   ===================== */
+.sg-section {
+  margin-bottom: 4px;
+}
+.sg-section[data-depth="1"] { padding-left: 20px; }
+.sg-section[data-depth="2"] { padding-left: 40px; }
+.sg-section[data-depth="3"] { padding-left: 60px; }
+.sg-section__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--sg-radius-sm);
+  color: var(--sg-text);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background var(--sg-transition);
+  text-align: left;
+}
+.sg-section__header:hover {
+  background: var(--sg-bg-card-hover);
+}
+.sg-section__chevron {
+  transition: transform 0.15s ease;
+  color: var(--sg-text-tertiary);
+  flex-shrink: 0;
+  display: flex;
+}
+.sg-section__chevron--collapsed {
+  transform: rotate(-90deg);
+}
+.sg-section__icon {
+  color: var(--sg-folder);
+  flex-shrink: 0;
+}
+.sg-section__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sg-section__rename {
+  flex: 1;
+  min-width: 0;
+}
+.sg-section__count {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--sg-text-tertiary);
+  flex-shrink: 0;
+}
+.sg-section__menu {
+  opacity: 0;
+  transition: opacity var(--sg-transition);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--sg-text-tertiary);
+  flex-shrink: 0;
+}
+.sg-section__header:hover .sg-section__menu {
+  opacity: 1;
+}
+.sg-section__menu:hover {
+  background: var(--sg-bg-card-hover);
+  color: var(--sg-text);
+}
+.sg-section__content {
+  padding: 4px 0 8px;
+}
+
+/* =====================
    SHORTCUT CHEAT SHEET
    ===================== */
 .sg-cheat__section {
