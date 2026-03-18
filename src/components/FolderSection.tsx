@@ -7,6 +7,7 @@ import { BookmarkCard } from './BookmarkCard'
 import { isComposing } from '../utils/keyboard'
 import { countAll } from '../utils/bookmarks'
 import type { SyncGridItem, SyncGridGroup, ReadStatus, BookmarkMeta } from '../types'
+import type { DragHandlers, DragState } from '../hooks/useDragReorder'
 import type { Messages } from '../i18n'
 
 interface Props {
@@ -22,6 +23,8 @@ interface Props {
   handleSetStatus: (id: string, status: ReadStatus) => void
   selectedIds: Set<string>
   toggleSelect: (id: string, e: React.MouseEvent) => boolean
+  getDragHandlers: (id: string, type: 'bookmark' | 'folder') => DragHandlers
+  dragState: DragState
   t: Messages
   locale: string
   renamingFolderId: string | null
@@ -42,6 +45,8 @@ export const FolderSection = memo(function FolderSection({
   handleSetStatus,
   selectedIds,
   toggleSelect,
+  getDragHandlers,
+  dragState,
   t,
   locale,
   renamingFolderId,
@@ -52,6 +57,8 @@ export const FolderSection = memo(function FolderSection({
   const totalItems = countAll(group)
   const isRenaming = renamingFolderId === group.id
   const [editValue, setEditValue] = useState(group.title)
+  const folderDragHandlers = getDragHandlers(group.id, 'folder')
+  const isDropTarget = dragState.dropTargetId === group.id && dragState.dropMode === 'into'
 
   const handleSubmitRename = () => {
     const name = editValue.trim()
@@ -61,7 +68,7 @@ export const FolderSection = memo(function FolderSection({
   return (
     <section className="sg-section" data-depth={depth}>
       <div
-        className="sg-section__header"
+        className={`sg-section__header ${isDropTarget ? 'sg-section__header--drop-target' : ''}`}
         role="button"
         tabIndex={0}
         onClick={() => {
@@ -84,6 +91,10 @@ export const FolderSection = memo(function FolderSection({
           onFolderContext(group, e.clientX, e.clientY)
         }}
         aria-expanded={!collapsed}
+        onDragOver={folderDragHandlers.onDragOver}
+        onDragEnter={folderDragHandlers.onDragEnter}
+        onDragLeave={folderDragHandlers.onDragLeave}
+        onDrop={folderDragHandlers.onDrop}
       >
         <span className={`sg-section__chevron ${collapsed ? 'sg-section__chevron--collapsed' : ''}`}>
           <Icon name="chevron-down" size={14} />
@@ -129,6 +140,10 @@ export const FolderSection = memo(function FolderSection({
                   key={item.id}
                   item={item}
                   onContextMenu={onBookmarkContext}
+                  dragHandlers={getDragHandlers(item.id, 'bookmark')}
+                  isDragging={dragState.draggingId === item.id}
+                  isDropTarget={dragState.dropTargetId === item.id}
+                  dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null}
                   t={t}
                   locale={locale}
                   isSelected={selectedIds.has(item.id)}
@@ -158,6 +173,8 @@ export const FolderSection = memo(function FolderSection({
               handleSetStatus={handleSetStatus}
               selectedIds={selectedIds}
               toggleSelect={toggleSelect}
+              getDragHandlers={getDragHandlers}
+              dragState={dragState}
               t={t}
               locale={locale}
               renamingFolderId={renamingFolderId}

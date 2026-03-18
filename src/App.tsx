@@ -383,6 +383,8 @@ export default function App() {
     handleSetStatus,
     selectedIds,
     toggleSelect,
+    getDragHandlers,
+    dragState,
     t,
     locale: settings.locale,
     renamingFolderId,
