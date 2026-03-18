@@ -80,10 +80,10 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
             aria-checked={layout === 'magazine'}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <rect x="0" y="0" width="6" height="6" rx="1" />
-              <rect x="8" y="0" width="6" height="6" rx="1" />
-              <rect x="0" y="8" width="6" height="6" rx="1" />
-              <rect x="8" y="8" width="6" height="6" rx="1" />
+              <rect x="0" y="0" width="6" height="6" rx="1.5" />
+              <rect x="8" y="0" width="6" height="6" rx="1.5" />
+              <rect x="0" y="8" width="6" height="6" rx="1.5" />
+              <rect x="8" y="8" width="6" height="6" rx="1.5" />
             </svg>
           </button>
           {/* Card: 大カード */}
@@ -96,8 +96,8 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
             aria-checked={layout === 'card'}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <rect x="0" y="0" width="14" height="6" rx="1" />
-              <rect x="0" y="8" width="14" height="6" rx="1" />
+              <rect x="0" y="0" width="14" height="6" rx="1.5" />
+              <rect x="0" y="8" width="14" height="6" rx="1.5" />
             </svg>
           </button>
           {/* List: 横長行 */}
@@ -110,9 +110,9 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
             aria-checked={layout === 'list'}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <rect x="0" y="1" width="14" height="3" rx="1" />
-              <rect x="0" y="5.5" width="14" height="3" rx="1" />
-              <rect x="0" y="10" width="14" height="3" rx="1" />
+              <rect x="0" y="1" width="14" height="3" rx="1.5" />
+              <rect x="0" y="5.5" width="14" height="3" rx="1.5" />
+              <rect x="0" y="10" width="14" height="3" rx="1.5" />
             </svg>
           </button>
         </div>
