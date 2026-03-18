@@ -375,7 +375,7 @@ export default function App() {
   if (showWelcome && groups.length === 0) {
     return (
       <div className="sg-welcome">
-        <div className="sg-welcome__logo"><Icon name="zap" size={48} /></div>
+        <div className="sg-welcome__logo"><Icon name="grid" size={48} /></div>
         <h1 className="sg-welcome__title">{t.welcomeTitle}</h1>
         <p className="sg-welcome__desc">{t.welcomeDesc}</p>
         <div className="sg-welcome__features">

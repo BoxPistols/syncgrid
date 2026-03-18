@@ -31,7 +31,7 @@ export type IconName =
   | 'keyboard'
   | 'lock'
   | 'more'
-  | 'zap'
+  | 'grid'
   | 'plus'
   | 'pin'
   | 'arrow-left'
@@ -63,7 +63,7 @@ const PATHS: Record<IconName, string> = {
   keyboard: 'M2 6a2 2 0 012-2h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM6 10h0M10 10h0M14 10h0M18 10h0M8 14h8',
   lock: 'M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2zM7 11V7a5 5 0 0110 0v4',
   more: 'M12 13a1 1 0 100-2 1 1 0 000 2zM19 13a1 1 0 100-2 1 1 0 000 2zM5 13a1 1 0 100-2 1 1 0 000 2z',
-  zap: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+  grid: 'M3.75 1.5h4.5q2.25 0 2.25 2.25v4.5q0 2.25-2.25 2.25h-4.5q-2.25 0-2.25-2.25v-4.5q0-2.25 2.25-2.25zM15.75 1.5h4.5q2.25 0 2.25 2.25v4.5q0 2.25-2.25 2.25h-4.5q-2.25 0-2.25-2.25v-4.5q0-2.25 2.25-2.25zM3.75 13.5h4.5q2.25 0 2.25 2.25v4.5q0 2.25-2.25 2.25h-4.5q-2.25 0-2.25-2.25v-4.5q0-2.25 2.25-2.25zM15.75 13.5h4.5q2.25 0 2.25 2.25v4.5q0 2.25-2.25 2.25h-4.5q-2.25 0-2.25-2.25v-4.5q0-2.25 2.25-2.25z',
   plus: 'M12 5v14M5 12h14',
   pin: 'M12 2a5 5 0 00-5 5c0 4 5 11 5 11s5-7 5-11a5 5 0 00-5-5zm0 7a2 2 0 110-4 2 2 0 010 4z',
   'arrow-left': 'M19 12H5M12 19l-7-7 7-7',
@@ -77,7 +77,7 @@ export function Icon({ name, size = 16, className }: Props) {
   const isStroke = ![
     'search',
     'sparkle',
-    'zap',
+    'grid',
     'pin',
     'moon',
   ].includes(name)

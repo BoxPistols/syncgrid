@@ -39,7 +39,7 @@ export function HelpPanel({ onClose, t }: Props) {
 
         <div className="sg-help-hero">
           <div className="sg-help-hero__icon">
-            <Icon name="zap" size={28} />
+            <Icon name="grid" size={28} />
           </div>
           <h2 className="sg-help-hero__title">SyncGrid</h2>
           <p className="sg-help-hero__tagline">

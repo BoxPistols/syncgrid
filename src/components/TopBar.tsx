@@ -27,7 +27,7 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
 
   return (
     <div className="sg-topbar">
-      <span className="sg-topbar__logo"><Icon name="zap" size={16} /> SyncGrid</span>
+      <span className="sg-topbar__logo"><Icon name="grid" size={16} /> SyncGrid</span>
 
       <div className="sg-topbar__search">
         <span className="sg-topbar__search-icon">
