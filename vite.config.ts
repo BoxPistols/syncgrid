@@ -10,6 +10,11 @@ export default defineConfig({
     rollupOptions: {
       input: {
         newtab: 'index.html',
+        background: 'src/background.ts',
+      },
+      output: {
+        entryFileNames: (chunkInfo) =>
+          chunkInfo.name === 'background' ? 'background.js' : 'assets/[name]-[hash].js',
       },
     },
   },

@@ -128,44 +128,32 @@ async function fetchOembedTitle(url: string): Promise<string | null> {
   return null
 }
 
-/** ページの<head>部分をHTMLとして取得 */
+/**
+ * ページの<head>部分をHTMLとして取得
+ * background service worker 経由でfetchすることでCORSを回避
+ */
 async function fetchHead(url: string): Promise<string | null> {
   try {
+    // background service workerが利用可能な場合はそちらを使う（CORS回避）
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      const response: { html: string | null } = await chrome.runtime.sendMessage({
+        type: 'FETCH_HTML',
+        url,
+      })
+      return response?.html ?? null
+    }
+
+    // dev環境フォールバック: 直接fetch
     const res = await fetch(url, {
       signal: AbortSignal.timeout(8000),
       headers: { Accept: 'text/html' },
-      cache: 'no-store', // ブラウザのpreload処理を抑制
+      cache: 'no-store',
     })
     if (!res.ok) return null
     const contentType = res.headers.get('content-type')
-    // HTML以外のレスポンスは無視
     if (contentType && !contentType.includes('text/html')) return null
-
-    const reader = res.body?.getReader()
-    if (!reader) return null
-
-    const chunks: Uint8Array[] = []
-    let totalLength = 0
-    const MAX_HEAD_SIZE = 32768 // 32KB — <head>内のOGPタグには十分
-
-    while (totalLength < MAX_HEAD_SIZE) {
-      const { done, value } = await reader.read()
-      if (done) break
-      if (value) {
-        chunks.push(value)
-        totalLength += value.length
-      }
-      // Check for </head> in the last 1KB of the current buffer to avoid re-decoding everything
-      const lastChunk = chunks[chunks.length - 1]
-      const peek = new TextDecoder('ascii').decode(lastChunk)
-      if (peek.toLowerCase().includes('</head>')) break
-    }
-    reader.cancel()
-
-    const bytes = mergeChunks(chunks, totalLength)
-    const encoding = detectEncoding(contentType, bytes)
-    const decoderName = resolveEncoding(encoding)
-    return new TextDecoder(decoderName, { fatal: false }).decode(bytes)
+    const text = await res.text()
+    return text.slice(0, 32768)
   } catch {
     return null
   }
@@ -203,47 +191,6 @@ function extractOgp(html: string): OgpData {
     siteName: get('og:site_name'),
     fetchedAt: Date.now(),
   }
-}
-
-/** Content-Typeヘッダー・HTML meta からエンコーディングを検出 */
-function detectEncoding(contentType: string | null, bytes: Uint8Array): string {
-  if (contentType) {
-    const m = contentType.match(/charset=["']?([^"'\s;]+)/i)
-    if (m) return m[1]
-  }
-  const head = new TextDecoder('ascii', { fatal: false }).decode(bytes.slice(0, 4000))
-  const m1 = head.match(/<meta[^>]+charset=["']?([^"'\s;>]+)/i)
-  if (m1) return m1[1]
-  const m2 = head.match(/content=["'][^"']*charset=([^"'\s;]+)/i)
-  if (m2) return m2[1]
-  return 'utf-8'
-}
-
-/** TextDecoderが受け付けるエンコーディング名に変換 */
-function resolveEncoding(raw: string): string {
-  const key = raw.toLowerCase().replace(/[_\s-]/g, '')
-  const map: Record<string, string> = {
-    shiftjis: 'shift_jis', shift_jis: 'shift_jis', sjis: 'shift_jis',
-    xsjis: 'shift_jis', csshiftjis: 'shift_jis', ms932: 'shift_jis', windows31j: 'shift_jis',
-    eucjp: 'euc-jp', xeucjp: 'euc-jp', cseucpkdfmtjapanese: 'euc-jp',
-    iso2022jp: 'iso-2022-jp', csiso2022jp: 'iso-2022-jp',
-    euckr: 'euc-kr', big5: 'big5', gb2312: 'gb18030', gbk: 'gbk', gb18030: 'gb18030',
-    utf8: 'utf-8', utf16: 'utf-16le', utf16le: 'utf-16le', utf16be: 'utf-16be',
-    latin1: 'windows-1252', iso88591: 'windows-1252', ascii: 'utf-8',
-  }
-  return map[key] ?? raw.toLowerCase()
-}
-
-/** Uint8Array結合 */
-function mergeChunks(chunks: Uint8Array[], totalLength: number): Uint8Array {
-  if (chunks.length === 1) return chunks[0]
-  const merged = new Uint8Array(totalLength)
-  let offset = 0
-  for (const chunk of chunks) {
-    merged.set(chunk, offset)
-    offset += chunk.length
-  }
-  return merged
 }
 
 /** HTMLエンティティをデコード */
