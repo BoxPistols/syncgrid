@@ -123,7 +123,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?
       async onDrop(e: React.DragEvent) {
         e.preventDefault()
         const data = dragDataRef.current
-        if (!data || !currentFolder || data.id === id) return
+        if (!data || data.id === id) return
 
         try {
           const rect = e.currentTarget.getBoundingClientRect()
@@ -139,24 +139,23 @@ export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?
               if (moveId !== id) await chrome.bookmarks.move(moveId, { parentId: id })
             }
           } else {
-            // 同一フォルダ内の並べ替え（__ungrouped__ は実際の親IDに解決）
-            const folderId = currentFolder.id === '__ungrouped__' ? await getRootId() : currentFolder.id
-            const [parentTree] = await chrome.bookmarks.getSubTree(folderId)
+            // ドロップターゲットの実際の親フォルダを取得（異なるフォルダ間のドロップに対応）
+            const [targetNode] = await chrome.bookmarks.get(id)
+            const parentId = targetNode.parentId!
+            const [parentTree] = await chrome.bookmarks.getSubTree(parentId)
             const chromeChildren = parentTree.children ?? []
 
             const targetChromeIdx = chromeChildren.findIndex((c) => c.id === id)
             if (targetChromeIdx < 0) return
 
+            // ソースが同じ親内にあるかチェック（異なる親ならindexのオフセット不要）
             const sourceChromeIdx = chromeChildren.findIndex((c) => c.id === data.id)
-            if (sourceChromeIdx < 0) return
-
             let moveIdx = mode === 'before' ? targetChromeIdx : targetChromeIdx + 1
-            if (sourceChromeIdx < moveIdx) {
+            if (sourceChromeIdx >= 0 && sourceChromeIdx < moveIdx) {
               moveIdx -= 1
             }
 
-            // 単一アイテムの並び替え（複数選択時のintoはフォルダ移動なのでここは単一のみ）
-            await chrome.bookmarks.move(data.id, { parentId: folderId, index: moveIdx })
+            await chrome.bookmarks.move(data.id, { parentId, index: moveIdx })
           }
         } catch (err) {
           console.error('[SyncGrid] Drop failed:', err)
