@@ -21,6 +21,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "watch": "vite build --watch",
     "zip": "npm run build && cd dist && zip -r ../syncgrid-extension.zip . && echo '✅ syncgrid-extension.zip created'",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
