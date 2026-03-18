@@ -87,7 +87,7 @@
 }
 
 html {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   line-height: 1.5;
   color: var(--sg-text);
@@ -1382,7 +1382,7 @@ button {
   color: var(--sg-text);
 }
 .sg-cheat__kbd {
-  font-family: monospace;
+  font-family: inherit;
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 4px;
@@ -1671,7 +1671,7 @@ button {
   background: var(--sg-bg-input);
   color: var(--sg-text-secondary);
   font-size: 12px;
-  font-family: monospace;
+  font-family: inherit;
   cursor: pointer;
   transition: border-color var(--sg-transition);
   min-width: 60px;
