@@ -158,6 +158,18 @@ export default function App() {
     [updateSettings],
   )
 
+  // --- OGP Refresh ---
+  const handleRefreshOgp = useCallback(async () => {
+    const { loadAllMeta, saveMeta } = await import('./utils/storage')
+    const meta = await loadAllMeta()
+    for (const [id, m] of Object.entries(meta)) {
+      if (m.ogp) {
+        await saveMeta(id, { ...m, ogp: undefined })
+      }
+    }
+    refresh()
+  }, [refresh])
+
   // --- Group/Folder CRUD ---
   const handleAddGroup = useCallback(() => { setCreatingGroup('tab'); setNewGroupName('') }, [])
 
@@ -382,7 +394,7 @@ export default function App() {
 
   return (
     <>
-      <TopBar query={query} onQueryChange={setQuery} theme={settings.theme} onToggleTheme={handleToggleTheme} onOpenSettings={() => setShowSettings(true)} onOpenShortcuts={() => setShowShortcutsPanel(true)} onOpenHelp={() => setShowHelp(true)} layout={settings.layout} cardSize={settings.cardSize} gridColumns={settings.gridColumns} onChangeLayout={handleChangeLayout} onChangeCardSize={(size) => updateSettings({ cardSize: size })} onChangeGridColumns={(cols) => updateSettings({ gridColumns: cols })} t={t} />
+      <TopBar query={query} onQueryChange={setQuery} theme={settings.theme} onToggleTheme={handleToggleTheme} onOpenSettings={() => setShowSettings(true)} onOpenShortcuts={() => setShowShortcutsPanel(true)} onOpenHelp={() => setShowHelp(true)} onRefreshOgp={handleRefreshOgp} layout={settings.layout} cardSize={settings.cardSize} gridColumns={settings.gridColumns} onChangeLayout={handleChangeLayout} onChangeCardSize={(size) => updateSettings({ cardSize: size })} onChangeGridColumns={(cols) => updateSettings({ gridColumns: cols })} t={t} />
 
       {/* Tab Bar */}
       <div className="sg-tabbar" role="tablist">

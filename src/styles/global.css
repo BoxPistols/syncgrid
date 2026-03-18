@@ -201,6 +201,13 @@ button {
   background: var(--sg-bg-card-hover);
   color: var(--sg-text);
 }
+.sg-btn--icon-label {
+  width: auto;
+  gap: 4px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 500;
+}
 
 /* =====================
    TOP BAR

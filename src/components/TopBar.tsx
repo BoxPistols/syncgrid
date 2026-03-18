@@ -12,6 +12,7 @@ interface Props {
   onOpenSettings: () => void
   onOpenShortcuts: () => void
   onOpenHelp: () => void
+  onRefreshOgp: () => void
   layout: LayoutMode
   cardSize: CardSize
   gridColumns: GridColumns
@@ -21,7 +22,7 @@ interface Props {
   t: Messages
 }
 
-export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSettings, onOpenShortcuts, onOpenHelp, layout, cardSize, gridColumns, onChangeLayout, onChangeCardSize, onChangeGridColumns, t }: Props) {
+export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSettings, onOpenShortcuts, onOpenHelp, onRefreshOgp, layout, cardSize, gridColumns, onChangeLayout, onChangeCardSize, onChangeGridColumns, t }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   return (
@@ -156,6 +157,10 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
           </select>
         )}
 
+        <button className="sg-btn--icon sg-btn--icon-label" onClick={onRefreshOgp} title={t.ogpPermissionRefresh}>
+          <Icon name="refresh" size={14} />
+          <span>OGP</span>
+        </button>
         <button className="sg-btn--icon" onClick={onToggleTheme} title={t.toggleTheme}>
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
         </button>
