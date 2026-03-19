@@ -2,6 +2,7 @@
  * SVGアイコンコンポーネント — 絵文字をSVGに統一
  * Lucide風のシンプルなアイコンセット
  */
+import { memo } from 'react'
 
 interface Props {
   name: IconName
@@ -75,7 +76,7 @@ const PATHS: Record<IconName, string> = {
   'help-circle': 'M12 22a10 10 0 110-20 10 10 0 010 20zM9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01',
 }
 
-export function Icon({ name, size = 16, className }: Props) {
+export const Icon = memo(function Icon({ name, size = 16, className }: Props) {
   const isStroke = ![
     'search',
     'sparkle',
@@ -100,4 +101,4 @@ export function Icon({ name, size = 16, className }: Props) {
       <path d={PATHS[name]} />
     </svg>
   )
-}
+})

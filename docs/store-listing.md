@@ -87,13 +87,13 @@ English, Japanese
 ## Privacy Practices Tab
 
 ### Single purpose description
-Replace the new tab page with a Speed Dial bookmark dashboard for organizing, searching, and syncing bookmarks.
+This extension replaces Chrome's new tab page with a Speed Dial bookmark dashboard that lets users visually organize, search, and manage their bookmarks.
 
 ### Host permission justification
-host_permissions for api.openai.com and generativelanguage.googleapis.com are used exclusively for the optional AI title generation and auto-tagging features. These APIs are only contacted when the user explicitly configures their own API key and triggers the feature. No data is sent otherwise.
+host_permissions for api.openai.com and generativelanguage.googleapis.com are required for the optional AI-assisted bookmark title generation and auto-tagging feature. These endpoints are contacted only when ALL of the following conditions are met: (1) the user has manually entered their own API key in the extension's settings, (2) the user explicitly triggers the AI title generation or auto-tagging action on a specific bookmark. No API calls are made at any other time. No user data, browsing history, or personal information is ever transmitted — only the bookmark URL and existing title are sent to generate an improved title or tags. API keys are stored exclusively in chrome.storage.local and are never synced or shared.
 
 ### Optional host permission justification
-optional_host_permissions for https://*/* and http://*/* are used by the background service worker to fetch page titles and OGP (Open Graph Protocol) metadata when users add bookmarks. This permission is requested at runtime only when the user first uses the title auto-fetch feature, and can be revoked at any time.
+optional_host_permissions for https://*/* and http://*/* are required to fetch page titles and Open Graph (OGP) metadata (title, description, image URL) from bookmarked websites. This is implemented via a background service worker that makes a single GET request to the bookmarked URL and parses the HTML response for meta OGP tags. This permission is: (1) requested at runtime via chrome.permissions.request() only when the user first initiates the metadata fetch feature, (2) scoped to fetching HTML content from URLs the user has explicitly bookmarked, (3) revocable at any time through Chrome's extension permissions UI. No content scripts are injected. No data is collected, stored remotely, or transmitted to any third party.
 
 ### Data usage disclosures
 - **Personally identifiable information**: No
