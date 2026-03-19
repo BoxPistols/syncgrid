@@ -17,6 +17,11 @@ export function useSettings() {
 
   useEffect(() => {
     loadSettings().then((s) => {
+      // dev環境: ?lang=en / ?lang=ja で言語オーバーライド
+      const urlLang = new URLSearchParams(window.location.search).get('lang')
+      if (urlLang === 'en' || urlLang === 'ja') {
+        s = { ...s, locale: urlLang }
+      }
       setSettings(s)
       setLoaded(true)
     })

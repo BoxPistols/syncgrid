@@ -4,7 +4,7 @@
     "description": "Extension name displayed in Chrome Web Store and browser UI"
   },
   "appDescription": {
-    "message": "Speed Dial bookmark manager for new tabs — organize, search & sync your bookmarks with a clean dashboard UI",
+    "message": "Replace your new tab with a beautiful Speed Dial dashboard. Organize bookmarks with drag & drop, tags, and zero tracking.",
     "description": "Extension description displayed in Chrome Web Store (max 132 chars)"
   }
 }

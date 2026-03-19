@@ -11,7 +11,7 @@ export const ja = {
   // Toolbar
   back: '戻る',
   addBookmark: (modKey: string) => `＋ 追加 (${modKey}N)`,
-  newFolder: '📁 新規フォルダ',
+  newFolder: '新規フォルダ',
   cancel: 'キャンセル',
   // Search
   searchResults: (q: string, n: number) => `「${q}」の検索結果（${n}件）`,
@@ -93,7 +93,7 @@ export const ja = {
   ogpPermissionDesc: 'サイトのOGP画像・説明文を自動取得します。ホストへのアクセス権限が必要です。',
   ogpPermissionGrant: '権限を許可',
   ogpPermissionGranted: '許可済み',
-  ogpPermissionRefresh: 'OGPを再取得',
+  ogpPermissionRefresh: 'プレビューを再取得',
   // Security
   security: 'セキュリティ',
   securityDesc:
