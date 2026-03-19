@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Icon } from './Icon'
+import { isComposing } from '../utils/keyboard'
 import type { Messages } from '../i18n'
 
 interface TourStep {
@@ -54,6 +55,7 @@ export function OnboardingTour({ steps, onComplete, t }: Props) {
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      if (isComposing(e)) return
       if (e.key === 'Escape') handleSkip()
       if (e.key === 'ArrowRight' || e.key === 'Enter') handleNext()
       if (e.key === 'ArrowLeft' && currentStep > 0) setCurrentStep((s) => s - 1)

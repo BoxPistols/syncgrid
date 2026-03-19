@@ -4,6 +4,7 @@ import { formatRelativeDate } from '../utils/date'
 import { UrlPreview } from './UrlPreview'
 import type { SyncGridItem, ReadStatus, OgpData } from '../types'
 import { Icon } from './Icon'
+import { isComposing } from '../utils/keyboard'
 import type { DragHandlers } from '../hooks/useDragReorder'
 import type { Messages } from '../i18n'
 
@@ -88,6 +89,7 @@ export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dr
           onOpen?.(item.id)
         }}
         onKeyDown={(e) => {
+          if (isComposing(e)) return
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
             window.open(item.url, '_blank', 'noopener,noreferrer')

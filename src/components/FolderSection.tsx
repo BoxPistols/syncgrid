@@ -76,6 +76,7 @@ export const FolderSection = memo(function FolderSection({
         }}
         onKeyDown={(e) => {
           if (isRenaming) return
+          if (isComposing(e)) return
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
             onToggleCollapse(group.id)
