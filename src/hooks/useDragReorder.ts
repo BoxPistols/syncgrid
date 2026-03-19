@@ -215,53 +215,6 @@ export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?
     [],
   )
 
-  // --- Breadcrumb / back button drop handlers ---
-  const getBreadcrumbDropHandlers = useCallback(
-    (parentId: string): ZoneDropHandlers => ({
-      onDragOver(e: React.DragEvent) {
-        const data = dragDataRef.current
-        if (!data) return
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
-        setDragState((prev) => {
-          if (prev.dropBreadcrumbId === parentId) return prev
-          return { ...prev, dropTargetId: null, dropMode: null, dropTabId: null, dropBreadcrumbId: parentId }
-        })
-      },
-
-      onDragEnter(e: React.DragEvent) {
-        if (!dragDataRef.current) return
-        e.preventDefault()
-      },
-
-      onDragLeave(e: React.DragEvent) {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-          setDragState((prev) => {
-            if (prev.dropBreadcrumbId !== parentId) return prev
-            return { ...prev, dropBreadcrumbId: null }
-          })
-        }
-      },
-
-      async onDrop(e: React.DragEvent) {
-        e.preventDefault()
-        const data = dragDataRef.current
-        if (!data) return
-
-        try {
-          const targetId = parentId === '__ungrouped__' ? await getRootId() : parentId
-          await chrome.bookmarks.move(data.id, { parentId: targetId })
-        } catch (err) {
-          console.error('[SyncGrid] Breadcrumb drop failed:', err)
-        } finally {
-          dragDataRef.current = null
-          setDragState(INITIAL_STATE)
-        }
-      },
-    }),
-    [],
-  )
-
   // --- Tab unified handlers (タブ自体のD&D + アイテム→タブへのドロップを統合) ---
   const getTabHandlers = useCallback(
     (tabId: string) => ({
@@ -351,6 +304,5 @@ export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?
     [selectedIds],
   )
 
-  return { dragState, getDragHandlers, getTabDropHandlers, getTabHandlers, getBreadcrumbDropHandlers }
-  // NOTE: getBreadcrumbDropHandlers はパンくず廃止後も互換性のため残す
+  return { dragState, getDragHandlers, getTabDropHandlers, getTabHandlers }
 }
