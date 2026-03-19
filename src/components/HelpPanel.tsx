@@ -16,6 +16,24 @@ const FEATURES: { icon: IconName; titleKey: keyof Messages; descKey: keyof Messa
   { icon: 'refresh', titleKey: 'featureSync', descKey: 'featureSyncDesc' },
 ]
 
+const QUICK_START: { titleKey: keyof Messages; descKey: keyof Messages }[] = [
+  { titleKey: 'helpQsTabs', descKey: 'helpQsTabsDesc' },
+  { titleKey: 'helpQsAdd', descKey: 'helpQsAddDesc' },
+  { titleKey: 'helpQsFolders', descKey: 'helpQsFoldersDesc' },
+  { titleKey: 'helpQsDrag', descKey: 'helpQsDragDesc' },
+]
+
+const FEATURE_REFS: { icon: IconName; titleKey: keyof Messages; descKey: keyof Messages }[] = [
+  { icon: 'sparkle', titleKey: 'helpRefLayout', descKey: 'helpRefLayoutDesc' },
+  { icon: 'search', titleKey: 'helpRefSearch', descKey: 'helpRefSearchDesc' },
+  { icon: 'tag', titleKey: 'helpRefFilter', descKey: 'helpRefFilterDesc' },
+  { icon: 'link', titleKey: 'helpRefOgp', descKey: 'helpRefOgpDesc' },
+  { icon: 'keyboard', titleKey: 'helpRefShortcuts', descKey: 'helpRefShortcutsDesc' },
+  { icon: 'bot', titleKey: 'helpRefAi', descKey: 'helpRefAiDesc' },
+  { icon: 'download', titleKey: 'helpRefExport', descKey: 'helpRefExportDesc' },
+  { icon: 'refresh', titleKey: 'helpRefSync', descKey: 'helpRefSyncDesc' },
+]
+
 export function HelpPanel({ onClose, t }: Props) {
   const trapRef = useFocusTrap<HTMLDivElement>()
 
@@ -32,7 +50,7 @@ export function HelpPanel({ onClose, t }: Props) {
           if (e.key === 'Escape') onClose()
         }}
       >
-        {/* Hero — ヘッダー不要、閉じるボタンだけ浮かせる */}
+        {/* Hero */}
         <button className="sg-help-hero__close" onClick={onClose} aria-label={t.close}>
           <Icon name="close" size={12} />
         </button>
@@ -49,7 +67,7 @@ export function HelpPanel({ onClose, t }: Props) {
         </div>
 
         <div className="sg-modal__body sg-help-panel">
-          {/* Feature Grid */}
+          {/* Feature highlights */}
           <div className="sg-help-features">
             {FEATURES.map(({ icon, titleKey, descKey }) => (
               <div key={titleKey} className="sg-help-feature">
@@ -60,6 +78,44 @@ export function HelpPanel({ onClose, t }: Props) {
                 <div className="sg-help-feature__desc">{t[descKey] as string}</div>
               </div>
             ))}
+          </div>
+
+          {/* Quick Start */}
+          <div className="sg-help-section">
+            <div className="sg-help-section__header">
+              <Icon name="help-circle" size={16} />
+              <h3 className="sg-help-section__title">{t.helpQuickStart}</h3>
+            </div>
+            <div className="sg-help-steps">
+              {QUICK_START.map(({ titleKey, descKey }, i) => (
+                <div key={titleKey} className="sg-help-step">
+                  <span className="sg-help-step__number">{i + 1}</span>
+                  <div>
+                    <div className="sg-help-step__title">{t[titleKey] as string}</div>
+                    <div className="sg-help-step__desc">{t[descKey] as string}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Feature Reference */}
+          <div className="sg-help-section">
+            <div className="sg-help-section__header">
+              <Icon name="grid" size={16} />
+              <h3 className="sg-help-section__title">{t.helpFeatureRef}</h3>
+            </div>
+            <div className="sg-help-features">
+              {FEATURE_REFS.map(({ icon, titleKey, descKey }) => (
+                <div key={titleKey} className="sg-help-feature">
+                  <div className="sg-help-feature__icon">
+                    <Icon name={icon} size={16} />
+                  </div>
+                  <div className="sg-help-feature__title">{t[titleKey] as string}</div>
+                  <div className="sg-help-feature__desc">{t[descKey] as string}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Security & Privacy */}

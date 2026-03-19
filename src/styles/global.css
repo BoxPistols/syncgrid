@@ -1556,8 +1556,62 @@ button {
   letter-spacing: 0.02em;
 }
 .sg-help-panel {
-  max-height: 50vh;
+  max-height: 55vh;
   overflow-y: auto;
+}
+.sg-help-section {
+  margin-bottom: 20px;
+}
+.sg-help-section__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--sg-text-secondary);
+}
+.sg-help-section__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sg-text);
+}
+.sg-help-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sg-help-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+.sg-help-step:hover {
+  background: var(--sg-bg-input);
+}
+.sg-help-step__number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--sg-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sg-help-step__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sg-text);
+  margin-bottom: 2px;
+}
+.sg-help-step__desc {
+  font-size: 11px;
+  color: var(--sg-text-secondary);
+  line-height: 1.5;
 }
 .sg-help-panel__section {
   margin-bottom: 16px;
