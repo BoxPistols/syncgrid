@@ -13,7 +13,7 @@ export function getAppVersion(): string {
   try {
     return chrome.runtime.getManifest().version
   } catch {
-    return '1.2.0'
+    return '2.0.0'
   }
 }
 

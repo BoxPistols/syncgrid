@@ -18,18 +18,21 @@ SyncGrid replaces your Chrome new tab page with a fast, beautiful Speed Dial boo
 
 **Features:**
 - Organize bookmarks into folders and groups with drag & drop
+- Accordion folder sections — see folder contents inline without navigating, expand/collapse individually or all at once
 - Search bookmarks instantly from the top bar
 - Light / Dark / System theme with smooth transitions
 - Japanese & English interface
 - Export & import bookmarks as JSON
 - Local folder sync — back up to Google Drive, OneDrive, iCloud, or Dropbox via a local synced folder
-- Multiple layouts: Card, List, Compact — switch with ⌘1/2/3
-- URL preview on hover — OGP images, descriptions, site info
-- Tags & filtering — organize bookmarks with tags, filter by tag
-- Sort by name, date, or domain
+- 3 layouts: Magazine (grid), Card (large), List (rows) — switch with ⌘1/2/3
+- Rich OGP previews — images, descriptions, site info fetched via background service worker
+- Tags & filtering — organize bookmarks with tags, filter by tag or read status
+- Sort by name, date, domain, or last read
 - AI-powered title generation & auto-tagging (optional) — bring your own OpenAI or Gemini API key
-- Customizable keyboard shortcuts
+- Dedicated keyboard shortcuts panel with customizable bindings
+- Built-in help panel with feature overview and security info
 - Bulk select & delete with Cmd/Ctrl+Click
+- Cross-folder drag & drop — move bookmarks between folders seamlessly
 
 **Privacy first:**
 - Zero telemetry — no analytics, no tracking, no external data collection
@@ -50,18 +53,21 @@ SyncGrid は Chrome の新規タブページを高速で美しい Speed Dial ブ
 
 **機能:**
 - ドラッグ＆ドロップでブックマークをフォルダ・グループに整理
+- アコーディオン型フォルダセクション — フォルダの中身をインラインで可視化、個別/一括で展開・折りたたみ
 - トップバーからブックマークを即座に検索
 - ライト / ダーク / システムテーマ（滑らかなトランジション）
 - 日本語・英語対応
 - JSON形式でブックマークのエクスポート＆インポート
 - ローカルフォルダ同期 — Google Drive, OneDrive, iCloud, Dropbox 等のクラウドフォルダ経由でバックアップ
-- 複数レイアウト: カード / リスト / コンパクト — ⌘1/2/3で切替
-- URLホバープレビュー — OGP画像・説明・サイト情報を表示
-- タグ＆フィルタリング — タグでブックマークを整理・絞り込み
-- 名前・日付・ドメインでソート
+- 3つのレイアウト: マガジン（グリッド）/ カード（大）/ リスト（横長行）— ⌘1/2/3で切替
+- リッチOGPプレビュー — background service worker経由でOGP画像・説明・サイト情報を自動取得
+- タグ＆フィルタリング — タグでブックマークを整理、タグ・閲覧状態で絞り込み
+- 名前・日付・ドメイン・最終閲覧順でソート
 - AI タイトル自動生成＆自動タグ付け（オプション）— OpenAI / Gemini API キーで利用
-- カスタマイズ可能なキーボードショートカット
+- 専用キーボードショートカット設定パネル（カスタマイズ可能）
+- ヘルプパネル内蔵（機能概要・セキュリティ情報）
 - 複数選択＆一括削除（Cmd/Ctrl+Click）
+- フォルダ間ドラッグ＆ドロップ — 異なるフォルダ間でブックマークをシームレスに移動
 
 **プライバシー重視:**
 - ゼロテレメトリ — アナリティクス、トラッキング、外部データ収集一切なし
@@ -87,7 +93,7 @@ Replace the new tab page with a Speed Dial bookmark dashboard for organizing, se
 host_permissions for api.openai.com and generativelanguage.googleapis.com are used exclusively for the optional AI title generation and auto-tagging features. These APIs are only contacted when the user explicitly configures their own API key and triggers the feature. No data is sent otherwise.
 
 ### Optional host permission justification
-optional_host_permissions for https://*/* and http://*/* are used to fetch page titles and OGP (Open Graph Protocol) metadata when users add bookmarks. This permission is requested at runtime only when the user first uses the title auto-fetch feature, and can be revoked at any time.
+optional_host_permissions for https://*/* and http://*/* are used by the background service worker to fetch page titles and OGP (Open Graph Protocol) metadata when users add bookmarks. This permission is requested at runtime only when the user first uses the title auto-fetch feature, and can be revoked at any time.
 
 ### Data usage disclosures
 - **Personally identifiable information**: No
@@ -102,8 +108,7 @@ optional_host_permissions for https://*/* and http://*/* are used to fetch page 
 
 ---
 
-## Support / サポート
+## Support
 
 SyncGrid is free and open source. If you find it useful:
 - GitHub Sponsors: https://github.com/sponsors/BoxPistols
-- Buy Me a Coffee: (URLを設定後に追記)
