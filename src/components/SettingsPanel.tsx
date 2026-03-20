@@ -320,6 +320,7 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
             <div className="sg-settings__section">
               <h3 className="sg-settings__label"><Icon name="bot" size={14} /> {t.aiSettings}</h3>
               <p className="sg-settings__desc">{t.aiDesc}</p>
+              <p className="sg-settings__desc">{t.aiFeatureList}</p>
 
               {/* Provider */}
               <label className="sg-label">{t.aiProvider}</label>

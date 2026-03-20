@@ -16,6 +16,7 @@ import { FolderSection } from './components/FolderSection'
 import { EditBookmarkModal } from './components/EditBookmarkModal'
 import { ContextMenu, type MenuItem } from './components/ContextMenu'
 import { AddBookmarkForm } from './components/AddBookmarkForm'
+import { AiCategorizeModal } from './components/AiCategorizeModal'
 import { SettingsPanel } from './components/SettingsPanel'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { TrashPanel } from './components/TrashPanel'
@@ -111,6 +112,7 @@ export default function App() {
   const [showTrash, setShowTrash] = useState(false)
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [showAiCategorize, setShowAiCategorize] = useState(false)
   const [showTour, setShowTour] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
 
@@ -543,6 +545,11 @@ export default function App() {
                   {allFolderIds.every((id) => collapsedIds.has(id)) ? t.expandAll : t.collapseAll}
                 </button>
               )}
+              {settings.ai.provider !== 'none' && nav.currentFolder && nav.currentFolder.items.length > 0 && (
+                <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAiCategorize(true)}>
+                  <Icon name="bot" size={12} /> {t.aiCategorizeBtn}
+                </button>
+              )}
               <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setShowAddForm(!showAddForm)}>{showAddForm ? t.cancel : t.addBookmark('Ctrl')}</button>
               <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => { setCreatingGroup('subfolder'); setNewGroupName('') }}>{t.newFolder}</button>
             </div>
@@ -597,6 +604,16 @@ export default function App() {
       {showTrash && (<TrashPanel onClose={() => setShowTrash(false)} onRestored={refresh} t={t} locale={settings.locale} />)}
       {showShortcutsPanel && (<KeyboardShortcutsPanel settings={settings} onUpdateSettings={updateSettings} onClose={() => setShowShortcutsPanel(false)} t={t} />)}
       {showHelp && (<HelpPanel onClose={() => setShowHelp(false)} t={t} />)}
+      {showAiCategorize && nav.currentFolder && (
+        <AiCategorizeModal
+          items={nav.currentFolder.items}
+          parentFolder={nav.currentFolder}
+          aiSettings={settings.ai}
+          onDone={() => { setShowAiCategorize(false); refresh() }}
+          onClose={() => setShowAiCategorize(false)}
+          t={t}
+        />
+      )}
       {showTour && (<OnboardingTour steps={[
         { target: '.sg-topbar__search', title: t.featureSearch, description: t.tourSearch },
         { target: '.sg-layout-switcher', title: t.featureLayout, description: t.tourLayout, position: 'bottom' },
