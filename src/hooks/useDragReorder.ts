@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
 import { getRootId } from '../utils/bookmarks'
-import type { SyncGridGroup } from '../types'
 
 type DragItemType = 'bookmark' | 'folder' | 'tab'
 type DropMode = 'before' | 'after' | 'into' | null
@@ -11,7 +10,6 @@ export interface DragState {
   dropTargetId: string | null
   dropMode: DropMode
   dropTabId: string | null
-  dropBreadcrumbId: string | null
 }
 
 export interface DragHandlers {
@@ -24,12 +22,6 @@ export interface DragHandlers {
   onDrop: (e: React.DragEvent) => void
 }
 
-export interface ZoneDropHandlers {
-  onDragOver: (e: React.DragEvent) => void
-  onDragEnter: (e: React.DragEvent) => void
-  onDragLeave: (e: React.DragEvent) => void
-  onDrop: (e: React.DragEvent) => void
-}
 
 function calcDropMode(
   relX: number,
@@ -55,10 +47,9 @@ const INITIAL_STATE: DragState = {
   dropTargetId: null,
   dropMode: null,
   dropTabId: null,
-  dropBreadcrumbId: null,
 }
 
-export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?: Set<string>) {
+export function useDragReorder(selectedIds?: Set<string>) {
   const [dragState, setDragState] = useState<DragState>(INITIAL_STATE)
 
   const dragDataRef = useRef<{
@@ -101,7 +92,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?
 
         setDragState((prev) => {
           if (prev.dropTargetId === id && prev.dropMode === mode) return prev
-          return { ...prev, dropTargetId: id, dropMode: mode, dropTabId: null, dropBreadcrumbId: null }
+          return { ...prev, dropTargetId: id, dropMode: mode, dropTabId: null }
         })
       },
 
@@ -165,54 +156,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?
         }
       },
     }),
-    [currentFolder, selectedIds],
-  )
-
-  // --- Tab bar drop handlers ---
-  const getTabDropHandlers = useCallback(
-    (tabId: string): ZoneDropHandlers => ({
-      onDragOver(e: React.DragEvent) {
-        const data = dragDataRef.current
-        if (!data) return
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
-        setDragState((prev) => {
-          if (prev.dropTabId === tabId) return prev
-          return { ...prev, dropTargetId: null, dropMode: null, dropTabId: tabId, dropBreadcrumbId: null }
-        })
-      },
-
-      onDragEnter(e: React.DragEvent) {
-        if (!dragDataRef.current) return
-        e.preventDefault()
-      },
-
-      onDragLeave(e: React.DragEvent) {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-          setDragState((prev) => {
-            if (prev.dropTabId !== tabId) return prev
-            return { ...prev, dropTabId: null }
-          })
-        }
-      },
-
-      async onDrop(e: React.DragEvent) {
-        e.preventDefault()
-        const data = dragDataRef.current
-        if (!data) return
-
-        try {
-          const targetId = tabId === '__ungrouped__' ? await getRootId() : tabId
-          await chrome.bookmarks.move(data.id, { parentId: targetId })
-        } catch (err) {
-          console.error('[SyncGrid] Tab drop failed:', err)
-        } finally {
-          dragDataRef.current = null
-          setDragState(INITIAL_STATE)
-        }
-      },
-    }),
-    [],
+    [selectedIds],
   )
 
   // --- Tab unified handlers (タブ自体のD&D + アイテム→タブへのドロップを統合) ---
@@ -245,7 +189,7 @@ export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?
         e.dataTransfer.dropEffect = 'move'
         setDragState((prev) => {
           if (prev.dropTabId === tabId) return prev
-          return { ...prev, dropTargetId: null, dropMode: null, dropTabId: tabId, dropBreadcrumbId: null }
+          return { ...prev, dropTargetId: null, dropMode: null, dropTabId: tabId }
         })
       },
 
@@ -304,5 +248,5 @@ export function useDragReorder(currentFolder: SyncGridGroup | null, selectedIds?
     [selectedIds],
   )
 
-  return { dragState, getDragHandlers, getTabDropHandlers, getTabHandlers }
+  return { dragState, getDragHandlers, getTabHandlers }
 }

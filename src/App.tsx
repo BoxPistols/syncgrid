@@ -101,7 +101,6 @@ export default function App() {
 
   // --- Drag & Drop ---
   const { dragState, getDragHandlers, getTabHandlers } = useDragReorder(
-    nav.currentFolder,
     selectedIds,
   )
 
