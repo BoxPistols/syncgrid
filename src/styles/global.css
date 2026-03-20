@@ -1201,6 +1201,23 @@ button {
 }
 
 /* =====================
+   STALE REMINDER BANNER
+   ===================== */
+.sg-stale-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+  background: var(--sg-accent-soft);
+  border-bottom: 1px solid var(--sg-accent);
+  font-size: 13px;
+  color: var(--sg-accent);
+}
+.sg-stale-banner > span {
+  flex: 1;
+}
+
+/* =====================
    FOLDER SECTION (Accordion)
    ===================== */
 .sg-section {

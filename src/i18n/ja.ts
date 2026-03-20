@@ -197,6 +197,18 @@ export const ja = {
   helpTagline: 'ブックマークを、',
   helpTaglineAccent: 'もっとスマートに。',
   helpPrivacy: 'セキュリティ & プライバシー',
+  // 積読サジェスト
+  staleReminder: (n: number) => `${n}件の「あとで読む」が1週間以上放置されています`,
+  staleReminderAction: '確認する',
+  staleReminderDismiss: '非表示',
+  // AI分類
+  aiCategorizeBtn: 'AI分類',
+  aiCategorizing: '分類中…',
+  aiCategorizeResult: 'AI分類結果',
+  aiCategorizeApply: '適用する',
+  aiCategorizeEmpty: '分類できるブックマークがありません',
+  aiCategorizeError: '分類に失敗しました',
+  aiFeatureList: 'AIでできること: タイトル整理 / 自動タグ付け / フォルダ自動分類',
   // Help — クイックスタート
   helpQuickStart: 'クイックスタート',
   helpQsTabs: 'タブの使い方',

@@ -67,6 +67,25 @@ export default function App() {
     return ids
   }, [nav.currentFolder])
 
+  // --- 積読サジェスト ---
+  const STALE_DAYS = 7
+  const [staleDismissedAt, setStaleDismissedAt] = useState(0)
+  const staleItems = useMemo(() => {
+    const cutoff = Date.now() - STALE_DAYS * 86400000
+    const items: SyncGridItem[] = []
+    for (const g of flattenGroups(groups)) {
+      for (const item of g.items) {
+        const meta = allMeta[item.id]
+        if (meta?.status === 'later') {
+          const lastTouch = meta.lastReadAt ?? item.dateAdded ?? 0
+          if (lastTouch < cutoff) items.push(item)
+        }
+      }
+    }
+    return items
+  }, [groups, allMeta])
+  const showStaleReminder = staleItems.length > 0 && Date.now() - staleDismissedAt > 86400000
+
   // --- Auto Sync ---
   const handleSynced = useCallback(
     (syncedAt: string) => updateSettings({ lastSyncedAt: syncedAt }),
@@ -440,6 +459,20 @@ export default function App() {
         )}
         <button className="sg-tab sg-tab--add" onClick={() => setShowTrash(true)} title={t.trash} aria-label={t.trash}><Icon name="trash" size={14} /></button>
       </div>
+
+      {/* 積読サジェスト */}
+      {showStaleReminder && (
+        <div className="sg-stale-banner">
+          <Icon name="pin" size={14} />
+          <span>{t.staleReminder(staleItems.length)}</span>
+          <button className="sg-btn sg-btn--sm sg-btn--primary" onClick={() => setFilterStatus('later')}>
+            {t.staleReminderAction}
+          </button>
+          <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setStaleDismissedAt(Date.now())}>
+            {t.staleReminderDismiss}
+          </button>
+        </div>
+      )}
 
       {/* Selection bar */}
       {selectedIds.size > 0 && (

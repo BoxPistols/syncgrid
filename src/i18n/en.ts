@@ -171,6 +171,18 @@ export const en = {
   helpTagline: 'Bookmarks,',
   helpTaglineAccent: 'reimagined.',
   helpPrivacy: 'Security & Privacy',
+  // Stale reminder
+  staleReminder: (n: number) => `${n} "Read Later" bookmarks haven't been touched for over a week`,
+  staleReminderAction: 'Review',
+  staleReminderDismiss: 'Dismiss',
+  // AI categorize
+  aiCategorizeBtn: 'AI Categorize',
+  aiCategorizing: 'Categorizing…',
+  aiCategorizeResult: 'AI categorization',
+  aiCategorizeApply: 'Apply',
+  aiCategorizeEmpty: 'No bookmarks to categorize',
+  aiCategorizeError: 'Categorization failed',
+  aiFeatureList: 'AI can: clean up titles / auto-tag / auto-categorize into folders',
   // Help — Quick Start
   helpQuickStart: 'Quick start',
   helpQsTabs: 'Using tabs',
