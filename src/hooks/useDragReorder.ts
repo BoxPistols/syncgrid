@@ -26,16 +26,22 @@ export interface DragHandlers {
 function calcDropMode(
   relX: number,
   targetType: DragItemType,
+  dragType: DragItemType,
   dragId: string,
   targetId: string,
   selectedIds?: Set<string>,
 ): DropMode {
+  if (dragId === targetId) return null
+  // フォルダ同士 → 並べ替え（before/after）を優先
+  if (dragType === 'folder' && targetType === 'folder') {
+    return relX < 0.5 ? 'before' : 'after'
+  }
   // 複数選択中のアイテムをフォルダにドロップ → 常にinto
-  if (targetType === 'folder' && dragId !== targetId && selectedIds && selectedIds.size > 1) {
+  if (targetType === 'folder' && selectedIds && selectedIds.size > 1) {
     return 'into'
   }
-  if (targetType === 'folder' && dragId !== targetId) {
-    // フォルダへのドロップ判定を緩くする（中央60%をintoに）
+  // ブックマーク → フォルダ: 中央60%をintoに
+  if (targetType === 'folder') {
     return relX < 0.2 ? 'before' : relX > 0.8 ? 'after' : 'into'
   }
   return relX < 0.5 ? 'before' : 'after'
@@ -88,7 +94,7 @@ export function useDragReorder(selectedIds?: Set<string>) {
 
         const rect = e.currentTarget.getBoundingClientRect()
         const relX = (e.clientX - rect.left) / rect.width
-        const mode = calcDropMode(relX, type, data.id, id, selectedIds)
+        const mode = calcDropMode(relX, type, data.type, data.id, id, selectedIds)
 
         setDragState((prev) => {
           if (prev.dropTargetId === id && prev.dropMode === mode) return prev
@@ -119,7 +125,7 @@ export function useDragReorder(selectedIds?: Set<string>) {
         try {
           const rect = e.currentTarget.getBoundingClientRect()
           const relX = (e.clientX - rect.left) / rect.width
-          const mode = calcDropMode(relX, type, data.id, id, selectedIds)
+          const mode = calcDropMode(relX, type, data.type, data.id, id, selectedIds)
 
           // 複数選択中のアイテムがドラッグされた場合、全選択アイテムを移動
           const idsToMove =

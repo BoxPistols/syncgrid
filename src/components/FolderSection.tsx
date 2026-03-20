@@ -59,6 +59,9 @@ export const FolderSection = memo(function FolderSection({
   const [editValue, setEditValue] = useState(group.title)
   const folderDragHandlers = getDragHandlers(group.id, 'folder')
   const isDropTarget = dragState.dropTargetId === group.id && dragState.dropMode === 'into'
+  const isDropBefore = dragState.dropTargetId === group.id && dragState.dropMode === 'before'
+  const isDropAfter = dragState.dropTargetId === group.id && dragState.dropMode === 'after'
+  const isDragging = dragState.draggingId === group.id
 
   const handleSubmitRename = () => {
     const name = editValue.trim()
@@ -66,11 +69,14 @@ export const FolderSection = memo(function FolderSection({
   }
 
   return (
-    <section className="sg-section" data-depth={depth}>
+    <section className={`sg-section ${isDragging ? 'sg-section--dragging' : ''}`} data-depth={depth}>
       <div
-        className={`sg-section__header ${isDropTarget ? 'sg-section__header--drop-target' : ''}`}
+        className={`sg-section__header ${isDropTarget ? 'sg-section__header--drop-target' : ''} ${isDropBefore ? 'sg-section__header--drop-before' : ''} ${isDropAfter ? 'sg-section__header--drop-after' : ''}`}
         role="button"
         tabIndex={0}
+        draggable
+        onDragStart={folderDragHandlers.onDragStart}
+        onDragEnd={folderDragHandlers.onDragEnd}
         onClick={() => {
           if (!isRenaming) onToggleCollapse(group.id)
         }}

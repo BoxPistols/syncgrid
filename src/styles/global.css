@@ -1277,10 +1277,19 @@ button {
   background: var(--sg-bg-card-hover);
   color: var(--sg-text);
 }
+.sg-section--dragging {
+  opacity: 0.4;
+}
 .sg-section__header--drop-target {
   outline: 2px solid var(--sg-accent);
   outline-offset: -2px;
   background: var(--sg-accent-soft);
+}
+.sg-section__header--drop-before {
+  box-shadow: 0 -2px 0 0 var(--sg-accent);
+}
+.sg-section__header--drop-after {
+  box-shadow: 0 2px 0 0 var(--sg-accent);
 }
 .sg-section__content {
   padding: 4px 0 8px;
