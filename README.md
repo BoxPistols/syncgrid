@@ -29,7 +29,7 @@ SyncGridは、Chromeの新しいタブページをSpeed Dialスタイルのブ�
 |------|------|
 | **Speed Dial UI** | フォルダとブックマークをカードグリッドで表示 |
 | **タブナビゲーション** | トップレベルのグループを水平タブで切り替え |
-| **フォルダドリルダウン** | フォルダをクリックして中に入り、パンくずリストで戻る |
+| **アコーディオンフォルダ** | フォルダの中身をインライン展開・折りたたみ。ツリー構造を可視化 |
 | **検索** | 全ブックマークのタイトル・URLを横断する即時検索 |
 | **テーマ** | ダーク / ライト / システム連動 の3モード |
 | **エクスポート / インポート** | SHA-256チェックサム検証付きJSONバックアップ |
@@ -72,14 +72,28 @@ npm run test       # テスト実行（watchモード）
 npm run test:run   # テスト実行（1回のみ）
 ```
 
-**開発サーバーについて:**
-`npm run dev` は localhost:5173 で開発サーバーを起動します。Chrome拡張APIはlocalhost環境では利用できないため、`src/utils/chromeMock.ts` がモックデータを提供します。UIの見た目やインタラクションの確認に使用し、実際のブックマーク操作の検証はChromeに拡張として読み込んで行ってください。
+**確認フロー（devプレビュー vs Chrome拡張）:**
 
-**Chrome拡張としてのビルド・運用:**
+| | `npm run dev` (localhost) | `npm run build` (dist/) |
+|---|---|---|
+| 用途 | UIデザイン・レイアウトの確認 | 実際のブックマーク操作の検証 |
+| Chrome API | モック（ダミーデータ） | 本物（実際のブックマーク） |
+| 更新 | HMR（ファイル保存で即反映） | ビルドし直し＋拡張リロード |
+| 言語切替 | `?lang=en` パラメータで切替可 | 設定パネルから変更 |
+
+**開発サーバーでの確認:**
+```bash
+npm run dev                    # localhost:5173 で起動
+# ブラウザで http://localhost:5173/ を開く
+# 英語UIの確認: http://localhost:5173/?lang=en
+```
+Chrome拡張APIはlocalhost環境では利用できないため、`src/utils/chromeMock.ts` がモックデータを提供します。
+
+**Chrome拡張としてのビルド・確認:**
 ```bash
 npm run build      # dist/ にビルド出力
 # chrome://extensions/ → 「パッケージ化されていない拡張機能を読み込む」→ dist/ を選択
-# コード変更後は再度 npm run build → 拡張ページで「更新」ボタンをクリック
+# コード変更後: npm run build → 拡張を削除して再読み込み（アイコン等のキャッシュ対策）
 ```
 
 **配布用パッケージ作成:**
@@ -113,7 +127,7 @@ SyncGridはクラウドAPIに直接接続しません。**File System Access API
 URLからブックマークのタイトルをAIで自動生成する機能です。デフォルトでは無効になっています。
 
 **対応プロバイダ:**
-- **OpenAI**: GPT-4.1 Nano / GPT-4.1 Mini / GPT-5 Nano / GPT-5 Mini
+- **OpenAI**: GPT-5.4 Nano / GPT-5.4 Mini / GPT-5 Nano / GPT-5 Mini
 - **Gemini**: Gemini 2.5 Flash / Gemini 2.5 Pro
 
 **設定手順:**
@@ -290,7 +304,7 @@ Zero telemetry. Zero analytics. Zero external tracking.
 |---------|-------------|
 | **Speed Dial UI** | Visual card grid with folders and bookmarks |
 | **Tab Navigation** | Top-level groups as horizontal tabs |
-| **Folder Drill-down** | Click folders to navigate, breadcrumb to go back |
+| **Accordion Folders** | Expand/collapse folders inline with tree visualization |
 | **Search** | Instant search across all bookmarks |
 | **Dark / Light / System** | Full theme support |
 | **Export / Import** | JSON backup with SHA-256 integrity verification |
@@ -333,20 +347,34 @@ npm run test       # Run tests (watch mode)
 npm run test:run   # Run tests once
 ```
 
-**About the dev server:**
-`npm run dev` starts a dev server at localhost:5173. Since Chrome extension APIs are not available in localhost, `src/utils/chromeMock.ts` provides mock data. Use the dev server for visual and interaction checks. For testing actual bookmark operations, load the extension into Chrome.
+**Verification flow (dev preview vs Chrome extension):**
 
-**Building and running as a Chrome extension:**
+| | `npm run dev` (localhost) | `npm run build` (dist/) |
+|---|---|---|
+| Purpose | UI design & layout checks | Testing actual bookmark operations |
+| Chrome API | Mock (dummy data) | Real (actual bookmarks) |
+| Updates | HMR (instant on file save) | Rebuild + extension reload |
+| Language | `?lang=en` URL parameter | Settings panel |
+
+**Dev server:**
+```bash
+npm run dev                    # Starts at localhost:5173
+# Open http://localhost:5173/ in browser
+# English UI: http://localhost:5173/?lang=en
+```
+Chrome extension APIs are unavailable on localhost; `src/utils/chromeMock.ts` provides mock data.
+
+**Chrome extension build & verify:**
 ```bash
 npm run build      # Output to dist/
 # chrome://extensions/ → "Load unpacked" → select dist/
-# After code changes: npm run build → click "Update" on the extensions page
+# After changes: npm run build → remove and re-load extension (clears icon cache)
 ```
 
-**Creating a distribution package:**
+**Distribution package:**
 ```bash
 npm run zip        # Zips dist/ → generates syncgrid-extension.zip
-# Use for Chrome Web Store upload or manual distribution
+# For Chrome Web Store upload or manual distribution
 ```
 
 ### Cloud Sync -- How It Works
@@ -374,7 +402,7 @@ SyncGrid does not connect to any cloud API directly. It uses the **File System A
 Auto-generate bookmark titles from URLs using AI. Disabled by default.
 
 **Supported providers:**
-- **OpenAI**: GPT-4.1 Nano / GPT-4.1 Mini / GPT-5 Nano / GPT-5 Mini
+- **OpenAI**: GPT-5.4 Nano / GPT-5.4 Mini / GPT-5 Nano / GPT-5 Mini
 - **Gemini**: Gemini 2.5 Flash / Gemini 2.5 Pro
 
 **Setup:**
