@@ -32,6 +32,7 @@ function mockHtml(html: string, contentType = 'text/html; charset=utf-8') {
   mockFetch.mockResolvedValueOnce({
     ok: true,
     headers: { get: () => contentType },
+    text: () => Promise.resolve(html),
     body: {
       getReader: () => {
         let done = false

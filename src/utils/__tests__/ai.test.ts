@@ -45,6 +45,7 @@ describe('generateTitle', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         headers: { get: () => 'text/html; charset=utf-8' },
+        text: () => Promise.resolve('<html><head><title>ページタイトル</title></head></html>'),
         body: {
           getReader: () => {
             let done = false
