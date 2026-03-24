@@ -29,6 +29,9 @@ SyncGrid replaces your Chrome new tab page with a fast, beautiful Speed Dial boo
 - Tags & filtering — organize bookmarks with tags, filter by tag or read status
 - Sort by name, date, domain, or last read
 - AI-powered title generation & auto-tagging (optional) — bring your own OpenAI or Gemini API key
+- AI auto-categorization — automatically sort bookmarks into folders with one click
+- Stale bookmark reminder — get nudged about "read later" bookmarks left unread for 7+ days
+- OGP nudge banner — prompts you to enable rich previews when permissions are missing
 - Dedicated keyboard shortcuts panel with customizable bindings
 - Built-in help panel with feature overview and security info
 - Bulk select & delete with Cmd/Ctrl+Click
@@ -64,6 +67,9 @@ SyncGrid は Chrome の新規タブページを高速で美しい Speed Dial ブ
 - タグ＆フィルタリング — タグでブックマークを整理、タグ・閲覧状態で絞り込み
 - 名前・日付・ドメイン・最終閲覧順でソート
 - AI タイトル自動生成＆自動タグ付け（オプション）— OpenAI / Gemini API キーで利用
+- AI 自動分類 — ワンクリックでブックマークをフォルダに自動振り分け
+- 積読サジェスト — 「あとで読む」のまま7日以上放置されたブックマークをリマインド
+- OGPナッジバナー — リッチプレビューの権限が未設定の場合に案内を表示
 - 専用キーボードショートカット設定パネル（カスタマイズ可能）
 - ヘルプパネル内蔵（機能概要・セキュリティ情報）
 - 複数選択＆一括削除（Cmd/Ctrl+Click）
