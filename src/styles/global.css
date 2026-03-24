@@ -353,6 +353,21 @@ button {
   border-radius: 2px 2px 0 0;
 }
 
+.sg-tab__shortcut {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--sg-text-tertiary);
+  opacity: 0.45;
+  margin-right: 2px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  user-select: none;
+}
+
+.sg-tab--active .sg-tab__shortcut {
+  opacity: 0.55;
+}
+
 .sg-tab__count {
   font-size: 10px;
   font-weight: 500;
@@ -1214,6 +1229,23 @@ button {
   color: var(--sg-accent);
 }
 .sg-stale-banner > span {
+  flex: 1;
+}
+
+/* =====================
+   OGP NUDGE BANNER
+   ===================== */
+.sg-ogp-nudge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+  background: var(--sg-accent-soft);
+  border-bottom: 1px solid var(--sg-accent);
+  font-size: 13px;
+  color: var(--sg-accent);
+}
+.sg-ogp-nudge > span {
   flex: 1;
 }
 

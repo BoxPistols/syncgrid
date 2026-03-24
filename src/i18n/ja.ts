@@ -93,6 +93,11 @@ export const ja = {
   ogpPermissionGrant: '権限を許可',
   ogpPermissionGranted: '許可済み',
   ogpPermissionRefresh: 'プレビューを再取得',
+  ogpNudgeNoPermission: 'OGP画像・説明文を表示するにはホストアクセス権限が必要です',
+  ogpNudgeLowCoverage: 'プレビュー画像を取得して、ブックマークをもっと見やすくしましょう',
+  ogpNudgeGrant: '権限を許可',
+  ogpNudgeRefresh: '今すぐ取得',
+  ogpNudgeDismiss: '後で',
   // Security
   security: 'セキュリティ',
   securityDesc:

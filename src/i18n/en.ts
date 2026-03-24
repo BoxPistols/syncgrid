@@ -77,6 +77,11 @@ export const en = {
   ogpPermissionGrant: 'Allow',
   ogpPermissionGranted: 'Granted',
   ogpPermissionRefresh: 'Refresh previews',
+  ogpNudgeNoPermission: 'Host access permission is required to display OGP images and descriptions',
+  ogpNudgeLowCoverage: 'Fetch preview images to make your bookmarks more visual',
+  ogpNudgeGrant: 'Grant permission',
+  ogpNudgeRefresh: 'Fetch now',
+  ogpNudgeDismiss: 'Later',
   security: 'Security',
   securityDesc:
     '• Data is stored only via Chrome Bookmarks API\n• No data is ever sent to external servers\n• Local sync writes only to the folder you explicitly select\n• Export files are not encrypted — store them securely\n• AI API keys are stored locally and only sent to your chosen provider',

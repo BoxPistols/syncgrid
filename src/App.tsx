@@ -87,6 +87,44 @@ export default function App() {
   }, [groups, allMeta])
   const showStaleReminder = staleItems.length > 0 && Date.now() - staleDismissedAt > 86400000
 
+  // --- OGPナッジ ---
+  const [ogpNudgeState, setOgpNudgeState] = useState<'hidden' | 'no-permission' | 'low-coverage'>('hidden')
+
+  useEffect(() => {
+    const checkOgpNudge = async () => {
+      const storage = await chrome.storage.local.get(['ogpNudgeInstalledAt', 'ogpNudgeDismissedAt'])
+      // 初回インストール日を記録
+      if (!storage.ogpNudgeInstalledAt) {
+        await chrome.storage.local.set({ ogpNudgeInstalledAt: Date.now() })
+      }
+      const installedAt = (storage.ogpNudgeInstalledAt as number | undefined) || Date.now()
+      const dismissedAt = (storage.ogpNudgeDismissedAt as number | undefined) || 0
+      // 非表示後72時間は再表示しない
+      if (Date.now() - dismissedAt < 72 * 3600000) return
+
+      const { hasTitleFetchPermission } = await import('./utils/permissions')
+      const granted = await hasTitleFetchPermission()
+      const allItems = flattenGroups(groups).flatMap((g) => g.items)
+      const total = allItems.length
+
+      if (!granted && total >= 5) {
+        setOgpNudgeState('no-permission')
+        return
+      }
+
+      if (granted) {
+        const withOgp = allItems.filter((item) => allMeta[item.id]?.ogp?.image || allMeta[item.id]?.ogp?.description).length
+        const coverage = total > 0 ? withOgp / total : 1
+        const daysSinceInstall = (Date.now() - installedAt) / 86400000
+        // インストール3日後以降 + カバレッジ50%未満 + 10件以上
+        if (daysSinceInstall >= 3 && coverage < 0.5 && total >= 10) {
+          setOgpNudgeState('low-coverage')
+        }
+      }
+    }
+    if (!loading) checkOgpNudge()
+  }, [loading, groups, allMeta])
+
   // --- Auto Sync ---
   const handleSynced = useCallback(
     (syncedAt: string) => updateSettings({ lastSyncedAt: syncedAt }),
@@ -194,6 +232,27 @@ export default function App() {
     }
     refresh()
   }, [refresh])
+
+  const handleDismissOgpNudge = useCallback(() => {
+    setOgpNudgeState('hidden')
+    chrome.storage.local.set({ ogpNudgeDismissedAt: Date.now() })
+  }, [])
+
+  const handleOgpNudgeGrant = useCallback(async () => {
+    const { requestTitleFetchPermission } = await import('./utils/permissions')
+    const granted = await requestTitleFetchPermission()
+    if (granted) {
+      setOgpNudgeState('hidden')
+      chrome.storage.local.set({ ogpNudgeDismissedAt: Date.now() })
+      await handleRefreshOgp()
+    }
+  }, [handleRefreshOgp])
+
+  const handleOgpNudgeRefresh = useCallback(async () => {
+    setOgpNudgeState('hidden')
+    chrome.storage.local.set({ ogpNudgeDismissedAt: Date.now() })
+    await handleRefreshOgp()
+  }, [handleRefreshOgp])
 
   // --- Group/Folder CRUD ---
   const handleAddGroup = useCallback(() => { setCreatingGroup('tab'); setNewGroupName('') }, [])
@@ -459,6 +518,7 @@ export default function App() {
       {/* Tab Bar */}
       <div className="sg-tabbar" role="tablist">
         <button className={`sg-tab ${nav.activeTabId === '__all__' ? 'sg-tab--active' : ''}`} role="tab" aria-selected={nav.activeTabId === '__all__'} onClick={() => handleSelectTab('__all__')} title="0">
+          <span className="sg-tab__shortcut">0</span>
           {t.allBookmarks}
           <span className="sg-tab__count">{flattenGroups(groups).reduce((sum, g) => sum + g.items.length, 0)}</span>
         </button>
@@ -466,7 +526,7 @@ export default function App() {
           <button key={g.id} className={`sg-tab ${g.id === nav.activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id && dragState.draggingId !== g.id ? 'sg-tab--drop-target' : ''} ${dragState.draggingId === g.id ? 'sg-tab--dragging' : ''}`} role="tab" aria-selected={g.id === nav.activeTabId} title={String(idx + 1)} onClick={() => handleSelectTab(g.id)} onContextMenu={(e) => handleTabContext(g, e)} onDoubleClick={() => { setRenamingTabId(g.id); setRenameValue(g.title) }} {...getTabHandlers(g.id)}>
             {renamingTabId === g.id ? (
               <input className="sg-tab__rename" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={handleRenameSubmit} onKeyDown={(e) => { if (isComposing(e)) return; if (e.key === 'Enter') handleRenameSubmit(); if (e.key === 'Escape') setRenamingTabId(null) }} autoFocus onClick={(e) => e.stopPropagation()} />
-            ) : (<>{g.title}<span className="sg-tab__count">{countAll(g)}</span></>)}
+            ) : (<><span className="sg-tab__shortcut">{idx + 1}</span>{g.title}<span className="sg-tab__count">{countAll(g)}</span></>)}
           </button>
         ))}
         {creatingGroup === 'tab' ? (
@@ -489,6 +549,26 @@ export default function App() {
           </button>
           <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={() => setStaleDismissedAt(Date.now())}>
             {t.staleReminderDismiss}
+          </button>
+        </div>
+      )}
+
+      {/* OGPナッジ */}
+      {ogpNudgeState !== 'hidden' && (
+        <div className="sg-ogp-nudge">
+          <Icon name="link" size={14} />
+          <span>{ogpNudgeState === 'no-permission' ? t.ogpNudgeNoPermission : t.ogpNudgeLowCoverage}</span>
+          {ogpNudgeState === 'no-permission' ? (
+            <button className="sg-btn sg-btn--sm sg-btn--primary" onClick={handleOgpNudgeGrant}>
+              <Icon name="lock" size={12} /> {t.ogpNudgeGrant}
+            </button>
+          ) : (
+            <button className="sg-btn sg-btn--sm sg-btn--primary" onClick={handleOgpNudgeRefresh}>
+              <Icon name="refresh" size={12} /> {t.ogpNudgeRefresh}
+            </button>
+          )}
+          <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleDismissOgpNudge}>
+            {t.ogpNudgeDismiss}
           </button>
         </div>
       )}
