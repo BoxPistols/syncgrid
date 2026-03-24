@@ -56,7 +56,7 @@ export function KeyboardShortcutsPanel({ settings, onUpdateSettings, onClose, t 
             </div>
             <div className="sg-cheat__row">
               <span className="sg-cheat__label">{t.shortcutTabSwitch}</span>
-              <kbd className="sg-cheat__kbd">1 – 9, 0</kbd>
+              <kbd className="sg-cheat__kbd">0 – 99</kbd>
             </div>
             <div className="sg-cheat__row">
               <span className="sg-cheat__label">{t.shortcutMultiSelect}</span>

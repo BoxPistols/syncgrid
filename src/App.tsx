@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useBookmarks } from './hooks/useBookmarks'
 import { useSettings } from './hooks/useSettings'
 import { useTheme } from './hooks/useTheme'
@@ -336,6 +336,25 @@ export default function App() {
     [groups, nav.activeTabId, updateSettings, refresh, t],
   )
 
+  // --- 数字キー連続入力でタブ切替（0始まり、2桁以上対応） ---
+  const tabDigitBuf = useRef('')
+  const tabDigitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const groupsRef = useRef(groups)
+  groupsRef.current = groups
+  const handleSelectTabRef = useRef(handleSelectTab)
+  handleSelectTabRef.current = handleSelectTab
+
+  const commitTabDigit = useCallback(() => {
+    const buf = tabDigitBuf.current
+    tabDigitBuf.current = ''
+    if (!buf) return
+    const idx = parseInt(buf, 10)
+    const allTabs = ['__all__', ...groupsRef.current.map((g) => g.id)]
+    if (idx >= 0 && idx < allTabs.length) {
+      handleSelectTabRef.current(allTabs[idx])
+    }
+  }, [])
+
   // --- Global keyboard shortcuts ---
   useEffect(() => {
     const sc = settings.shortcuts
@@ -350,21 +369,19 @@ export default function App() {
       else if (matchesBinding(e, sc.selectAll)) { e.preventDefault(); selectAll() }
       else if (e.key === 'Escape' && selectedIds.size > 0) clearSelection()
       else if (e.key === '?' && !e.ctrlKey && !e.metaKey) setShowShortcutsPanel((v) => !v)
-      // 数字キー 1-9 でタブ切替、0 で最後のタブ（修飾キーなし、入力欄以外）
+      // 数字キー 0始まりでタブ切替（2桁以上対応：素早く連続入力で確定）
       else if (/^[0-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const target = e.target as HTMLElement
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return
-        const allTabs = ['__all__', ...groups.map((g) => g.id)]
-        const idx = e.key === '0' ? allTabs.length - 1 : parseInt(e.key, 10) - 1
-        if (idx >= 0 && idx < allTabs.length) {
-          e.preventDefault()
-          handleSelectTab(allTabs[idx])
-        }
+        e.preventDefault()
+        if (tabDigitTimer.current) clearTimeout(tabDigitTimer.current)
+        tabDigitBuf.current += e.key
+        tabDigitTimer.current = setTimeout(commitTabDigit, 400)
       }
     }
     document.addEventListener('keydown', handleGlobalKeyDown)
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, selectAll, clearSelection, groups, handleSelectTab])
+  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, selectAll, clearSelection, commitTabDigit])
 
   // --- UI helper fragments ---
   const statusFilterChips = (
@@ -441,12 +458,12 @@ export default function App() {
 
       {/* Tab Bar */}
       <div className="sg-tabbar" role="tablist">
-        <button className={`sg-tab ${nav.activeTabId === '__all__' ? 'sg-tab--active' : ''}`} role="tab" aria-selected={nav.activeTabId === '__all__'} onClick={() => handleSelectTab('__all__')} title="1">
+        <button className={`sg-tab ${nav.activeTabId === '__all__' ? 'sg-tab--active' : ''}`} role="tab" aria-selected={nav.activeTabId === '__all__'} onClick={() => handleSelectTab('__all__')} title="0">
           {t.allBookmarks}
           <span className="sg-tab__count">{flattenGroups(groups).reduce((sum, g) => sum + g.items.length, 0)}</span>
         </button>
         {groups.map((g, idx) => (
-          <button key={g.id} className={`sg-tab ${g.id === nav.activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id && dragState.draggingId !== g.id ? 'sg-tab--drop-target' : ''} ${dragState.draggingId === g.id ? 'sg-tab--dragging' : ''}`} role="tab" aria-selected={g.id === nav.activeTabId} title={idx < 8 ? String(idx + 2) : undefined} onClick={() => handleSelectTab(g.id)} onContextMenu={(e) => handleTabContext(g, e)} onDoubleClick={() => { setRenamingTabId(g.id); setRenameValue(g.title) }} {...getTabHandlers(g.id)}>
+          <button key={g.id} className={`sg-tab ${g.id === nav.activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id && dragState.draggingId !== g.id ? 'sg-tab--drop-target' : ''} ${dragState.draggingId === g.id ? 'sg-tab--dragging' : ''}`} role="tab" aria-selected={g.id === nav.activeTabId} title={String(idx + 1)} onClick={() => handleSelectTab(g.id)} onContextMenu={(e) => handleTabContext(g, e)} onDoubleClick={() => { setRenamingTabId(g.id); setRenameValue(g.title) }} {...getTabHandlers(g.id)}>
             {renamingTabId === g.id ? (
               <input className="sg-tab__rename" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={handleRenameSubmit} onKeyDown={(e) => { if (isComposing(e)) return; if (e.key === 'Enter') handleRenameSubmit(); if (e.key === 'Escape') setRenamingTabId(null) }} autoFocus onClick={(e) => e.stopPropagation()} />
             ) : (<>{g.title}<span className="sg-tab__count">{countAll(g)}</span></>)}
