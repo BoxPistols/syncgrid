@@ -254,6 +254,22 @@ export default function App() {
     await handleRefreshOgp()
   }, [handleRefreshOgp])
 
+  // --- Tab Reorder (Cmd+[ / Cmd+]) ---
+  const handleMoveTab = useCallback(async (direction: -1 | 1) => {
+    if (nav.activeTabId === '__all__') return
+    const rootId = await getRootId()
+    const [rootTree] = await chrome.bookmarks.getSubTree(rootId)
+    const children = rootTree.children ?? []
+    const sourceIdx = children.findIndex((c) => c.id === nav.activeTabId)
+    if (sourceIdx < 0) return
+    const targetIdx = sourceIdx + direction
+    if (targetIdx < 0 || targetIdx >= children.length) return
+    // 前方→後方移動時は+1補正（chrome.bookmarks.move仕様）
+    const moveIdx = direction > 0 ? targetIdx + 1 : targetIdx
+    await chrome.bookmarks.move(nav.activeTabId, { parentId: rootId, index: moveIdx })
+    await refresh()
+  }, [nav.activeTabId, refresh])
+
   // --- Group/Folder CRUD ---
   const handleAddGroup = useCallback(() => { setCreatingGroup('tab'); setNewGroupName('') }, [])
 
@@ -428,6 +444,9 @@ export default function App() {
       else if (matchesBinding(e, sc.selectAll)) { e.preventDefault(); selectAll() }
       else if (e.key === 'Escape' && selectedIds.size > 0) clearSelection()
       else if (e.key === '?' && !e.ctrlKey && !e.metaKey) setShowShortcutsPanel((v) => !v)
+      // Cmd+[ / Cmd+] でアクティブタブを左右に移動
+      else if ((e.metaKey || e.ctrlKey) && e.key === '[') { e.preventDefault(); handleMoveTab(-1) }
+      else if ((e.metaKey || e.ctrlKey) && e.key === ']') { e.preventDefault(); handleMoveTab(1) }
       // 数字キー 0始まりでタブ切替（2桁以上対応：素早く連続入力で確定）
       else if (/^[0-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const target = e.target as HTMLElement
@@ -440,7 +459,7 @@ export default function App() {
     }
     document.addEventListener('keydown', handleGlobalKeyDown)
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, selectAll, clearSelection, commitTabDigit])
+  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, selectAll, clearSelection, commitTabDigit, handleMoveTab])
 
   // --- UI helper fragments ---
   const statusFilterChips = (
