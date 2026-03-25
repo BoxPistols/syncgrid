@@ -28,15 +28,25 @@ SyncGridは、Chromeの新しいタブページをSpeed Dialスタイルのブ�
 | 機能 | 説明 |
 |------|------|
 | **Speed Dial UI** | フォルダとブックマークをカードグリッドで表示 |
-| **タブナビゲーション** | トップレベルのグループを水平タブで切り替え |
+| **3レイアウト** | マガジン（グリッド）/ カード（大）/ リスト（横長行）— ⌘1/2/3で切替 |
+| **タブナビゲーション** | トップレベルのグループを水平タブで切り替え。ショートカット番号表示付き |
+| **タブ並べ替え** | Cmd+[ / Cmd+] でアクティブタブを左右に移動 |
 | **アコーディオンフォルダ** | フォルダの中身をインライン展開・折りたたみ。ツリー構造を可視化 |
 | **検索** | 全ブックマークのタイトル・URLを横断する即時検索 |
+| **タグ&フィルタリング** | タグでブックマークを整理、タグ・閲覧ステータスで絞り込み |
+| **ソート** | 名前・日付・ドメイン・最終閲覧順で並べ替え |
 | **テーマ** | ダーク / ライト / システム連動 の3モード |
 | **エクスポート / インポート** | SHA-256チェックサム検証付きJSONバックアップ |
 | **ローカルフォルダ同期** | Google Drive, OneDrive, iCloud, Dropbox, Box等との自動同期 |
+| **リッチOGPプレビュー** | OGP画像・説明文・サイト情報をバックグラウンドで自動取得 |
+| **OGPナッジ** | 権限未付与時やカバレッジ低下時にバナーで取得を促進 |
 | **AIタイトル生成** | OpenAI / Gemini APIでURLからブックマークタイトルを自動生成（オプション） |
+| **AI自動分類** | ワンクリックでブックマークをフォルダに自動振り分け |
+| **積読サジェスト** | 「あとで読む」のまま7日以上放置されたブックマークをリマインド |
 | **バイリンガルUI** | 日本語（デフォルト）と英語 |
-| **ドラッグ&ドロップ** | カードをドラッグして並べ替え（フォルダ・ブックマーク各タイプ内） |
+| **ドラッグ&ドロップ** | カード・フォルダの並べ替え、フォルダ間移動をシームレスに |
+| **複数選択** | Cmd/Ctrl+Clickで複数選択 → 一括削除・移動 |
+| **キーボードショートカット** | カスタマイズ可能なショートカットキー設定パネル |
 | **接続テスト** | AI API接続・ローカル同期フォルダの読み書きをワンクリックで検証 |
 | **コンテキストメニュー** | 右クリックで編集・名前変更・削除 |
 | **インラインリネーム** | タブのダブルクリックでグループ名を変更 |
@@ -240,8 +250,14 @@ Chrome Bookmarks API（信頼できる唯一のデータソース）
 | `useSettings` | chrome.storage.localから設定を読み書き（テーマ、言語、AI設定等） |
 | `useTheme` | テーマの切り替え（light / dark / system）とCSS変数の適用 |
 | `useI18n` | ロケールに応じた翻訳テキストの提供 |
+| `useMetadata` | OGPデータ・タグ・閲覧ステータスの管理（chrome.storage.local） |
+| `useNavigation` | タブナビゲーション・アクティブタブ・フォルダ階層の管理 |
+| `useSelection` | 複数選択の状態管理と一括操作（削除・移動） |
+| `useFiltering` | 検索・タグフィルタ・ステータスフィルタ・ソートの適用 |
+| `useCollapse` | フォルダアコーディオンの展開/折りたたみ状態の管理 |
 | `useAutoSync` | ローカルフォルダへの定期同期とブックマーク変更時の同期 |
-| `useDragReorder` | カードのドラッグ&ドロップ並べ替え（HTML5 DnD API） |
+| `useDragReorder` | カード・フォルダのドラッグ&ドロップ並べ替え（HTML5 DnD API） |
+| `useFocusTrap` | モーダル内のフォーカストラップ（アクセシビリティ） |
 
 #### テーマシステム
 
@@ -276,8 +292,8 @@ SyncGridは「ゼロトラスト・ゼロテレメトリ」の原則に基づい
 ```
 syncgrid/
 ├── src/
-│   ├── components/     # Reactコンポーネント（UI層）
-│   ├── hooks/          # カスタムフック（状態管理・API連携層）
+│   ├── components/     # Reactコンポーネント（UI層、17ファイル）
+│   ├── hooks/          # カスタムフック（状態管理・API連携層、12ファイル）
 │   ├── i18n/           # 国際化（日本語・英語）
 │   ├── styles/         # CSSデザイントークン（テーマ定義）
 │   ├── types/          # TypeScript型定義（共有インターフェース）
@@ -303,15 +319,25 @@ Zero telemetry. Zero analytics. Zero external tracking.
 | Feature | Description |
 |---------|-------------|
 | **Speed Dial UI** | Visual card grid with folders and bookmarks |
-| **Tab Navigation** | Top-level groups as horizontal tabs |
+| **3 Layouts** | Magazine (grid) / Card (large) / List (rows) — switch with ⌘1/2/3 |
+| **Tab Navigation** | Top-level groups as horizontal tabs with shortcut number indicators |
+| **Tab Reorder** | Move the active tab left/right with Cmd+[ / Cmd+] |
 | **Accordion Folders** | Expand/collapse folders inline with tree visualization |
 | **Search** | Instant search across all bookmarks |
+| **Tags & Filtering** | Organize bookmarks with tags, filter by tag or read status |
+| **Sort** | Sort by name, date, domain, or last read |
 | **Dark / Light / System** | Full theme support |
 | **Export / Import** | JSON backup with SHA-256 integrity verification |
 | **Local Folder Sync** | Auto-sync to any local folder (Google Drive, OneDrive, iCloud, Dropbox, Box) |
+| **Rich OGP Previews** | Auto-fetch OGP images, descriptions, and site info via background service worker |
+| **OGP Nudge** | Banner prompts to enable rich previews when permissions are missing |
 | **AI Title Generation** | Auto-generate bookmark titles from URLs via OpenAI / Gemini (optional) |
+| **AI Auto-Categorization** | Automatically sort bookmarks into folders with one click |
+| **Stale Bookmark Reminder** | Nudge for "read later" bookmarks left unread for 7+ days |
 | **Bilingual** | Japanese (default) and English UI |
-| **Drag & Drop** | Reorder cards by dragging (within folder or bookmark type) |
+| **Drag & Drop** | Reorder cards and folders, move bookmarks across folders seamlessly |
+| **Bulk Select** | Cmd/Ctrl+Click to multi-select → bulk delete or move |
+| **Keyboard Shortcuts** | Customizable shortcut key settings panel |
 | **Connection Test** | Verify AI API keys and local sync folder access with one click |
 | **Context Menus** | Right-click to edit, rename, delete |
 | **Inline Rename** | Double-click tabs to rename groups |
@@ -491,6 +517,23 @@ Chrome Bookmarks API (single source of truth)
 | **Types** | `src/types/` | Shared interfaces and constants |
 | **i18n** | `src/i18n/` | Translation data and locale switching |
 | **Styles** | `src/styles/` | CSS custom properties for design tokens and themes |
+
+#### Key Custom Hooks
+
+| Hook | Role |
+|------|------|
+| `useBookmarks` | Load bookmark tree from Chrome Bookmarks API and watch for changes |
+| `useSettings` | Read/write settings from chrome.storage.local (theme, locale, AI config, etc.) |
+| `useTheme` | Theme switching (light / dark / system) and CSS variable application |
+| `useI18n` | Provide translated text based on the active locale |
+| `useMetadata` | Manage OGP data, tags, and read status (chrome.storage.local) |
+| `useNavigation` | Tab navigation, active tab, and folder hierarchy management |
+| `useSelection` | Multi-selection state and bulk operations (delete, move) |
+| `useFiltering` | Apply search, tag filters, status filters, and sort |
+| `useCollapse` | Manage accordion expand/collapse state for folder sections |
+| `useAutoSync` | Periodic and change-triggered local folder sync |
+| `useDragReorder` | Drag & drop reordering for cards and folders (HTML5 DnD API) |
+| `useFocusTrap` | Focus trapping within modals (accessibility) |
 
 ### Data Safety
 
