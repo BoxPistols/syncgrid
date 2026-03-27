@@ -40,6 +40,14 @@ export const KanbanBoard = memo(function KanbanBoard({
   onReload,
   t,
 }: Props) {
+  const [syncing, setSyncing] = useState(false)
+
+  const handleSync = useCallback(async () => {
+    setSyncing(true)
+    await onReload()
+    setTimeout(() => setSyncing(false), 600)
+  }, [onReload])
+
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTargetId, setDropTargetId] = useState<string | null>(null)
   const [dropMode, setDropMode] = useState<'before' | 'after' | null>(null)
@@ -178,8 +186,8 @@ export const KanbanBoard = memo(function KanbanBoard({
         <div className="sg-kanban__empty-state">
           <Icon name="columns" size={48} className="sg-kanban__empty-icon" />
           <p className="sg-kanban__empty-text">{t.kanbanEmpty}</p>
-          <button className="sg-btn sg-btn--sm sg-btn--ghost sg-kanban__sync-btn" onClick={onReload}>
-            <Icon name="refresh" size={12} /> Sync
+          <button className="sg-btn sg-btn--sm sg-btn--ghost sg-kanban__sync-btn" onClick={handleSync} disabled={syncing}>
+            <Icon name="refresh" size={12} className={syncing ? 'sg-icon--spin' : ''} /> Sync
           </button>
         </div>
       </div>
@@ -189,8 +197,8 @@ export const KanbanBoard = memo(function KanbanBoard({
   return (
     <div className="sg-kanban">
       <div className="sg-kanban__toolbar">
-        <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={onReload} title="Sync">
-          <Icon name="refresh" size={12} /> Sync
+        <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleSync} title="Sync" disabled={syncing}>
+          <Icon name="refresh" size={12} className={syncing ? 'sg-icon--spin' : ''} /> Sync
         </button>
       </div>
       <div className="sg-kanban__columns">

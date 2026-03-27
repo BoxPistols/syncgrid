@@ -1210,6 +1210,10 @@ button {
   }
 }
 
+.sg-icon--spin {
+  animation: sg-spin 0.7s linear infinite;
+}
+
 /* =====================
    ONBOARDING TOUR
    ===================== */

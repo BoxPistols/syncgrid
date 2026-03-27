@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import type { Messages } from '../i18n'
 import type { LayoutMode, CardSize, GridColumns } from '../types'
 import { MOD_LABEL } from '../utils/keyboard'
@@ -27,6 +27,13 @@ interface Props {
 
 export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSettings, onOpenShortcuts, onOpenHelp, onRefreshOgp, layout, cardSize, gridColumns, onChangeLayout, onChangeCardSize, onChangeGridColumns, isKanbanActive, kanbanItemCount, onToggleKanban, t }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [ogpSpinning, setOgpSpinning] = useState(false)
+
+  const handleOgpRefresh = useCallback(() => {
+    setOgpSpinning(true)
+    onRefreshOgp()
+    setTimeout(() => setOgpSpinning(false), 2000)
+  }, [onRefreshOgp])
 
   return (
     <div className="sg-topbar">
@@ -165,8 +172,8 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
           <span>{t.kanban}</span>
           {kanbanItemCount > 0 && <span className="sg-topbar__badge">{kanbanItemCount}</span>}
         </button>
-        <button className="sg-btn--icon sg-btn--icon-label" onClick={onRefreshOgp} title={t.ogpPermissionRefresh}>
-          <Icon name="refresh" size={14} />
+        <button className="sg-btn--icon sg-btn--icon-label" onClick={handleOgpRefresh} title={t.ogpPermissionRefresh} disabled={ogpSpinning}>
+          <Icon name="refresh" size={14} className={ogpSpinning ? 'sg-icon--spin' : ''} />
           <span>OGP</span>
         </button>
         <button className="sg-btn--icon" onClick={onToggleTheme} title={t.toggleTheme}>

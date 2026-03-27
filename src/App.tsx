@@ -480,6 +480,13 @@ export default function App() {
       else if (matchesBinding(e, sc.selectAll)) { e.preventDefault(); selectAll() }
       else if (e.key === 'Escape' && selectedIds.size > 0) clearSelection()
       else if (e.key === '?' && !e.ctrlKey && !e.metaKey) setShowShortcutsPanel((v) => !v)
+      // K でカンバン切替（入力欄以外）
+      else if (e.key === 'k' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const target = e.target as HTMLElement
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return
+        e.preventDefault()
+        handleSelectTab(nav.activeTabId === '__kanban__' ? '__all__' : '__kanban__')
+      }
       // Cmd+[ / Cmd+] でアクティブタブを左右に移動
       else if ((e.metaKey || e.ctrlKey) && e.key === '[') { e.preventDefault(); handleMoveTab(-1) }
       else if ((e.metaKey || e.ctrlKey) && e.key === ']') { e.preventDefault(); handleMoveTab(1) }
@@ -495,7 +502,7 @@ export default function App() {
     }
     document.addEventListener('keydown', handleGlobalKeyDown)
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, selectAll, clearSelection, commitTabDigit, handleMoveTab])
+  }, [settings.shortcuts, selectedIds, handleDeleteSelected, updateSettings, selectAll, clearSelection, commitTabDigit, handleMoveTab, handleSelectTab, nav.activeTabId])
 
   // --- UI helper fragments ---
   const statusFilterChips = (
