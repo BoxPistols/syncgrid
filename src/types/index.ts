@@ -79,9 +79,10 @@ export type ReadStatus = 'unread' | 'read' | 'later' | 'starred'
 /** カンバン列 */
 export type KanbanColumn = 'todo' | 'doing' | 'done'
 
-/** カンバンアイテム（ブックマークへの参照） */
+/** カンバンアイテム（URLベースで端末間同期対応） */
 export interface KanbanItem {
-  bookmarkId: string
+  /** 端末間の安定識別子 */
+  url: string
   column: KanbanColumn
   order: number
   /** 期限（UTCタイムスタンプ） */
