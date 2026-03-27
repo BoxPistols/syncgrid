@@ -2252,7 +2252,7 @@ button {
    KANBAN BOARD
    ===================== */
 .sg-kanban {
-  max-width: 1400px;
+  max-width: 1080px;
   margin: 0 auto;
   padding: 16px 24px 60px;
   height: calc(100vh - 96px);
@@ -2283,8 +2283,9 @@ button {
 
 .sg-kanban__columns {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(240px, 340px));
+  justify-content: center;
+  gap: 12px;
   flex: 1;
   min-height: 0;
 }
@@ -2296,6 +2297,7 @@ button {
   border-radius: var(--sg-radius);
   box-shadow: var(--sg-shadow);
   min-height: 0;
+  min-width: 0;
 }
 
 .sg-kanban-col__header {
