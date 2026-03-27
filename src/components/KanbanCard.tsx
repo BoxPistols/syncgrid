@@ -111,7 +111,7 @@ export const KanbanCard = memo(function KanbanCard({
       />
       <div className="sg-kanban-card__body">
         <span className="sg-kanban-card__title">
-          {meta?.ogp?.title || (item.title && item.title !== t.loading ? item.title : domain)}
+          {meta?.ogp?.title || (item.title && !/^(読み込み中|Loading|タイトル取得中|Fetching)/.test(item.title) ? item.title : domain)}
         </span>
         <div className="sg-kanban-card__meta-row">
           <span className="sg-kanban-card__domain">{domain}</span>
