@@ -76,6 +76,23 @@ export interface TrashItem {
 /** ブックマーク閲覧ステータス */
 export type ReadStatus = 'unread' | 'read' | 'later' | 'starred'
 
+/** カンバン列 */
+export type KanbanColumn = 'todo' | 'doing' | 'done'
+
+/** カンバンアイテム（ブックマークへの参照） */
+export interface KanbanItem {
+  bookmarkId: string
+  column: KanbanColumn
+  order: number
+  /** 期限（UTCタイムスタンプ） */
+  dueDate?: number
+}
+
+/** カンバン永続化データ */
+export interface KanbanState {
+  items: KanbanItem[]
+}
+
 /** ローカルメタデータ（chrome.storage.local） */
 export interface BookmarkMeta {
   memo: string

@@ -55,7 +55,7 @@ const INITIAL_STATE: DragState = {
   dropTabId: null,
 }
 
-export function useDragReorder(selectedIds?: Set<string>) {
+export function useDragReorder(selectedIds?: Set<string>, onKanbanDrop?: (bookmarkId: string) => void) {
   const [dragState, setDragState] = useState<DragState>(INITIAL_STATE)
 
   const dragDataRef = useRef<{
@@ -234,6 +234,13 @@ export function useDragReorder(selectedIds?: Set<string>) {
             if (sourceIdx < moveIdx) moveIdx += 1
 
             await chrome.bookmarks.move(data.id, { parentId: rootId, index: moveIdx })
+          } else if (tabId === '__kanban__') {
+            // カード → カンバンへ追加
+            if (onKanbanDrop) {
+              const idsToAdd =
+                selectedIds && selectedIds.size > 1 && selectedIds.has(data.id) ? [...selectedIds] : [data.id]
+              for (const addId of idsToAdd) onKanbanDrop(addId)
+            }
           } else {
             // カード/フォルダ → タブへ移動（複数選択対応）
             const targetId = tabId === '__ungrouped__' ? await getRootId() : tabId
@@ -251,7 +258,7 @@ export function useDragReorder(selectedIds?: Set<string>) {
         }
       },
     }),
-    [selectedIds],
+    [selectedIds, onKanbanDrop],
   )
 
   return { dragState, getDragHandlers, getTabHandlers }

@@ -10,6 +10,7 @@ import { useFiltering } from './hooks/useFiltering'
 import { useMetadata } from './hooks/useMetadata'
 import { useCollapse } from './hooks/useCollapse'
 import { useDragReorder } from './hooks/useDragReorder'
+import { useKanban } from './hooks/useKanban'
 import { TopBar } from './components/TopBar'
 import { BookmarkCard } from './components/BookmarkCard'
 import { FolderSection } from './components/FolderSection'
@@ -24,6 +25,7 @@ import { Icon } from './components/Icon'
 import { OnboardingTour } from './components/OnboardingTour'
 import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel'
 import { HelpPanel } from './components/HelpPanel'
+import { KanbanBoard } from './components/KanbanBoard'
 import {
   addBookmark,
   removeBookmark,
@@ -55,6 +57,7 @@ export default function App() {
     allTagsInFolder, applyFiltersAndSort,
   } = useFiltering(groups, nav.currentFolder, allMeta, settings.sort)
   const { collapsedIds, toggleCollapse, expandAll, collapseAll } = useCollapse()
+  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems } = useKanban(groups)
 
   // 全フォルダIDを再帰収集（一括折りたたみ用）
   const allFolderIds = useMemo(() => {
@@ -152,6 +155,7 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false)
   const [showAiCategorize, setShowAiCategorize] = useState(false)
   const [showTour, setShowTour] = useState(false)
+  const [dueDateTarget, setDueDateTarget] = useState<string | null>(null)
   const [showWelcome, setShowWelcome] = useState(false)
 
   // --- Selection ---
@@ -159,8 +163,13 @@ export default function App() {
     useSelection(nav.currentFolder, refresh, t, setConfirmDialog)
 
   // --- Drag & Drop ---
+  const handleKanbanDrop = useCallback(
+    (bookmarkId: string) => { addToKanban(bookmarkId) },
+    [addToKanban],
+  )
   const { dragState, getDragHandlers, getTabHandlers } = useDragReorder(
     selectedIds,
+    handleKanbanDrop,
   )
 
   // Tab切替時に選択解除をラップ
@@ -353,11 +362,38 @@ export default function App() {
           { label: t.statusStarred, icon: 'sparkle', shortcut: 'S', action: () => handleSetStatus(item.id, 'starred') },
           { label: t.statusRead, icon: 'check-circle', shortcut: 'R', action: () => handleSetStatus(item.id, 'read') },
           { label: '---', action: () => {} },
+          isInKanban(item.id)
+            ? { label: t.removeFromKanban, icon: 'columns', shortcut: 'K', action: () => removeFromKanban(item.id) }
+            : { label: t.addToKanban, icon: 'columns', shortcut: 'K', action: () => addToKanban(item.id) },
+          { label: '---', action: () => {} },
           { label: t.delete, icon: 'trash', danger: true, action: async () => { await removeBookmark(item.id); refresh() } },
         ],
       })
     },
-    [refresh, t, handleSetStatus],
+    [refresh, t, handleSetStatus, isInKanban, addToKanban, removeFromKanban],
+  )
+
+  // カンバン内ブックマークのコンテキストメニュー
+  const handleKanbanContext = useCallback(
+    (item: SyncGridItem, x: number, y: number) => {
+      setCtxMenu({
+        x, y,
+        items: [
+          { label: t.openNewTab, icon: 'link', shortcut: 'O', action: () => { window.open(item.url, '_blank'); handleSetStatus(item.id, 'read') } },
+          { label: t.edit, icon: 'edit', shortcut: 'E', action: () => setEditItem(item) },
+          { label: '---', action: () => {} },
+          { label: t.kanbanTodo, icon: 'columns', action: () => moveKanbanItem(item.id, 'todo', 0) },
+          { label: t.kanbanDoing, icon: 'columns', action: () => moveKanbanItem(item.id, 'doing', 0) },
+          { label: t.kanbanDone, icon: 'columns', action: () => { moveKanbanItem(item.id, 'done', 0); handleSetStatus(item.id, 'read') } },
+          { label: '---', action: () => {} },
+          { label: t.kanbanSetDueDate, icon: 'pin', action: () => setDueDateTarget(item.id) },
+          ...(dueDates.get(item.id) ? [{ label: t.kanbanClearDueDate, icon: 'close' as const, action: () => setDueDate(item.id, undefined) }] : []),
+          { label: '---', action: () => {} },
+          { label: t.removeFromKanban, icon: 'close', danger: true, action: () => removeFromKanban(item.id) },
+        ],
+      })
+    },
+    [t, handleSetStatus, moveKanbanItem, removeFromKanban, setDueDate, dueDates],
   )
 
   const handleFolderContext = useCallback(
@@ -555,6 +591,10 @@ export default function App() {
         ) : (
           <button className="sg-tab sg-tab--add" onClick={handleAddGroup} title={t.newGroup} aria-label={t.newGroup}><Icon name="plus" size={14} /></button>
         )}
+        <button className={`sg-tab sg-tab--kanban ${nav.activeTabId === '__kanban__' ? 'sg-tab--active' : ''} ${dragState.dropTabId === '__kanban__' ? 'sg-tab--drop-target' : ''}`} role="tab" aria-selected={nav.activeTabId === '__kanban__'} onClick={() => handleSelectTab('__kanban__')} {...{ ...getTabHandlers('__kanban__'), draggable: false, onDragStart: undefined }}>
+          <Icon name="columns" size={12} /> {t.kanban}
+          {kanbanItemCount > 0 && <span className="sg-tab__count">{kanbanItemCount}</span>}
+        </button>
         <button className="sg-tab sg-tab--add" onClick={() => setShowTrash(true)} title={t.trash} aria-label={t.trash}><Icon name="trash" size={14} /></button>
       </div>
 
@@ -592,6 +632,17 @@ export default function App() {
         </div>
       )}
 
+      {/* 期限超過バナー */}
+      {overdueItems.length > 0 && nav.activeTabId !== '__kanban__' && (
+        <div className="sg-stale-banner">
+          <Icon name="warning" size={14} />
+          <span>{t.kanbanOverdue(overdueItems.length)}</span>
+          <button className="sg-btn sg-btn--sm sg-btn--primary" onClick={() => handleSelectTab('__kanban__')}>
+            {t.kanbanOverdueAction}
+          </button>
+        </div>
+      )}
+
       {/* Selection bar */}
       {selectedIds.size > 0 && (
         <div className="sg-selection-bar">
@@ -608,7 +659,19 @@ export default function App() {
 
       {/* Content */}
       <div key={nav.pageKey} className="sg-page-transition">
-        {searchResults ? (
+        {nav.activeTabId === '__kanban__' ? (
+          <KanbanBoard
+            kanbanColumns={kanbanColumns}
+            allMeta={allMeta}
+            dueDates={dueDates}
+            locale={settings.locale}
+            onMoveItem={moveKanbanItem}
+            onContextMenu={handleKanbanContext}
+            onOpen={(id) => { handleSetStatus(id, 'read') }}
+            onMarkRead={(id) => { handleSetStatus(id, 'read') }}
+            t={t}
+          />
+        ) : searchResults ? (
           <div className="sg-dial">
             <div className="sg-toolbar"><span className="sg-toolbar__title">{t.searchResults(query, searchResults.length)}</span></div>
             {searchResults.length > 0 ? (
@@ -720,6 +783,19 @@ export default function App() {
       {showTrash && (<TrashPanel onClose={() => setShowTrash(false)} onRestored={refresh} t={t} locale={settings.locale} />)}
       {showShortcutsPanel && (<KeyboardShortcutsPanel settings={settings} onUpdateSettings={updateSettings} onClose={() => setShowShortcutsPanel(false)} t={t} />)}
       {showHelp && (<HelpPanel onClose={() => setShowHelp(false)} t={t} />)}
+      {dueDateTarget && (
+        <div className="sg-modal-overlay" onClick={() => setDueDateTarget(null)}>
+          <div className="sg-modal" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') setDueDateTarget(null) }}>
+            <div className="sg-modal__header">
+              <span className="sg-modal__title">{t.kanbanSetDueDate}</span>
+              <button className="sg-modal__close" onClick={() => setDueDateTarget(null)} aria-label={t.close}><Icon name="close" size={12} /></button>
+            </div>
+            <div className="sg-modal__body">
+              <input type="date" className="sg-add-form__input" defaultValue={dueDates.get(dueDateTarget) ? new Date(dueDates.get(dueDateTarget)!).toISOString().split('T')[0] : ''} autoFocus onChange={(e) => { const v = e.target.value; if (v) { setDueDate(dueDateTarget, new Date(v + 'T23:59:59').getTime()); setDueDateTarget(null) } }} />
+            </div>
+          </div>
+        </div>
+      )}
       {showAiCategorize && nav.currentFolder && (
         <AiCategorizeModal
           items={nav.currentFolder.items}
