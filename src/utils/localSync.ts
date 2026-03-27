@@ -11,8 +11,9 @@
  * - File name is fixed: syncgrid-sync.json
  */
 
-import type { SyncGridGroup, SyncGridExport } from '../types'
+import type { SyncGridGroup, SyncGridExport, KanbanState } from '../types'
 import { exportData } from './dataTransfer'
+import { saveKanban } from './kanban'
 
 const SYNC_FILENAME = 'syncgrid-sync.json'
 const IDB_NAME = 'syncgrid-fs'
@@ -149,6 +150,35 @@ export async function syncToFolder(
     console.error('[SyncGrid] Sync failed:', err)
     return { success: false, syncedAt: '' }
   }
+}
+
+/** Read kanban data from sync file (other device wrote it) */
+export async function readKanbanFromSyncFolder(
+  handle?: FileSystemDirectoryHandle | null,
+): Promise<KanbanState | null> {
+  const dir = handle ?? (await getSyncHandle(false))
+  if (!dir) return null
+
+  try {
+    const fileHandle = await dir.getFileHandle(SYNC_FILENAME)
+    const file = await fileHandle.getFile()
+    const text = await file.text()
+    const parsed = JSON.parse(text) as Partial<SyncGridExport>
+    if (parsed.kanban?.items && Array.isArray(parsed.kanban.items)) {
+      return parsed.kanban
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/** Pull kanban from sync file and save locally */
+export async function pullKanbanFromSync(): Promise<boolean> {
+  const kanban = await readKanbanFromSyncFolder()
+  if (!kanban || kanban.items.length === 0) return false
+  await saveKanban(kanban)
+  return true
 }
 
 /** Disconnect: clear saved handle */

@@ -39,6 +39,7 @@ import {
 } from './utils/bookmarks'
 import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
 import { isComposing, matchesBinding } from './utils/keyboard'
+import { pullKanbanFromSync } from './utils/localSync'
 
 import './styles/global.css'
 
@@ -672,7 +673,7 @@ export default function App() {
             onContextMenu={handleKanbanContext}
             onOpen={(id) => { handleSetStatus(id, 'read') }}
             onMarkRead={(id) => { handleSetStatus(id, 'read') }}
-            onReload={reloadKanban}
+            onReload={async () => { await pullKanbanFromSync(); await reloadKanban() }}
             t={t}
           />
         ) : searchResults ? (

@@ -201,6 +201,8 @@ export interface SyncGridExport {
   appName: 'SyncGrid'
   checksum: string
   data: SyncGridExportGroup[]
+  /** カンバンデータ（v1.1〜） */
+  kanban?: KanbanState
 }
 
 export interface SyncGridExportGroup {
