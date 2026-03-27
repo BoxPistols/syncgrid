@@ -40,6 +40,17 @@ export function useKanban(groups: SyncGridGroup[]) {
     cleanupKanban(new Set(urlMap.keys())).then(setKanbanState)
   }, [urlMap])
 
+  // 他端末からの同期変更を検知してUIに反映
+  useEffect(() => {
+    const handleChange = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
+      if (areaName === 'sync' && changes.syncgrid_kanban?.newValue) {
+        setKanbanState(changes.syncgrid_kanban.newValue as KanbanState)
+      }
+    }
+    chrome.storage.onChanged.addListener(handleChange)
+    return () => chrome.storage.onChanged.removeListener(handleChange)
+  }, [])
+
   // 列ごとの解決済みアイテム
   const kanbanColumns = useMemo(() => {
     const cols: Record<KanbanColumn, SyncGridItem[]> = {
