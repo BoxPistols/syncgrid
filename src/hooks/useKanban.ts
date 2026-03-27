@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { SyncGridGroup, SyncGridItem, KanbanColumn, KanbanState } from '../types'
 import {
+  loadKanban,
   addToKanban as addToKanbanStorage,
   removeFromKanban as removeFromKanbanStorage,
   moveInKanban as moveInKanbanStorage,
@@ -138,6 +139,11 @@ export function useKanban(groups: SyncGridGroup[]) {
       .filter((item): item is SyncGridItem => !!item)
   }, [kanbanState, urlMap])
 
+  const reloadKanban = useCallback(async () => {
+    const state = await loadKanban()
+    setKanbanState(state)
+  }, [])
+
   return {
     kanbanState,
     kanbanColumns,
@@ -149,5 +155,6 @@ export function useKanban(groups: SyncGridGroup[]) {
     setDueDate,
     dueDates,
     overdueItems,
+    reloadKanban,
   }
 }

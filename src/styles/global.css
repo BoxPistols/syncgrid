@@ -209,6 +209,24 @@ button {
   font-weight: 500;
 }
 
+.sg-btn--icon--active {
+  color: var(--sg-accent);
+  background: var(--sg-accent-soft);
+}
+
+.sg-topbar__badge {
+  font-size: 9px;
+  font-weight: 600;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 8px;
+  background: var(--sg-accent);
+  color: #fff;
+  padding: 0 4px;
+}
+
 /* =====================
    TOP BAR
    ===================== */
@@ -2279,6 +2297,17 @@ button {
   font-size: 13px;
   line-height: 1.6;
   white-space: pre-line;
+}
+
+.sg-kanban__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 8px;
+  flex-shrink: 0;
+}
+
+.sg-kanban__sync-btn {
+  margin-top: 16px;
 }
 
 .sg-kanban__columns {

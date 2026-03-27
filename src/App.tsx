@@ -57,7 +57,7 @@ export default function App() {
     allTagsInFolder, applyFiltersAndSort,
   } = useFiltering(groups, nav.currentFolder, allMeta, settings.sort)
   const { collapsedIds, toggleCollapse, expandAll, collapseAll } = useCollapse()
-  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems } = useKanban(groups)
+  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems, reloadKanban } = useKanban(groups)
 
   // 全フォルダIDを再帰収集（一括折りたたみ用）
   const allFolderIds = useMemo(() => {
@@ -568,7 +568,7 @@ export default function App() {
 
   return (
     <>
-      <TopBar query={query} onQueryChange={setQuery} theme={settings.theme} onToggleTheme={handleToggleTheme} onOpenSettings={() => setShowSettings(true)} onOpenShortcuts={() => setShowShortcutsPanel(true)} onOpenHelp={() => setShowHelp(true)} onRefreshOgp={handleRefreshOgp} layout={settings.layout} cardSize={settings.cardSize} gridColumns={settings.gridColumns} onChangeLayout={handleChangeLayout} onChangeCardSize={(size) => updateSettings({ cardSize: size })} onChangeGridColumns={(cols) => updateSettings({ gridColumns: cols })} t={t} />
+      <TopBar query={query} onQueryChange={setQuery} theme={settings.theme} onToggleTheme={handleToggleTheme} onOpenSettings={() => setShowSettings(true)} onOpenShortcuts={() => setShowShortcutsPanel(true)} onOpenHelp={() => setShowHelp(true)} onRefreshOgp={handleRefreshOgp} layout={settings.layout} cardSize={settings.cardSize} gridColumns={settings.gridColumns} onChangeLayout={handleChangeLayout} onChangeCardSize={(size) => updateSettings({ cardSize: size })} onChangeGridColumns={(cols) => updateSettings({ gridColumns: cols })} isKanbanActive={nav.activeTabId === '__kanban__'} kanbanItemCount={kanbanItemCount} onToggleKanban={() => handleSelectTab(nav.activeTabId === '__kanban__' ? '__all__' : '__kanban__')} t={t} />
 
       {/* Tab Bar */}
       <div className="sg-tabbar" role="tablist">
@@ -591,10 +591,6 @@ export default function App() {
         ) : (
           <button className="sg-tab sg-tab--add" onClick={handleAddGroup} title={t.newGroup} aria-label={t.newGroup}><Icon name="plus" size={14} /></button>
         )}
-        <button className={`sg-tab sg-tab--kanban ${nav.activeTabId === '__kanban__' ? 'sg-tab--active' : ''} ${dragState.dropTabId === '__kanban__' ? 'sg-tab--drop-target' : ''}`} role="tab" aria-selected={nav.activeTabId === '__kanban__'} onClick={() => handleSelectTab('__kanban__')} {...{ ...getTabHandlers('__kanban__'), draggable: false, onDragStart: undefined }}>
-          <Icon name="columns" size={12} /> {t.kanban}
-          {kanbanItemCount > 0 && <span className="sg-tab__count">{kanbanItemCount}</span>}
-        </button>
         <button className="sg-tab sg-tab--add" onClick={() => setShowTrash(true)} title={t.trash} aria-label={t.trash}><Icon name="trash" size={14} /></button>
       </div>
 
@@ -669,6 +665,7 @@ export default function App() {
             onContextMenu={handleKanbanContext}
             onOpen={(id) => { handleSetStatus(id, 'read') }}
             onMarkRead={(id) => { handleSetStatus(id, 'read') }}
+            onReload={reloadKanban}
             t={t}
           />
         ) : searchResults ? (
