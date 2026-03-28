@@ -174,6 +174,7 @@ export const ja = {
   welcomeDesc: 'ブックマークを美しく整理・検索・同期できるSpeed Dialダッシュボード。まずはグループを作成して始めましょう。',
   startTour: 'ツアーを開始',
   skipTour: 'スキップ',
+  restartTour: 'ツアーをもう一度見る',
   tourSearch: '検索バーからブックマークを即座に検索できます',
   tourLayout: 'カード / リスト / コンパクトの3つのレイアウトを切り替えられます',
   tourAdd: 'ここからブックマークを追加。URLを入力するとタイトルが自動取得されます',

@@ -149,6 +149,7 @@ export const en = {
   welcomeDesc: 'A Speed Dial dashboard to organize, search, and sync your bookmarks. Create a group to get started.',
   startTour: 'Start Tour',
   skipTour: 'Skip',
+  restartTour: 'Restart tour',
   tourSearch: 'Search all your bookmarks instantly from here',
   tourLayout: 'Switch between Magazine, Cards, and List layouts',
   tourAdd: 'Add bookmarks here. Titles are auto-fetched from the page',

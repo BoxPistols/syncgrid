@@ -783,7 +783,7 @@ export default function App() {
       {/* Modals */}
       {editItem && (<EditBookmarkModal item={editItem} onSave={handleSaveBookmark} onDelete={handleDeleteBookmark} onClose={() => setEditItem(null)} t={t} initialTags={allMeta[editItem.id]?.tags} aiSettings={settings.ai} />)}
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />}
-      {showSettings && (<SettingsPanel settings={settings} groups={groups} t={t} onUpdateSettings={updateSettings} onClose={() => setShowSettings(false)} onRefresh={refresh} />)}
+      {showSettings && (<SettingsPanel settings={settings} groups={groups} t={t} onUpdateSettings={updateSettings} onClose={() => setShowSettings(false)} onRefresh={refresh} onStartTour={handleStartTour} />)}
       {confirmDialog && (<ConfirmDialog message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog(null)} confirmLabel={confirmDialog.confirmLabel} t={t} />)}
       {showTrash && (<TrashPanel onClose={() => setShowTrash(false)} onRestored={refresh} t={t} locale={settings.locale} />)}
       {showShortcutsPanel && (<KeyboardShortcutsPanel settings={settings} onUpdateSettings={updateSettings} onClose={() => setShowShortcutsPanel(false)} t={t} />)}

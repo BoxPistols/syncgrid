@@ -27,9 +27,10 @@ interface Props {
   onUpdateSettings: (patch: Partial<SyncGridSettings>) => void
   onClose: () => void
   onRefresh: () => void
+  onStartTour: () => void
 }
 
-export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, onRefresh }: Props) {
+export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, onRefresh, onStartTour }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const aiTestTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const syncTestTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -468,6 +469,25 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
                   <Icon name="refresh" size={14} /> {t.ogpPermissionRefresh}
                 </button>
               </div>
+            </div>
+
+            <hr className="sg-settings__divider" />
+
+            {/* Onboarding Tour */}
+            <div className="sg-settings__section">
+              <h3 className="sg-settings__label">{t.startTour}</h3>
+              <p className="sg-settings__desc">{t.welcomeDesc}</p>
+              <button
+                className="sg-btn sg-btn--sm sg-btn--ghost"
+                onClick={() => {
+                  chrome.storage.local.remove('syncgrid_onboarded').then(() => {
+                    onStartTour()
+                    onClose()
+                  })
+                }}
+              >
+                <Icon name="help" size={14} /> {t.restartTour}
+              </button>
             </div>
 
           </div>
