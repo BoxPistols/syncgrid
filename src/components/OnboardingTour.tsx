@@ -67,12 +67,27 @@ export function OnboardingTour({ steps, onComplete, t }: Props) {
   if (!step) return null
 
   const pos = step.position ?? 'bottom'
+  const tooltipWidth = 320 // ツールチップの固定幅
   const tooltipStyle: React.CSSProperties = rect
-    ? {
-        left: pos === 'right' ? rect.right + 12 : pos === 'left' ? rect.left - 320 - 12 : rect.left,
-        top: pos === 'bottom' ? rect.bottom + 12 : pos === 'top' ? rect.top - 12 : rect.top,
-        transform: pos === 'top' ? 'translateY(-100%)' : undefined,
-      }
+    ? (() => {
+        let left = pos === 'right' ? rect.right + 12 : pos === 'left' ? rect.left - tooltipWidth - 12 : rect.left
+        const top = pos === 'bottom' ? rect.bottom + 12 : pos === 'top' ? rect.top - 12 : rect.top
+
+        // 画面右端からはみ出る場合は左側に調整
+        if (left + tooltipWidth > window.innerWidth - 16) {
+          left = window.innerWidth - tooltipWidth - 16
+        }
+        // 画面左端からはみ出る場合は右側に調整
+        if (left < 16) {
+          left = 16
+        }
+
+        return {
+          left,
+          top,
+          transform: pos === 'top' ? 'translateY(-100%)' : undefined,
+        }
+      })()
     : { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
 
   return (
