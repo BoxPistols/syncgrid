@@ -486,7 +486,7 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
                   })
                 }}
               >
-                <Icon name="help" size={14} /> {t.restartTour}
+                <Icon name="help-circle" size={14} /> {t.restartTour}
               </button>
             </div>
 
