@@ -5,7 +5,9 @@ const STORAGE_KEY = 'syncgrid_kanban'
 const EMPTY_STATE: KanbanState = { items: [] }
 
 export async function loadKanban(): Promise<KanbanState> {
-  const result = await chrome.storage.sync.get(STORAGE_KEY)
+  const storage = globalThis.chrome?.storage?.sync
+  if (!storage?.get) return { ...EMPTY_STATE }
+  const result = await storage.get(STORAGE_KEY)
   const stored = result[STORAGE_KEY]
   if (!stored || typeof stored !== 'object' || !Array.isArray((stored as KanbanState).items)) {
     return { ...EMPTY_STATE }
@@ -23,7 +25,9 @@ export async function loadKanban(): Promise<KanbanState> {
 }
 
 export async function saveKanban(state: KanbanState): Promise<void> {
-  await chrome.storage.sync.set({ [STORAGE_KEY]: state })
+  const storage = globalThis.chrome?.storage?.sync
+  if (!storage?.set) return
+  await storage.set({ [STORAGE_KEY]: state })
 }
 
 export async function addToKanban(url: string, column: KanbanColumn = 'todo'): Promise<KanbanState> {
