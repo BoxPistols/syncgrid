@@ -104,6 +104,14 @@ export const KanbanBoard = memo(function KanbanBoard({
     [],
   )
 
+  const resetDrag = useCallback(() => {
+    dragDataRef.current = null
+    setDraggingId(null)
+    setDropTargetId(null)
+    setDropMode(null)
+    setDropColumn(null)
+  }, [])
+
   const handleCardDrop = useCallback(
     (e: React.DragEvent, targetBookmarkId: string) => {
       e.preventDefault()
@@ -132,12 +140,12 @@ export const KanbanBoard = memo(function KanbanBoard({
       if (targetColumn === 'done' && onMarkRead) onMarkRead(data.bookmarkId)
       resetDrag()
     },
-    [kanbanColumns, onMoveItem, onMarkRead],
+    [kanbanColumns, onMoveItem, onMarkRead, resetDrag],
   )
 
   const handleCardDragEnd = useCallback(() => {
     resetDrag()
-  }, [])
+  }, [resetDrag])
 
   // --- 列への直接ドロップ（空列やカード外のエリア） ---
   const handleColumnDragOver = useCallback(
@@ -169,16 +177,8 @@ export const KanbanBoard = memo(function KanbanBoard({
       if (column === 'done' && onMarkRead) onMarkRead(data.bookmarkId)
       resetDrag()
     },
-    [kanbanColumns, onMoveItem, onMarkRead],
+    [kanbanColumns, onMoveItem, onMarkRead, resetDrag],
   )
-
-  function resetDrag() {
-    dragDataRef.current = null
-    setDraggingId(null)
-    setDropTargetId(null)
-    setDropMode(null)
-    setDropColumn(null)
-  }
 
   if (totalItems === 0) {
     return (

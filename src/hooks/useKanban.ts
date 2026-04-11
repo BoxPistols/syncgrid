@@ -12,6 +12,12 @@ import { flattenGroups } from '../utils/bookmarks'
 
 export function useKanban(groups: SyncGridGroup[]) {
   const [kanbanState, setKanbanState] = useState<KanbanState>({ items: [] })
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   // URL→SyncGridItem マップ（URL基準でブックマーク解決）
   const urlMap = useMemo(() => {
@@ -132,12 +138,11 @@ export function useKanban(groups: SyncGridGroup[]) {
 
   // 期限超過アイテム（done列以外）
   const overdueItems = useMemo(() => {
-    const now = Date.now()
     return kanbanState.items
       .filter((ki) => ki.dueDate && ki.dueDate < now && ki.column !== 'done')
       .map((ki) => urlMap.get(ki.url))
       .filter((item): item is SyncGridItem => !!item)
-  }, [kanbanState, urlMap])
+  }, [kanbanState, urlMap, now])
 
   const reloadKanban = useCallback(async () => {
     const state = await loadKanban()
