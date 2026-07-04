@@ -253,8 +253,9 @@ export default function App() {
     [updateSettings],
   )
 
+  // light → dark → system → light の3値循環（systemに到達できない不具合を修正）
   const handleToggleTheme = useCallback(
-    () => updateSettings((prev) => ({ theme: prev.theme === 'dark' ? 'light' : prev.theme === 'light' ? 'dark' : 'dark' })),
+    () => updateSettings((prev) => ({ theme: prev.theme === 'light' ? 'dark' : prev.theme === 'dark' ? 'system' : 'light' })),
     [updateSettings],
   )
 
@@ -638,7 +639,8 @@ export default function App() {
   // --- Render ---
   if (loading || !loaded) return <div className="sg-loading">{t.loading}</div>
 
-  if (showWelcome && groups.length === 0) {
+  // 初回起動時は既存ブックマークの有無に関わらずウェルカム画面を表示（skip/startでonboarded記録）
+  if (showWelcome) {
     return (
       <div className="sg-welcome">
         <div className="sg-welcome__logo"><Icon name="grid" size={48} /></div>

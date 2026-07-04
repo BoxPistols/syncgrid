@@ -84,6 +84,26 @@ export async function saveMeta(bookmarkId: string, meta: BookmarkMeta): Promise<
 }
 
 /**
+ * 現存しないブックマークの孤立メタデータ（meta_*）を削除する。
+ * @param validBookmarkIds 現存するブックマークIDの集合
+ * @returns 削除した孤立メタの件数
+ */
+export async function pruneOrphanMeta(validBookmarkIds: Set<string>): Promise<number> {
+  const all = await chrome.storage.local.get(null)
+  const orphanKeys: string[] = []
+  for (const key of Object.keys(all)) {
+    if (key.startsWith(META_PREFIX)) {
+      const id = key.slice(META_PREFIX.length)
+      if (!validBookmarkIds.has(id)) orphanKeys.push(key)
+    }
+  }
+  if (orphanKeys.length > 0) {
+    await chrome.storage.local.remove(orphanKeys)
+  }
+  return orphanKeys.length
+}
+
+/**
  * 全メタデータを一括読み込み
  */
 export async function loadAllMeta(): Promise<Record<string, BookmarkMeta>> {
