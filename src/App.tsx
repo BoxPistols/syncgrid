@@ -28,6 +28,7 @@ import { HelpPanel } from './components/HelpPanel'
 import { KanbanBoard } from './components/KanbanBoard'
 import { ToastContainer } from './components/Toast'
 import { useToast } from './hooks/useToast'
+import { useFocusTrap } from './hooks/useFocusTrap'
 import {
   addBookmark,
   removeBookmark,
@@ -58,6 +59,9 @@ export default function App() {
 
   // --- Toast (操作の成否通知) ---
   const { toasts, showToast, dismiss: dismissToast } = useToast()
+
+  // 期限設定モーダル用フォーカストラップ
+  const dueDateTrapRef = useFocusTrap<HTMLDivElement>()
 
   // --- Extracted hooks ---
   const { allMeta, handleSetStatus, handleSaveMeta } = useMetadata(groups)
@@ -878,7 +882,7 @@ export default function App() {
       {showHelp && (<HelpPanel onClose={() => setShowHelp(false)} t={t} />)}
       {dueDateTarget && (
         <div className="sg-modal-overlay" onClick={() => setDueDateTarget(null)}>
-          <div className="sg-modal" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') setDueDateTarget(null) }}>
+          <div ref={dueDateTrapRef} className="sg-modal" role="dialog" aria-modal="true" aria-label={t.kanbanSetDueDate} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') setDueDateTarget(null) }}>
             <div className="sg-modal__header">
               <span className="sg-modal__title">{t.kanbanSetDueDate}</span>
               <button className="sg-modal__close" onClick={() => setDueDateTarget(null)} aria-label={t.close}><Icon name="close" size={12} /></button>
