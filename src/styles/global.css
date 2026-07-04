@@ -2399,16 +2399,18 @@ button {
 }
 
 .sg-kanban-card--drop-before {
-  box-shadow: 0 -2px 0 0 var(--sg-accent);
+  box-shadow: 0 -3px 0 0 var(--sg-accent);
 }
 
 .sg-kanban-card--drop-after {
-  box-shadow: 0 2px 0 0 var(--sg-accent);
+  box-shadow: 0 3px 0 0 var(--sg-accent);
 }
 
 .sg-kanban-card__favicon {
   flex-shrink: 0;
   border-radius: 4px;
+  /* 既定でドラッグ可能な img がカード左端のドラッグ開始を奪うのを防ぐ */
+  pointer-events: none;
 }
 
 .sg-kanban-card__body {
@@ -2417,6 +2419,8 @@ button {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* カード面全体を確実にドラッグ対象にする（メニューボタンは別途操作可能） */
+  pointer-events: none;
 }
 
 .sg-kanban-card__title {
@@ -2535,4 +2539,79 @@ button {
     grid-template-columns: 1fr;
     overflow-y: auto;
   }
+}
+
+/* --- Toast 通知 --- */
+.sg-toasts {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 40px));
+  pointer-events: none;
+}
+
+.sg-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--sg-radius-sm);
+  background: var(--sg-bg-card);
+  border: 1px solid var(--sg-border);
+  box-shadow: var(--sg-shadow-modal);
+  color: var(--sg-text);
+  font-size: 13px;
+  line-height: 1.4;
+  pointer-events: auto;
+  animation: sg-toast-in 200ms ease;
+}
+
+@keyframes sg-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-toast { animation: none; }
+}
+
+.sg-toast__icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sg-toast--error { border-left: 3px solid var(--sg-danger); }
+.sg-toast--error .sg-toast__icon { color: var(--sg-danger); }
+.sg-toast--success { border-left: 3px solid var(--sg-success); }
+.sg-toast--success .sg-toast__icon { color: var(--sg-success); }
+.sg-toast--warning { border-left: 3px solid var(--sg-accent); }
+.sg-toast--warning .sg-toast__icon { color: var(--sg-accent); }
+.sg-toast--info .sg-toast__icon { color: var(--sg-text-secondary); }
+
+.sg-toast__message {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.sg-toast__close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  color: var(--sg-text-tertiary);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.sg-toast__close:hover {
+  color: var(--sg-text);
+  background: var(--sg-bg-card-hover);
 }

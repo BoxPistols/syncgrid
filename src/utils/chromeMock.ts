@@ -196,7 +196,45 @@ if (!IS_EXTENSION) {
   const onMoved = mockEvent()
 
   // --- Storage mock ---
-  const storageData: Record<string, unknown> = {}
+  const storageOnChanged = mockEvent()
+  const storageLocal: Record<string, unknown> = {}
+  const storageSync: Record<string, unknown> = {}
+
+  function makeStorageArea(data: Record<string, unknown>, areaName: string) {
+    return {
+      get: (keys: string | string[] | null) => {
+        if (keys === null) return Promise.resolve({ ...data })
+        const keyList = typeof keys === 'string' ? [keys] : keys
+        const result: Record<string, unknown> = {}
+        for (const k of keyList) {
+          if (k in data) result[k] = data[k]
+        }
+        return Promise.resolve(result)
+      },
+      set: (items: Record<string, unknown>) => {
+        const changes: Record<string, { oldValue?: unknown; newValue?: unknown }> = {}
+        for (const [k, v] of Object.entries(items)) {
+          changes[k] = { oldValue: data[k], newValue: v }
+        }
+        Object.assign(data, items)
+        storageOnChanged.fire(changes, areaName)
+        return Promise.resolve()
+      },
+      remove: (keys: string | string[]) => {
+        const keyList = typeof keys === 'string' ? [keys] : keys
+        const changes: Record<string, { oldValue?: unknown }> = {}
+        for (const k of keyList) {
+          if (k in data) {
+            changes[k] = { oldValue: data[k] }
+            delete data[k]
+          }
+        }
+        storageOnChanged.fire(changes, areaName)
+        return Promise.resolve()
+      },
+      getBytesInUse: () => Promise.resolve(0),
+    }
+  }
 
   // --- Mount mocks ---
   const g = globalThis as unknown as { chrome: typeof chrome }
@@ -285,20 +323,11 @@ if (!IS_EXTENSION) {
       onMoved,
     },
     storage: {
-      local: {
-        get: (keys: string | string[] | null) => {
-          if (keys === null) return Promise.resolve({ ...storageData })
-          const keyList = typeof keys === 'string' ? [keys] : keys
-          const result: Record<string, unknown> = {}
-          for (const k of keyList) {
-            if (k in storageData) result[k] = storageData[k]
-          }
-          return Promise.resolve(result)
-        },
-        set: (items: Record<string, unknown>) => {
-          Object.assign(storageData, items)
-          return Promise.resolve()
-        },
+      local: makeStorageArea(storageLocal, 'local'),
+      sync: makeStorageArea(storageSync, 'sync'),
+      onChanged: {
+        addListener: storageOnChanged.addListener,
+        removeListener: storageOnChanged.removeListener,
       },
     },
     permissions: {

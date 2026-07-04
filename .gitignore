@@ -20,3 +20,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Vite dev キャッシュ
+.vite/

@@ -26,6 +26,8 @@ import { OnboardingTour } from './components/OnboardingTour'
 import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel'
 import { HelpPanel } from './components/HelpPanel'
 import { KanbanBoard } from './components/KanbanBoard'
+import { ToastContainer } from './components/Toast'
+import { useToast } from './hooks/useToast'
 import {
   addBookmark,
   removeBookmark,
@@ -43,11 +45,17 @@ import { pullKanbanFromSync } from './utils/localSync'
 
 import './styles/global.css'
 
+/** タブ直下の未分類ブックマークをまとめる仮想フォルダのID */
+const UNCATEGORIZED_ID = '__uncategorized_virtual__'
+
 export default function App() {
   const { groups, loading, refresh } = useBookmarks()
   const { settings, updateSettings, loaded } = useSettings()
   useTheme(settings.theme)
   const t = useI18n(settings.locale)
+
+  // --- Toast (操作の成否通知) ---
+  const { toasts, showToast, dismiss: dismissToast } = useToast()
 
   // --- Extracted hooks ---
   const { allMeta, handleSetStatus, handleSaveMeta } = useMetadata(groups)
@@ -58,7 +66,23 @@ export default function App() {
     allTagsInFolder, applyFiltersAndSort,
   } = useFiltering(groups, nav.currentFolder, allMeta, settings.sort)
   const { collapsedIds, toggleCollapse, expandAll, collapseAll } = useCollapse()
-  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems, reloadKanban } = useKanban(groups)
+  const handleKanbanError = useCallback(() => showToast(t.kanbanSaveError, 'error'), [showToast, t])
+  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems, reloadKanban } = useKanban(groups, { onError: handleKanbanError })
+
+  // タブ直下の未分類ブックマークを折りたためる仮想フォルダにまとめる。
+  // サブフォルダが存在する場合のみ（フラットなフォルダは素のグリッドのまま）。
+  const uncategorizedGroup = useMemo<SyncGridGroup | null>(() => {
+    const folder = nav.currentFolder
+    if (!folder || folder.items.length === 0 || folder.children.length === 0) return null
+    return {
+      id: UNCATEGORIZED_ID,
+      title: t.uncategorized,
+      items: folder.items,
+      children: [],
+      parentId: folder.id,
+      depth: 0,
+    }
+  }, [nav.currentFolder, t])
 
   // 全フォルダIDを再帰収集（一括折りたたみ用）
   const allFolderIds = useMemo(() => {
@@ -69,8 +93,9 @@ export default function App() {
       for (const child of group.children) collect(child)
     }
     for (const child of nav.currentFolder.children) collect(child)
+    if (uncategorizedGroup) ids.push(UNCATEGORIZED_ID)
     return ids
-  }, [nav.currentFolder])
+  }, [nav.currentFolder, uncategorizedGroup])
 
   // --- 積読サジェスト ---
   const STALE_DAYS = 7
@@ -383,9 +408,9 @@ export default function App() {
           { label: t.openNewTab, icon: 'link', shortcut: 'O', action: () => { window.open(item.url, '_blank'); handleSetStatus(item.id, 'read') } },
           { label: t.edit, icon: 'edit', shortcut: 'E', action: () => setEditItem(item) },
           { label: '---', action: () => {} },
-          { label: t.kanbanTodo, icon: 'columns', action: () => moveKanbanItem(item.id, 'todo', 0) },
-          { label: t.kanbanDoing, icon: 'columns', action: () => moveKanbanItem(item.id, 'doing', 0) },
-          { label: t.kanbanDone, icon: 'columns', action: () => { moveKanbanItem(item.id, 'done', 0); handleSetStatus(item.id, 'read') } },
+          { label: t.kanbanTodo, icon: 'columns', action: () => moveKanbanItem(item.id, 'todo', null) },
+          { label: t.kanbanDoing, icon: 'columns', action: () => moveKanbanItem(item.id, 'doing', null) },
+          { label: t.kanbanDone, icon: 'columns', action: () => { moveKanbanItem(item.id, 'done', null); handleSetStatus(item.id, 'read') } },
           { label: '---', action: () => {} },
           { label: t.kanbanSetDueDate, icon: 'pin', action: () => setDueDateTarget(item.id) },
           ...(dueDates.get(item.id) ? [{ label: t.kanbanClearDueDate, icon: 'close' as const, action: () => setDueDate(item.id, undefined) }] : []),
@@ -589,7 +614,7 @@ export default function App() {
           <button key={g.id} className={`sg-tab ${g.id === nav.activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id && dragState.draggingId !== g.id ? 'sg-tab--drop-target' : ''} ${dragState.draggingId === g.id ? 'sg-tab--dragging' : ''}`} role="tab" aria-selected={g.id === nav.activeTabId} title={String(idx + 1)} onClick={() => handleSelectTab(g.id)} onContextMenu={(e) => handleTabContext(g, e)} onDoubleClick={() => { setRenamingTabId(g.id); setRenameValue(g.title) }} {...getTabHandlers(g.id)}>
             {renamingTabId === g.id ? (
               <input className="sg-tab__rename" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={handleRenameSubmit} onKeyDown={(e) => { if (isComposing(e)) return; if (e.key === 'Enter') handleRenameSubmit(); if (e.key === 'Escape') setRenamingTabId(null) }} autoFocus onClick={(e) => e.stopPropagation()} />
-            ) : (<><span className="sg-tab__shortcut">{idx + 1}</span>{g.title}<span className="sg-tab__count">{countAll(g)}</span></>)}
+            ) : (<><span className="sg-tab__shortcut">{idx + 1}</span>{g.id === '__ungrouped__' ? t.uncategorized : g.title}<span className="sg-tab__count">{countAll(g)}</span></>)}
           </button>
         ))}
         {creatingGroup === 'tab' ? (
@@ -761,14 +786,16 @@ export default function App() {
               <div className="sg-empty"><div className="sg-empty__icon"><Icon name="pin" size={48} /></div><p className="sg-empty__text sg-preline">{t.emptyFolder}</p></div>
             ) : (
               <>
-                {/* ルート直下のブックマーク */}
-                {nav.currentFolder.items.length > 0 && (
+                {/* タブ直下のブックマーク: サブフォルダがある場合は折りたためる「未分類」セクションにまとめる */}
+                {uncategorizedGroup ? (
+                  <FolderSection key={UNCATEGORIZED_ID} group={uncategorizedGroup} depth={0} virtual {...folderSectionProps} />
+                ) : nav.currentFolder.items.length > 0 ? (
                   <div className={gridClass}>
                     {applyFiltersAndSort(nav.currentFolder.items).map((item) => (
                       <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} isSelected={selectedIds.has(item.id)} onToggleSelect={toggleSelect} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
                     ))}
                   </div>
-                )}
+                ) : null}
 
                 {/* フォルダをアコーディオンセクションとして表示 */}
                 {nav.currentFolder.children.map((child) => (
@@ -817,6 +844,7 @@ export default function App() {
         { target: '.sg-tab--add', title: t.addBookmark('Ctrl'), description: t.tourAdd },
         { target: '.sg-btn--icon:last-child', title: t.settings, description: t.tourSettings },
       ]} onComplete={handleCompleteTour} t={t} />)}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} dismissLabel={t.toastDismiss} />
     </>
   )
 }

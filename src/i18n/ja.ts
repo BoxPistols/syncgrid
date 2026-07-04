@@ -259,4 +259,12 @@ export const ja = {
   helpRefExportDesc: '設定画面からブックマークデータをJSONファイルとしてバックアップ・復元',
   helpRefSync: 'ローカル同期',
   helpRefSyncDesc: 'クラウドドライブ（Google Drive, OneDrive等）と同期されたローカルフォルダを選択して自動バックアップ',
+  // Toast / エラー通知
+  toastDismiss: '通知を閉じる',
+  kanbanSaveError: 'カンバンの保存に失敗しました（容量制限の可能性があります）',
+  actionFailed: '操作に失敗しました。もう一度お試しください。',
+  // 未分類フォルダ
+  uncategorized: '未分類',
+  // 単体削除の確認
+  confirmDeleteBookmark: (name: string) => `「${name}」を削除しますか？削除したブックマークはゴミ箱に移動します。`,
 } as const

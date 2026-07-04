@@ -9,7 +9,7 @@ interface Props {
   allMeta: Record<string, BookmarkMeta>
   dueDates: Map<string, number>
   locale: string
-  onMoveItem: (bookmarkId: string, toColumn: KanbanColumn, toOrder: number) => void
+  onMoveItem: (bookmarkId: string, toColumn: KanbanColumn, beforeBookmarkId: string | null) => void
   onContextMenu: (item: SyncGridItem, x: number, y: number) => void
   onOpen: (id: string) => void
   onMarkRead?: (id: string) => void
@@ -134,9 +134,14 @@ export const KanbanBoard = memo(function KanbanBoard({
 
       const rect = e.currentTarget.getBoundingClientRect()
       const relY = (e.clientY - rect.top) / rect.height
-      const order = relY < 0.5 ? targetIndex : targetIndex + 1
+      const columnItems = kanbanColumns[targetColumn]
+      // before: ターゲットの直前 / after: ターゲットの次のカードの直前（末尾なら null）
+      const beforeId =
+        relY < 0.5
+          ? targetBookmarkId
+          : columnItems[targetIndex + 1]?.id ?? null
 
-      onMoveItem(data.bookmarkId, targetColumn, order)
+      onMoveItem(data.bookmarkId, targetColumn, beforeId)
       if (targetColumn === 'done' && onMarkRead) onMarkRead(data.bookmarkId)
       resetDrag()
     },
@@ -172,12 +177,25 @@ export const KanbanBoard = memo(function KanbanBoard({
       const data = dragDataRef.current
       if (!data) return
 
-      const order = kanbanColumns[column].length
-      onMoveItem(data.bookmarkId, column, order)
+      // カード外（gap/padding/空エリア）へのドロップ:
+      // カーソル位置に最も近いカードを検出し、その直前に挿入する（なければ末尾）
+      const cards = e.currentTarget.querySelectorAll<HTMLElement>('.sg-kanban-card[data-card-id]')
+      let beforeId: string | null = null
+      for (const el of cards) {
+        const id = el.dataset.cardId
+        if (!id || id === data.bookmarkId) continue
+        const rect = el.getBoundingClientRect()
+        if (e.clientY < rect.top + rect.height / 2) {
+          beforeId = id
+          break
+        }
+      }
+
+      onMoveItem(data.bookmarkId, column, beforeId)
       if (column === 'done' && onMarkRead) onMarkRead(data.bookmarkId)
       resetDrag()
     },
-    [kanbanColumns, onMoveItem, onMarkRead, resetDrag],
+    [onMoveItem, onMarkRead, resetDrag],
   )
 
   if (totalItems === 0) {
