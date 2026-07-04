@@ -267,4 +267,7 @@ export const ja = {
   uncategorized: '未分類',
   // 単体削除の確認
   confirmDeleteBookmark: (name: string) => `「${name}」を削除しますか？削除したブックマークはゴミ箱に移動します。`,
+  bookmarkDeleted: 'ゴミ箱に移動しました',
+  // AI権限
+  aiPermissionDenied: 'AI APIへのアクセス権限が必要です。許可すると接続できます。',
 } as const

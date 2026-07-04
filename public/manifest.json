@@ -12,10 +12,6 @@
     "storage",
     "favicon"
   ],
-  "host_permissions": [
-    "https://api.openai.com/*",
-    "https://generativelanguage.googleapis.com/*"
-  ],
   "optional_host_permissions": [
     "https://*/*",
     "http://*/*"

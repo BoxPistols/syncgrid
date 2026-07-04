@@ -9,7 +9,7 @@
 
 import type { SyncGridGroup, SyncGridExport, SyncGridExportGroup, KanbanState } from '../types'
 import { SYNCGRID_ROOT } from '../types'
-import { loadKanban } from './kanban'
+import { loadKanban, saveKanban } from './kanban'
 
 // ===== EXPORT =====
 
@@ -209,6 +209,12 @@ async function restoreGroups(groups: SyncGridExportGroup[], parentId: string): P
     }
     await restoreGroups(group.children, folder.id)
   }
+}
+
+/** インポートしたカンバン状態を保存（存在する場合のみ） */
+export async function importKanban(kanban: KanbanState | undefined): Promise<void> {
+  if (!kanban || kanban.items.length === 0) return
+  await saveKanban(kanban)
 }
 
 export function readFileAsText(file: File): Promise<string> {

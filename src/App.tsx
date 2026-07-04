@@ -38,7 +38,9 @@ import {
   getRootId,
   flattenGroups,
   countAll,
+  findGroupById,
 } from './utils/bookmarks'
+import { addToTrash } from './utils/trash'
 import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
 import { isComposing, matchesBinding } from './utils/keyboard'
 import { pullKanbanFromSync } from './utils/localSync'
@@ -311,68 +313,125 @@ export default function App() {
   const handleCreateGroup = useCallback(async () => {
     const name = newGroupName.trim()
     if (!name) { setCreatingGroup(false); return }
-    await createGroup(name, await getRootId())
-    setCreatingGroup(false)
-    setNewGroupName('')
-    await refresh()
-  }, [newGroupName, refresh])
+    try {
+      await createGroup(name, await getRootId())
+      setCreatingGroup(false)
+      setNewGroupName('')
+      await refresh()
+    } catch {
+      showToast(t.actionFailed, 'error')
+    }
+  }, [newGroupName, refresh, showToast, t])
 
   const handleCreateSubfolder = useCallback(async () => {
     const name = newGroupName.trim()
     if (!name) { setCreatingGroup(false); return }
-    await createGroup(name, nav.currentFolder?.id || (await getRootId()))
-    setCreatingGroup(false)
-    setNewGroupName('')
-    await refresh()
-  }, [newGroupName, nav.currentFolder, refresh])
+    try {
+      await createGroup(name, nav.currentFolder?.id || (await getRootId()))
+      setCreatingGroup(false)
+      setNewGroupName('')
+      await refresh()
+    } catch {
+      showToast(t.actionFailed, 'error')
+    }
+  }, [newGroupName, nav.currentFolder, refresh, showToast, t])
 
   const handleAddBookmark = useCallback(
     async (url: string, title: string) => {
       if (!nav.currentFolder) return
-      await addBookmark(nav.currentFolder.id, title, url)
-      setShowAddForm(false)
-      await refresh()
+      try {
+        await addBookmark(nav.currentFolder.id, title, url)
+        setShowAddForm(false)
+        await refresh()
+      } catch {
+        showToast(t.actionFailed, 'error')
+      }
     },
-    [nav.currentFolder, refresh],
+    [nav.currentFolder, refresh, showToast, t],
   )
 
   const handleSaveBookmark = useCallback(
     async (id: string, title: string, url: string, tags: string[]) => {
-      await updateBookmark(id, { title, url })
-      await handleSaveMeta(id, tags)
-      setEditItem(null)
-      await refresh()
+      try {
+        await updateBookmark(id, { title, url })
+        await handleSaveMeta(id, tags)
+        setEditItem(null)
+        await refresh()
+      } catch {
+        showToast(t.actionFailed, 'error')
+      }
     },
-    [refresh, handleSaveMeta],
+    [refresh, handleSaveMeta, showToast, t],
   )
 
-  const handleDeleteBookmark = useCallback(
-    async (id: string) => {
-      await removeBookmark(id)
-      setEditItem(null)
-      await refresh()
+  // ブックマークをゴミ箱経由で削除する共通処理（確認ダイアログ＋トースト＋復元可能）
+  const requestDeleteBookmark = useCallback(
+    (item: SyncGridItem) => {
+      setConfirmDialog({
+        message: t.confirmDeleteBookmark(item.title || item.url),
+        confirmLabel: t.delete,
+        onConfirm: async () => {
+          setConfirmDialog(null)
+          try {
+            const parentTitle = findGroupById(groups, item.parentId)?.title ?? ''
+            await addToTrash({
+              id: `trash_${Date.now()}_${item.id}`,
+              title: item.title,
+              url: item.url,
+              parentId: item.parentId,
+              parentTitle,
+              deletedAt: Date.now(),
+            })
+            await removeBookmark(item.id)
+            setEditItem(null)
+            showToast(t.bookmarkDeleted, 'success')
+            await refresh()
+          } catch {
+            showToast(t.actionFailed, 'error')
+          }
+        },
+      })
     },
-    [refresh],
+    [t, groups, refresh, showToast],
+  )
+
+  // 編集モーダルからの削除（id受け取り→itemを解決）
+  const handleDeleteBookmark = useCallback(
+    (id: string) => {
+      const item = editItem?.id === id
+        ? editItem
+        : flattenGroups(groups).flatMap((g) => g.items).find((i) => i.id === id)
+      if (item) requestDeleteBookmark(item)
+    },
+    [editItem, groups, requestDeleteBookmark],
   )
 
   const handleFolderRename = useCallback(
     async (id: string, name: string) => {
       const trimmed = name.trim()
-      if (trimmed) await renameGroup(id, trimmed)
-      setRenamingFolderId(null)
-      await refresh()
+      try {
+        if (trimmed) await renameGroup(id, trimmed)
+        setRenamingFolderId(null)
+        await refresh()
+      } catch {
+        showToast(t.actionFailed, 'error')
+      }
     },
-    [refresh],
+    [refresh, showToast, t],
   )
 
   const handleRenameSubmit = useCallback(async () => {
     if (!renamingTabId) return
     const name = renameValue.trim()
-    if (name) await renameGroup(renamingTabId, name)
-    setRenamingTabId(null)
-    setRenameValue('')
-    await refresh()
-  }, [renamingTabId, renameValue, refresh])
+    try {
+      if (name) await renameGroup(renamingTabId, name)
+      setRenamingTabId(null)
+      setRenameValue('')
+      await refresh()
+    } catch {
+      showToast(t.actionFailed, 'error')
+    }
+  }, [renamingTabId, renameValue, refresh, showToast, t])
 
   // --- Context menus ---
   const handleBookmarkContext = useCallback(
@@ -392,11 +451,11 @@ export default function App() {
             ? { label: t.removeFromKanban, icon: 'columns', shortcut: 'K', action: () => removeFromKanban(item.id) }
             : { label: t.addToKanban, icon: 'columns', shortcut: 'K', action: () => addToKanban(item.id) },
           { label: '---', action: () => {} },
-          { label: t.delete, icon: 'trash', danger: true, action: async () => { await removeBookmark(item.id); refresh() } },
+          { label: t.delete, icon: 'trash', danger: true, action: () => requestDeleteBookmark(item) },
         ],
       })
     },
-    [refresh, t, handleSetStatus, isInKanban, addToKanban, removeFromKanban],
+    [t, handleSetStatus, isInKanban, addToKanban, removeFromKanban, requestDeleteBookmark],
   )
 
   // カンバン内ブックマークのコンテキストメニュー

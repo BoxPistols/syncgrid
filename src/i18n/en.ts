@@ -241,4 +241,7 @@ export const en = {
   uncategorized: 'Uncategorized',
   // Single delete confirmation
   confirmDeleteBookmark: (name: string) => `Delete "${name}"? It will be moved to the trash.`,
+  bookmarkDeleted: 'Moved to trash',
+  // AI permission
+  aiPermissionDenied: 'Access to the AI API is required. Grant it to connect.',
 } as const
