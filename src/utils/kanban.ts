@@ -29,29 +29,43 @@ function migrate(stored: KanbanState): { state: KanbanState; changed: boolean } 
   return { state: { items } as unknown as KanbanState, changed: true }
 }
 
+/** 指定ストレージエリアから有効なカンバン状態を読む（無効/未定義なら null） */
+async function readArea(
+  area: chrome.storage.StorageArea | undefined,
+): Promise<KanbanState | null> {
+  if (!area?.get) return null
+  try {
+    const result = await area.get(STORAGE_KEY)
+    const stored = result[STORAGE_KEY]
+    return isValidState(stored) ? (stored as KanbanState) : null
+  } catch {
+    return null
+  }
+}
+
+/** updatedAt が新しい方を採用（同値/未設定は sync=a を優先＝クロスPC同期のソースオブトゥルース） */
+function pickNewer(a: KanbanState | null, b: KanbanState | null): KanbanState | null {
+  if (!a) return b
+  if (!b) return a
+  return (a.updatedAt ?? 0) >= (b.updatedAt ?? 0) ? a : b
+}
+
 /**
  * カンバン状態を読み込む。
- * 主保存は chrome.storage.local。local に無ければ sync ミラーから復元する
- * （新デバイスでの初回起動など）。
+ * クロスPC同期のソースオブトゥルースは chrome.storage.sync（同一Googleアカウント間で自動同期）。
+ * local はオフライン/開発環境用のキャッシュ。両者を読み、updatedAt が新しい方を採用する
+ * （他PCが sync に書いた新しい状態が勝ち、全端末が収束する。オフライン編集は local が
+ *  新しければ保持され、次回オンライン保存で sync に反映される）。
  */
 export async function loadKanban(): Promise<KanbanState> {
-  const local = globalThis.chrome?.storage?.local
   const sync = globalThis.chrome?.storage?.sync
+  const local = globalThis.chrome?.storage?.local
 
-  let stored: unknown
-  if (local?.get) {
-    const result = await local.get(STORAGE_KEY)
-    stored = result[STORAGE_KEY]
-  }
-  // local に無ければ sync から復元
-  if (!isValidState(stored) && sync?.get) {
-    const result = await sync.get(STORAGE_KEY)
-    stored = result[STORAGE_KEY]
-  }
+  const [syncState, localState] = await Promise.all([readArea(sync), readArea(local)])
+  const chosen = pickNewer(syncState, localState)
+  if (!chosen) return { ...EMPTY_STATE }
 
-  if (!isValidState(stored)) return { ...EMPTY_STATE }
-
-  const { state, changed } = migrate(stored)
+  const { state, changed } = migrate(chosen)
   if (changed) {
     // マイグレーション結果を永続化（成否は問わない）
     saveKanban(state).catch(() => {})
@@ -61,13 +75,16 @@ export async function loadKanban(): Promise<KanbanState> {
 
 /**
  * カンバン状態を保存する。
- * local を主保存として確実に書き込み（失敗時は throw）、
- * sync へはベストエフォートでミラーする（quota 超過等は握りつぶし synced=false を返す）。
+ * updatedAt を打刻し、sync（ソースオブトゥルース）と local（キャッシュ）の両方へ書き込む。
+ * local は確実な永続化のため失敗時に throw、sync は quota/オフラインで失敗しうるため
+ * ベストエフォート（synced=false を返す。local には保存済みなので次回オンライン時に収束）。
  */
 export async function saveKanban(state: KanbanState): Promise<SaveResult> {
+  // 打刻はin-placeで行い、呼び出し側が return する state にも反映されるようにする
+  state.updatedAt = Date.now()
+
   const local = globalThis.chrome?.storage?.local
   if (local?.set) {
-    // 主保存。失敗（QUOTA_BYTES 超過など）は呼び出し側へ伝播させる
     await local.set({ [STORAGE_KEY]: state })
   }
 
@@ -77,7 +94,7 @@ export async function saveKanban(state: KanbanState): Promise<SaveResult> {
       await sync.set({ [STORAGE_KEY]: state })
       return { synced: true }
     } catch {
-      // sync は 8KB/item・120回/分 の制限で失敗しうる。local には保存済みなので実害は同期のみ
+      // sync は 8KB/item・120回/分 の制限で失敗しうる。local には保存済み
       return { synced: false }
     }
   }

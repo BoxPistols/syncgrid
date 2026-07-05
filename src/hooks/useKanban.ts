@@ -63,7 +63,11 @@ export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {
   useEffect(() => {
     const handleChange = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
       if ((areaName === 'sync' || areaName === 'local') && changes.syncgrid_kanban?.newValue) {
-        setKanbanState(changes.syncgrid_kanban.newValue as KanbanState)
+        const incoming = changes.syncgrid_kanban.newValue as KanbanState
+        // 古い変更（自分の書き込みechoの遅延や、他PCの旧状態）は無視して収束を保つ
+        setKanbanState((prev) =>
+          (incoming.updatedAt ?? 0) < (prev.updatedAt ?? 0) ? prev : incoming,
+        )
       }
     }
     chrome.storage.onChanged.addListener(handleChange)

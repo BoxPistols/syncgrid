@@ -92,6 +92,8 @@ export interface KanbanItem {
 /** カンバン永続化データ */
 export interface KanbanState {
   items: KanbanItem[]
+  /** 最終更新時刻（UTCタイムスタンプ）。sync/local間で新しい方を採用する競合解決に使う */
+  updatedAt?: number
 }
 
 /** ローカルメタデータ（chrome.storage.local） */
