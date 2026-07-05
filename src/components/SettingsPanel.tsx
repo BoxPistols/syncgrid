@@ -7,7 +7,7 @@ import type { SyncGridSettings, SyncGridGroup, AIProvider } from '../types'
 import { OPENAI_MODELS, GEMINI_MODELS } from '../types'
 import type { Messages } from '../i18n'
 import type { Locale } from '../i18n'
-import { exportData, downloadExport, readFileAsText, validateImport, importToBookmarks } from '../utils/dataTransfer'
+import { exportData, downloadExport, readFileAsText, validateImport, importToBookmarks, importKanban } from '../utils/dataTransfer'
 import {
   isSyncSupported,
   pickSyncFolder,
@@ -18,7 +18,7 @@ import {
   testSyncConnection,
 } from '../utils/localSync'
 import { testAiConnection } from '../utils/ai'
-import { hasTitleFetchPermission, requestTitleFetchPermission } from '../utils/permissions'
+import { hasTitleFetchPermission, requestTitleFetchPermission, hasAiPermission, requestAiPermission } from '../utils/permissions'
 
 interface Props {
   settings: SyncGridSettings
@@ -84,6 +84,7 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
               return
             }
             await importToBookmarks(validated.data)
+            await importKanban(validated.kanban)
             setImportStatus('success')
             setTimeout(() => location.reload(), 1500)
           } catch {
@@ -140,6 +141,17 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
   const handleAiTest = useCallback(async () => {
     setAiTestStatus('testing')
     setAiTestError('')
+    // AIホスト権限を確保（未付与ならこのユーザージェスチャー中にリクエスト）
+    if (!(await hasAiPermission(settings.ai.provider))) {
+      const granted = await requestAiPermission(settings.ai.provider)
+      if (!granted) {
+        setAiTestStatus('error')
+        setAiTestError(t.aiPermissionDenied)
+        clearTimeout(aiTestTimerRef.current)
+        aiTestTimerRef.current = setTimeout(() => setAiTestStatus('idle'), 4000)
+        return
+      }
+    }
     const result = await testAiConnection(settings.ai)
     if (result.ok) {
       setAiTestStatus('ok')
@@ -149,7 +161,7 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
     }
     clearTimeout(aiTestTimerRef.current)
     aiTestTimerRef.current = setTimeout(() => setAiTestStatus('idle'), 4000)
-  }, [settings.ai])
+  }, [settings.ai, t])
 
   // --- Sync Connection Test ---
   const handleSyncTest = useCallback(async () => {

@@ -11,6 +11,7 @@
 
 import type { AISettings } from '../types'
 import { fetchPageTitle } from './fetchTitle'
+import { ensureAiPermission } from './permissions'
 
 /** Test AI API connection by calling a lightweight endpoint */
 export async function testAiConnection(settings: AISettings): Promise<{ ok: boolean; error?: string }> {
@@ -152,6 +153,7 @@ export async function suggestCategories(
 /** Call OpenAI Chat Completions API */
 async function callOpenAI(prompt: string, apiKey: string, model: string, maxTokens: number = 100): Promise<string> {
   if (!apiKey) throw new Error('OpenAI API key not set')
+  await ensureAiPermission('openai')
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -188,6 +190,7 @@ async function callOpenAI(prompt: string, apiKey: string, model: string, maxToke
 /** Call Gemini generateContent API */
 async function callGemini(prompt: string, apiKey: string, model: string, maxTokens: number = 100): Promise<string> {
   if (!apiKey) throw new Error('Gemini API key not set')
+  await ensureAiPermission('gemini')
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 

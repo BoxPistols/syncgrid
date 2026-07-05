@@ -13,6 +13,8 @@ import type { Messages } from '../i18n'
 interface Props {
   group: SyncGridGroup
   depth: number
+  /** 仮想フォルダ（未分類など）: ドラッグ・改名・フォルダメニューを無効化し、折りたたみのみ許可 */
+  virtual?: boolean
   collapsedIds: Set<string>
   onToggleCollapse: (id: string) => void
   gridClass: string
@@ -35,6 +37,7 @@ interface Props {
 export const FolderSection = memo(function FolderSection({
   group,
   depth,
+  virtual = false,
   collapsedIds,
   onToggleCollapse,
   gridClass,
@@ -74,9 +77,9 @@ export const FolderSection = memo(function FolderSection({
         className={`sg-section__header ${isDropTarget ? 'sg-section__header--drop-target' : ''} ${isDropBefore ? 'sg-section__header--drop-before' : ''} ${isDropAfter ? 'sg-section__header--drop-after' : ''}`}
         role="button"
         tabIndex={0}
-        draggable
-        onDragStart={folderDragHandlers.onDragStart}
-        onDragEnd={folderDragHandlers.onDragEnd}
+        draggable={!virtual}
+        onDragStart={virtual ? undefined : folderDragHandlers.onDragStart}
+        onDragEnd={virtual ? undefined : folderDragHandlers.onDragEnd}
         onClick={() => {
           if (!isRenaming) onToggleCollapse(group.id)
         }}
@@ -88,20 +91,20 @@ export const FolderSection = memo(function FolderSection({
             onToggleCollapse(group.id)
           }
         }}
-        onDoubleClick={(e) => {
+        onDoubleClick={virtual ? undefined : (e) => {
           e.stopPropagation()
           setEditValue(group.title)
           onStartRename(group.id)
         }}
-        onContextMenu={(e) => {
+        onContextMenu={virtual ? undefined : (e) => {
           e.preventDefault()
           onFolderContext(group, e.clientX, e.clientY)
         }}
         aria-expanded={!collapsed}
-        onDragOver={folderDragHandlers.onDragOver}
-        onDragEnter={folderDragHandlers.onDragEnter}
-        onDragLeave={folderDragHandlers.onDragLeave}
-        onDrop={folderDragHandlers.onDrop}
+        onDragOver={virtual ? undefined : folderDragHandlers.onDragOver}
+        onDragEnter={virtual ? undefined : folderDragHandlers.onDragEnter}
+        onDragLeave={virtual ? undefined : folderDragHandlers.onDragLeave}
+        onDrop={virtual ? undefined : folderDragHandlers.onDrop}
       >
         <span className={`sg-section__chevron ${collapsed ? 'sg-section__chevron--collapsed' : ''}`}>
           <Icon name="chevron-down" size={14} />
@@ -125,16 +128,18 @@ export const FolderSection = memo(function FolderSection({
           <span className="sg-section__title">{group.title}</span>
         )}
         <span className="sg-section__count">{t.items(totalItems)}</span>
-        <button
-          className="sg-section__menu"
-          onClick={(e) => {
-            e.stopPropagation()
-            onFolderContext(group, e.clientX, e.clientY)
-          }}
-          aria-label={t.menu}
-        >
-          <Icon name="more" size={14} />
-        </button>
+        {!virtual && (
+          <button
+            className="sg-section__menu"
+            onClick={(e) => {
+              e.stopPropagation()
+              onFolderContext(group, e.clientX, e.clientY)
+            }}
+            aria-label={t.menu}
+          >
+            <Icon name="more" size={14} />
+          </button>
+        )}
       </div>
 
       {!collapsed && (

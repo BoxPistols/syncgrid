@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type { SyncGridGroup, SyncGridItem, KanbanColumn, KanbanState } from '../types'
 import {
   loadKanban,
@@ -10,9 +10,21 @@ import {
 } from '../utils/kanban'
 import { flattenGroups } from '../utils/bookmarks'
 
-export function useKanban(groups: SyncGridGroup[]) {
+interface UseKanbanOptions {
+  /** 保存失敗時に呼ばれる（トースト表示など） */
+  onError?: () => void
+}
+
+export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {}) {
+  const { onError } = options
   const [kanbanState, setKanbanState] = useState<KanbanState>({ items: [] })
   const [now, setNow] = useState(() => Date.now())
+
+  // 最新の onError を ref 経由で参照（コールバックの依存を安定させる）
+  const onErrorRef = useRef(onError)
+  useEffect(() => {
+    onErrorRef.current = onError
+  }, [onError])
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000)
@@ -47,10 +59,10 @@ export function useKanban(groups: SyncGridGroup[]) {
     cleanupKanban(new Set(urlMap.keys())).then(setKanbanState)
   }, [urlMap])
 
-  // 他端末からの同期変更を検知してUIに反映
+  // 他端末（sync）・同一端末の別タブ（local）からの変更を検知してUIに反映
   useEffect(() => {
     const handleChange = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
-      if (areaName === 'sync' && changes.syncgrid_kanban?.newValue) {
+      if ((areaName === 'sync' || areaName === 'local') && changes.syncgrid_kanban?.newValue) {
         setKanbanState(changes.syncgrid_kanban.newValue as KanbanState)
       }
     }
@@ -84,44 +96,57 @@ export function useKanban(groups: SyncGridGroup[]) {
     [kanbanState, idToUrl],
   )
 
+  // storage 書き込みを実行し、成功時に state 反映・失敗時にロールバック（再読込）＋通知する
+  const runMutation = useCallback(async (fn: () => Promise<KanbanState>) => {
+    try {
+      const state = await fn()
+      setKanbanState(state)
+    } catch {
+      // local 保存に失敗（quota 超過など）: 永続化された状態へ巻き戻す
+      onErrorRef.current?.()
+      try {
+        setKanbanState(await loadKanban())
+      } catch {
+        // 読み込みも失敗した場合は現状維持
+      }
+    }
+  }, [])
+
   const addToKanban = useCallback(
     async (bookmarkId: string, column: KanbanColumn = 'todo') => {
       const url = idToUrl.get(bookmarkId)
       if (!url) return
-      const state = await addToKanbanStorage(url, column)
-      setKanbanState(state)
+      await runMutation(() => addToKanbanStorage(url, column))
     },
-    [idToUrl],
+    [idToUrl, runMutation],
   )
 
   const removeFromKanban = useCallback(
     async (bookmarkId: string) => {
       const url = idToUrl.get(bookmarkId)
       if (!url) return
-      const state = await removeFromKanbanStorage(url)
-      setKanbanState(state)
+      await runMutation(() => removeFromKanbanStorage(url))
     },
-    [idToUrl],
+    [idToUrl, runMutation],
   )
 
   const moveItem = useCallback(
-    async (bookmarkId: string, toColumn: KanbanColumn, toOrder: number) => {
+    async (bookmarkId: string, toColumn: KanbanColumn, beforeBookmarkId: string | null) => {
       const url = idToUrl.get(bookmarkId)
       if (!url) return
-      const state = await moveInKanbanStorage(url, toColumn, toOrder)
-      setKanbanState(state)
+      const beforeUrl = beforeBookmarkId ? idToUrl.get(beforeBookmarkId) ?? null : null
+      await runMutation(() => moveInKanbanStorage(url, toColumn, beforeUrl))
     },
-    [idToUrl],
+    [idToUrl, runMutation],
   )
 
   const setDueDate = useCallback(
     async (bookmarkId: string, dueDate: number | undefined) => {
       const url = idToUrl.get(bookmarkId)
       if (!url) return
-      const state = await setDueDateInKanban(url, dueDate)
-      setKanbanState(state)
+      await runMutation(() => setDueDateInKanban(url, dueDate))
     },
-    [idToUrl],
+    [idToUrl, runMutation],
   )
 
   // 期限情報のマップ（bookmarkId → dueDate）

@@ -92,6 +92,7 @@ export const KanbanCard = memo(function KanbanCard({
   return (
     <div
       className={cls}
+      data-card-id={item.id}
       onClick={handleClick}
       onContextMenu={handleContext}
       draggable
@@ -108,6 +109,7 @@ export const KanbanCard = memo(function KanbanCard({
         width={16}
         height={16}
         loading="lazy"
+        draggable={false}
       />
       <div className="sg-kanban-card__body">
         <span className="sg-kanban-card__title">

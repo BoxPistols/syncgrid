@@ -176,8 +176,8 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
           <Icon name="refresh" size={14} className={ogpSpinning ? 'sg-icon--spin' : ''} />
           <span>OGP</span>
         </button>
-        <button className="sg-btn--icon" onClick={onToggleTheme} title={t.toggleTheme}>
-          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
+        <button className="sg-btn--icon" onClick={onToggleTheme} title={`${t.toggleTheme}: ${theme}`}>
+          <Icon name={theme === 'light' ? 'sun' : 'moon'} size={16} />
         </button>
         <button className="sg-btn--icon" onClick={onOpenShortcuts} title={t.shortcuts}>
           <Icon name="keyboard" size={16} />

@@ -26,6 +26,9 @@ import { OnboardingTour } from './components/OnboardingTour'
 import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel'
 import { HelpPanel } from './components/HelpPanel'
 import { KanbanBoard } from './components/KanbanBoard'
+import { ToastContainer } from './components/Toast'
+import { useToast } from './hooks/useToast'
+import { useFocusTrap } from './hooks/useFocusTrap'
 import {
   addBookmark,
   removeBookmark,
@@ -36,18 +39,29 @@ import {
   getRootId,
   flattenGroups,
   countAll,
+  findGroupById,
 } from './utils/bookmarks'
+import { addToTrash } from './utils/trash'
 import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
 import { isComposing, matchesBinding } from './utils/keyboard'
 import { pullKanbanFromSync } from './utils/localSync'
 
 import './styles/global.css'
 
+/** タブ直下の未分類ブックマークをまとめる仮想フォルダのID */
+const UNCATEGORIZED_ID = '__uncategorized_virtual__'
+
 export default function App() {
   const { groups, loading, refresh } = useBookmarks()
   const { settings, updateSettings, loaded } = useSettings()
   useTheme(settings.theme)
   const t = useI18n(settings.locale)
+
+  // --- Toast (操作の成否通知) ---
+  const { toasts, showToast, dismiss: dismissToast } = useToast()
+
+  // 期限設定モーダル用フォーカストラップ
+  const dueDateTrapRef = useFocusTrap<HTMLDivElement>()
 
   // --- Extracted hooks ---
   const { allMeta, handleSetStatus, handleSaveMeta } = useMetadata(groups)
@@ -58,7 +72,23 @@ export default function App() {
     allTagsInFolder, applyFiltersAndSort,
   } = useFiltering(groups, nav.currentFolder, allMeta, settings.sort)
   const { collapsedIds, toggleCollapse, expandAll, collapseAll } = useCollapse()
-  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems, reloadKanban } = useKanban(groups)
+  const handleKanbanError = useCallback(() => showToast(t.kanbanSaveError, 'error'), [showToast, t])
+  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems, reloadKanban } = useKanban(groups, { onError: handleKanbanError })
+
+  // タブ直下の未分類ブックマークを折りたためる仮想フォルダにまとめる。
+  // サブフォルダが存在する場合のみ（フラットなフォルダは素のグリッドのまま）。
+  const uncategorizedGroup = useMemo<SyncGridGroup | null>(() => {
+    const folder = nav.currentFolder
+    if (!folder || folder.items.length === 0 || folder.children.length === 0) return null
+    return {
+      id: UNCATEGORIZED_ID,
+      title: t.uncategorized,
+      items: folder.items,
+      children: [],
+      parentId: folder.id,
+      depth: 0,
+    }
+  }, [nav.currentFolder, t])
 
   // 全フォルダIDを再帰収集（一括折りたたみ用）
   const allFolderIds = useMemo(() => {
@@ -69,8 +99,9 @@ export default function App() {
       for (const child of group.children) collect(child)
     }
     for (const child of nav.currentFolder.children) collect(child)
+    if (uncategorizedGroup) ids.push(UNCATEGORIZED_ID)
     return ids
-  }, [nav.currentFolder])
+  }, [nav.currentFolder, uncategorizedGroup])
 
   // --- 積読サジェスト ---
   const STALE_DAYS = 7
@@ -226,8 +257,9 @@ export default function App() {
     [updateSettings],
   )
 
+  // light → dark → system → light の3値循環（systemに到達できない不具合を修正）
   const handleToggleTheme = useCallback(
-    () => updateSettings((prev) => ({ theme: prev.theme === 'dark' ? 'light' : prev.theme === 'light' ? 'dark' : 'dark' })),
+    () => updateSettings((prev) => ({ theme: prev.theme === 'light' ? 'dark' : prev.theme === 'dark' ? 'system' : 'light' })),
     [updateSettings],
   )
 
@@ -286,68 +318,125 @@ export default function App() {
   const handleCreateGroup = useCallback(async () => {
     const name = newGroupName.trim()
     if (!name) { setCreatingGroup(false); return }
-    await createGroup(name, await getRootId())
-    setCreatingGroup(false)
-    setNewGroupName('')
-    await refresh()
-  }, [newGroupName, refresh])
+    try {
+      await createGroup(name, await getRootId())
+      setCreatingGroup(false)
+      setNewGroupName('')
+      await refresh()
+    } catch {
+      showToast(t.actionFailed, 'error')
+    }
+  }, [newGroupName, refresh, showToast, t])
 
   const handleCreateSubfolder = useCallback(async () => {
     const name = newGroupName.trim()
     if (!name) { setCreatingGroup(false); return }
-    await createGroup(name, nav.currentFolder?.id || (await getRootId()))
-    setCreatingGroup(false)
-    setNewGroupName('')
-    await refresh()
-  }, [newGroupName, nav.currentFolder, refresh])
+    try {
+      await createGroup(name, nav.currentFolder?.id || (await getRootId()))
+      setCreatingGroup(false)
+      setNewGroupName('')
+      await refresh()
+    } catch {
+      showToast(t.actionFailed, 'error')
+    }
+  }, [newGroupName, nav.currentFolder, refresh, showToast, t])
 
   const handleAddBookmark = useCallback(
     async (url: string, title: string) => {
       if (!nav.currentFolder) return
-      await addBookmark(nav.currentFolder.id, title, url)
-      setShowAddForm(false)
-      await refresh()
+      try {
+        await addBookmark(nav.currentFolder.id, title, url)
+        setShowAddForm(false)
+        await refresh()
+      } catch {
+        showToast(t.actionFailed, 'error')
+      }
     },
-    [nav.currentFolder, refresh],
+    [nav.currentFolder, refresh, showToast, t],
   )
 
   const handleSaveBookmark = useCallback(
     async (id: string, title: string, url: string, tags: string[]) => {
-      await updateBookmark(id, { title, url })
-      await handleSaveMeta(id, tags)
-      setEditItem(null)
-      await refresh()
+      try {
+        await updateBookmark(id, { title, url })
+        await handleSaveMeta(id, tags)
+        setEditItem(null)
+        await refresh()
+      } catch {
+        showToast(t.actionFailed, 'error')
+      }
     },
-    [refresh, handleSaveMeta],
+    [refresh, handleSaveMeta, showToast, t],
   )
 
-  const handleDeleteBookmark = useCallback(
-    async (id: string) => {
-      await removeBookmark(id)
-      setEditItem(null)
-      await refresh()
+  // ブックマークをゴミ箱経由で削除する共通処理（確認ダイアログ＋トースト＋復元可能）
+  const requestDeleteBookmark = useCallback(
+    (item: SyncGridItem) => {
+      setConfirmDialog({
+        message: t.confirmDeleteBookmark(item.title || item.url),
+        confirmLabel: t.delete,
+        onConfirm: async () => {
+          setConfirmDialog(null)
+          try {
+            const parentTitle = findGroupById(groups, item.parentId)?.title ?? ''
+            await addToTrash({
+              id: `trash_${Date.now()}_${item.id}`,
+              title: item.title,
+              url: item.url,
+              parentId: item.parentId,
+              parentTitle,
+              deletedAt: Date.now(),
+            })
+            await removeBookmark(item.id)
+            setEditItem(null)
+            showToast(t.bookmarkDeleted, 'success')
+            await refresh()
+          } catch {
+            showToast(t.actionFailed, 'error')
+          }
+        },
+      })
     },
-    [refresh],
+    [t, groups, refresh, showToast],
+  )
+
+  // 編集モーダルからの削除（id受け取り→itemを解決）
+  const handleDeleteBookmark = useCallback(
+    (id: string) => {
+      const item = editItem?.id === id
+        ? editItem
+        : flattenGroups(groups).flatMap((g) => g.items).find((i) => i.id === id)
+      if (item) requestDeleteBookmark(item)
+    },
+    [editItem, groups, requestDeleteBookmark],
   )
 
   const handleFolderRename = useCallback(
     async (id: string, name: string) => {
       const trimmed = name.trim()
-      if (trimmed) await renameGroup(id, trimmed)
-      setRenamingFolderId(null)
-      await refresh()
+      try {
+        if (trimmed) await renameGroup(id, trimmed)
+        setRenamingFolderId(null)
+        await refresh()
+      } catch {
+        showToast(t.actionFailed, 'error')
+      }
     },
-    [refresh],
+    [refresh, showToast, t],
   )
 
   const handleRenameSubmit = useCallback(async () => {
     if (!renamingTabId) return
     const name = renameValue.trim()
-    if (name) await renameGroup(renamingTabId, name)
-    setRenamingTabId(null)
-    setRenameValue('')
-    await refresh()
-  }, [renamingTabId, renameValue, refresh])
+    try {
+      if (name) await renameGroup(renamingTabId, name)
+      setRenamingTabId(null)
+      setRenameValue('')
+      await refresh()
+    } catch {
+      showToast(t.actionFailed, 'error')
+    }
+  }, [renamingTabId, renameValue, refresh, showToast, t])
 
   // --- Context menus ---
   const handleBookmarkContext = useCallback(
@@ -367,11 +456,11 @@ export default function App() {
             ? { label: t.removeFromKanban, icon: 'columns', shortcut: 'K', action: () => removeFromKanban(item.id) }
             : { label: t.addToKanban, icon: 'columns', shortcut: 'K', action: () => addToKanban(item.id) },
           { label: '---', action: () => {} },
-          { label: t.delete, icon: 'trash', danger: true, action: async () => { await removeBookmark(item.id); refresh() } },
+          { label: t.delete, icon: 'trash', danger: true, action: () => requestDeleteBookmark(item) },
         ],
       })
     },
-    [refresh, t, handleSetStatus, isInKanban, addToKanban, removeFromKanban],
+    [t, handleSetStatus, isInKanban, addToKanban, removeFromKanban, requestDeleteBookmark],
   )
 
   // カンバン内ブックマークのコンテキストメニュー
@@ -383,9 +472,9 @@ export default function App() {
           { label: t.openNewTab, icon: 'link', shortcut: 'O', action: () => { window.open(item.url, '_blank'); handleSetStatus(item.id, 'read') } },
           { label: t.edit, icon: 'edit', shortcut: 'E', action: () => setEditItem(item) },
           { label: '---', action: () => {} },
-          { label: t.kanbanTodo, icon: 'columns', action: () => moveKanbanItem(item.id, 'todo', 0) },
-          { label: t.kanbanDoing, icon: 'columns', action: () => moveKanbanItem(item.id, 'doing', 0) },
-          { label: t.kanbanDone, icon: 'columns', action: () => { moveKanbanItem(item.id, 'done', 0); handleSetStatus(item.id, 'read') } },
+          { label: t.kanbanTodo, icon: 'columns', action: () => moveKanbanItem(item.id, 'todo', null) },
+          { label: t.kanbanDoing, icon: 'columns', action: () => moveKanbanItem(item.id, 'doing', null) },
+          { label: t.kanbanDone, icon: 'columns', action: () => { moveKanbanItem(item.id, 'done', null); handleSetStatus(item.id, 'read') } },
           { label: '---', action: () => {} },
           { label: t.kanbanSetDueDate, icon: 'pin', action: () => setDueDateTarget(item.id) },
           ...(dueDates.get(item.id) ? [{ label: t.kanbanClearDueDate, icon: 'close' as const, action: () => setDueDate(item.id, undefined) }] : []),
@@ -554,7 +643,8 @@ export default function App() {
   // --- Render ---
   if (loading || !loaded) return <div className="sg-loading">{t.loading}</div>
 
-  if (showWelcome && groups.length === 0) {
+  // 初回起動時は既存ブックマークの有無に関わらずウェルカム画面を表示（skip/startでonboarded記録）
+  if (showWelcome) {
     return (
       <div className="sg-welcome">
         <div className="sg-welcome__logo"><Icon name="grid" size={48} /></div>
@@ -589,7 +679,7 @@ export default function App() {
           <button key={g.id} className={`sg-tab ${g.id === nav.activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id && dragState.draggingId !== g.id ? 'sg-tab--drop-target' : ''} ${dragState.draggingId === g.id ? 'sg-tab--dragging' : ''}`} role="tab" aria-selected={g.id === nav.activeTabId} title={String(idx + 1)} onClick={() => handleSelectTab(g.id)} onContextMenu={(e) => handleTabContext(g, e)} onDoubleClick={() => { setRenamingTabId(g.id); setRenameValue(g.title) }} {...getTabHandlers(g.id)}>
             {renamingTabId === g.id ? (
               <input className="sg-tab__rename" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={handleRenameSubmit} onKeyDown={(e) => { if (isComposing(e)) return; if (e.key === 'Enter') handleRenameSubmit(); if (e.key === 'Escape') setRenamingTabId(null) }} autoFocus onClick={(e) => e.stopPropagation()} />
-            ) : (<><span className="sg-tab__shortcut">{idx + 1}</span>{g.title}<span className="sg-tab__count">{countAll(g)}</span></>)}
+            ) : (<><span className="sg-tab__shortcut">{idx + 1}</span>{g.id === '__ungrouped__' ? t.uncategorized : g.title}<span className="sg-tab__count">{countAll(g)}</span></>)}
           </button>
         ))}
         {creatingGroup === 'tab' ? (
@@ -761,14 +851,16 @@ export default function App() {
               <div className="sg-empty"><div className="sg-empty__icon"><Icon name="pin" size={48} /></div><p className="sg-empty__text sg-preline">{t.emptyFolder}</p></div>
             ) : (
               <>
-                {/* ルート直下のブックマーク */}
-                {nav.currentFolder.items.length > 0 && (
+                {/* タブ直下のブックマーク: サブフォルダがある場合は折りたためる「未分類」セクションにまとめる */}
+                {uncategorizedGroup ? (
+                  <FolderSection key={UNCATEGORIZED_ID} group={uncategorizedGroup} depth={0} virtual {...folderSectionProps} />
+                ) : nav.currentFolder.items.length > 0 ? (
                   <div className={gridClass}>
                     {applyFiltersAndSort(nav.currentFolder.items).map((item) => (
                       <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} isSelected={selectedIds.has(item.id)} onToggleSelect={toggleSelect} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
                     ))}
                   </div>
-                )}
+                ) : null}
 
                 {/* フォルダをアコーディオンセクションとして表示 */}
                 {nav.currentFolder.children.map((child) => (
@@ -790,7 +882,7 @@ export default function App() {
       {showHelp && (<HelpPanel onClose={() => setShowHelp(false)} t={t} />)}
       {dueDateTarget && (
         <div className="sg-modal-overlay" onClick={() => setDueDateTarget(null)}>
-          <div className="sg-modal" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') setDueDateTarget(null) }}>
+          <div ref={dueDateTrapRef} className="sg-modal" role="dialog" aria-modal="true" aria-label={t.kanbanSetDueDate} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') setDueDateTarget(null) }}>
             <div className="sg-modal__header">
               <span className="sg-modal__title">{t.kanbanSetDueDate}</span>
               <button className="sg-modal__close" onClick={() => setDueDateTarget(null)} aria-label={t.close}><Icon name="close" size={12} /></button>
@@ -817,6 +909,7 @@ export default function App() {
         { target: '.sg-tab--add', title: t.addBookmark('Ctrl'), description: t.tourAdd },
         { target: '.sg-btn--icon:last-child', title: t.settings, description: t.tourSettings },
       ]} onComplete={handleCompleteTour} t={t} />)}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} dismissLabel={t.toastDismiss} />
     </>
   )
 }

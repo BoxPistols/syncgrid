@@ -233,4 +233,15 @@ export const en = {
   helpRefExportDesc: 'Back up and restore bookmark data as JSON files from Settings',
   helpRefSync: 'Local sync',
   helpRefSyncDesc: 'Select a local folder synced with a cloud drive (Google Drive, OneDrive, etc.) for auto backup',
+  // Toast / error notifications
+  toastDismiss: 'Dismiss notification',
+  kanbanSaveError: 'Failed to save the Kanban board (storage limit may have been reached)',
+  actionFailed: 'Something went wrong. Please try again.',
+  // Uncategorized folder
+  uncategorized: 'Uncategorized',
+  // Single delete confirmation
+  confirmDeleteBookmark: (name: string) => `Delete "${name}"? It will be moved to the trash.`,
+  bookmarkDeleted: 'Moved to trash',
+  // AI permission
+  aiPermissionDenied: 'Access to the AI API is required. Grant it to connect.',
 } as const
