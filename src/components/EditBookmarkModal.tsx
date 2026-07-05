@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { refetchTitle } from '../utils/fetchTitle'
 import { generateTags } from '../utils/ai'
+import { ensureAiPermission } from '../utils/permissions'
 import { isComposing } from '../utils/keyboard'
 import { Icon } from './Icon'
 import type { SyncGridItem, AISettings } from '../types'
@@ -66,6 +67,8 @@ export function EditBookmarkModal({ item, onSave, onDelete, onClose, t, initialT
     if (aiSettings.provider === 'none') return
     setAiTagLoading(true)
     try {
+      // AIホスト権限をこのユーザージェスチャー中に確保（未付与ならリクエスト）
+      if (!(await ensureAiPermission(aiSettings.provider))) return
       const generated = await generateTags(url.trim(), title.trim(), aiSettings)
       // 既存タグと重複しないものを追加
       setTags((prev) => [...new Set([...prev, ...generated])])

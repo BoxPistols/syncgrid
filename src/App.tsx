@@ -38,8 +38,11 @@ import {
   deleteGroup,
   getRootId,
   flattenGroups,
+  getAllItems,
+  findItemById,
   countAll,
   findGroupById,
+  UNGROUPED_ID,
 } from './utils/bookmarks'
 import { addToTrash } from './utils/trash'
 import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
@@ -48,7 +51,11 @@ import { pullKanbanFromSync } from './utils/localSync'
 
 import './styles/global.css'
 
-/** タブ直下の未分類ブックマークをまとめる仮想フォルダのID */
+/**
+ * フォルダ内の未分類ブックマークをまとめる仮想フォルダセクションのID。
+ * タブレベルの未分類グループ（bookmarks.ts の UNGROUPED_ID）とは別スコープ:
+ * こちらは「タブを開いた中で、サブフォルダに属さない直下ブックマーク」を折りたたむ用途。
+ */
 const UNCATEGORIZED_ID = '__uncategorized_virtual__'
 
 export default function App() {
@@ -139,7 +146,7 @@ export default function App() {
 
       const { hasTitleFetchPermission } = await import('./utils/permissions')
       const granted = await hasTitleFetchPermission()
-      const allItems = flattenGroups(groups).flatMap((g) => g.items)
+      const allItems = getAllItems(groups)
       const total = allItems.length
 
       if (!granted && total >= 5) {
@@ -313,60 +320,65 @@ export default function App() {
   }, [nav.activeTabId, refresh])
 
   // --- Group/Folder CRUD ---
+  // 失敗時にエラートーストを出す共通ラッパ（各CRUDハンドラの try/catch を集約）
+  const runWithErrorToast = useCallback(
+    async (fn: () => Promise<void>) => {
+      try {
+        await fn()
+      } catch {
+        showToast(t.actionFailed, 'error')
+      }
+    },
+    [showToast, t],
+  )
+
   const handleAddGroup = useCallback(() => { setCreatingGroup('tab'); setNewGroupName('') }, [])
 
   const handleCreateGroup = useCallback(async () => {
     const name = newGroupName.trim()
     if (!name) { setCreatingGroup(false); return }
-    try {
+    await runWithErrorToast(async () => {
       await createGroup(name, await getRootId())
       setCreatingGroup(false)
       setNewGroupName('')
       await refresh()
-    } catch {
-      showToast(t.actionFailed, 'error')
-    }
-  }, [newGroupName, refresh, showToast, t])
+    })
+  }, [newGroupName, refresh, runWithErrorToast])
 
   const handleCreateSubfolder = useCallback(async () => {
     const name = newGroupName.trim()
     if (!name) { setCreatingGroup(false); return }
-    try {
+    await runWithErrorToast(async () => {
       await createGroup(name, nav.currentFolder?.id || (await getRootId()))
       setCreatingGroup(false)
       setNewGroupName('')
       await refresh()
-    } catch {
-      showToast(t.actionFailed, 'error')
-    }
-  }, [newGroupName, nav.currentFolder, refresh, showToast, t])
+    })
+  }, [newGroupName, nav.currentFolder, refresh, runWithErrorToast])
 
   const handleAddBookmark = useCallback(
     async (url: string, title: string) => {
       if (!nav.currentFolder) return
-      try {
-        await addBookmark(nav.currentFolder.id, title, url)
+      const folderId = nav.currentFolder.id
+      await runWithErrorToast(async () => {
+        await addBookmark(folderId, title, url)
         setShowAddForm(false)
         await refresh()
-      } catch {
-        showToast(t.actionFailed, 'error')
-      }
+      })
     },
-    [nav.currentFolder, refresh, showToast, t],
+    [nav.currentFolder, refresh, runWithErrorToast],
   )
 
   const handleSaveBookmark = useCallback(
     async (id: string, title: string, url: string, tags: string[]) => {
-      try {
+      await runWithErrorToast(async () => {
         await updateBookmark(id, { title, url })
         await handleSaveMeta(id, tags)
         setEditItem(null)
         await refresh()
-      } catch {
-        showToast(t.actionFailed, 'error')
-      }
+      })
     },
-    [refresh, handleSaveMeta, showToast, t],
+    [refresh, handleSaveMeta, runWithErrorToast],
   )
 
   // ブックマークをゴミ箱経由で削除する共通処理（確認ダイアログ＋トースト＋復元可能）
@@ -403,9 +415,7 @@ export default function App() {
   // 編集モーダルからの削除（id受け取り→itemを解決）
   const handleDeleteBookmark = useCallback(
     (id: string) => {
-      const item = editItem?.id === id
-        ? editItem
-        : flattenGroups(groups).flatMap((g) => g.items).find((i) => i.id === id)
+      const item = editItem?.id === id ? editItem : findItemById(groups, id)
       if (item) requestDeleteBookmark(item)
     },
     [editItem, groups, requestDeleteBookmark],
@@ -414,29 +424,25 @@ export default function App() {
   const handleFolderRename = useCallback(
     async (id: string, name: string) => {
       const trimmed = name.trim()
-      try {
+      await runWithErrorToast(async () => {
         if (trimmed) await renameGroup(id, trimmed)
         setRenamingFolderId(null)
         await refresh()
-      } catch {
-        showToast(t.actionFailed, 'error')
-      }
+      })
     },
-    [refresh, showToast, t],
+    [refresh, runWithErrorToast],
   )
 
   const handleRenameSubmit = useCallback(async () => {
     if (!renamingTabId) return
     const name = renameValue.trim()
-    try {
+    await runWithErrorToast(async () => {
       if (name) await renameGroup(renamingTabId, name)
       setRenamingTabId(null)
       setRenameValue('')
       await refresh()
-    } catch {
-      showToast(t.actionFailed, 'error')
-    }
-  }, [renamingTabId, renameValue, refresh, showToast, t])
+    })
+  }, [renamingTabId, renameValue, refresh, runWithErrorToast])
 
   // --- Context menus ---
   const handleBookmarkContext = useCallback(
@@ -673,13 +679,13 @@ export default function App() {
         <button className={`sg-tab ${nav.activeTabId === '__all__' ? 'sg-tab--active' : ''}`} role="tab" aria-selected={nav.activeTabId === '__all__'} onClick={() => handleSelectTab('__all__')} title="0">
           <span className="sg-tab__shortcut">0</span>
           {t.allBookmarks}
-          <span className="sg-tab__count">{flattenGroups(groups).reduce((sum, g) => sum + g.items.length, 0)}</span>
+          <span className="sg-tab__count">{getAllItems(groups).length}</span>
         </button>
         {groups.map((g, idx) => (
           <button key={g.id} className={`sg-tab ${g.id === nav.activeTabId ? 'sg-tab--active' : ''} ${dragState.dropTabId === g.id && dragState.draggingId !== g.id ? 'sg-tab--drop-target' : ''} ${dragState.draggingId === g.id ? 'sg-tab--dragging' : ''}`} role="tab" aria-selected={g.id === nav.activeTabId} title={String(idx + 1)} onClick={() => handleSelectTab(g.id)} onContextMenu={(e) => handleTabContext(g, e)} onDoubleClick={() => { setRenamingTabId(g.id); setRenameValue(g.title) }} {...getTabHandlers(g.id)}>
             {renamingTabId === g.id ? (
               <input className="sg-tab__rename" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={handleRenameSubmit} onKeyDown={(e) => { if (isComposing(e)) return; if (e.key === 'Enter') handleRenameSubmit(); if (e.key === 'Escape') setRenamingTabId(null) }} autoFocus onClick={(e) => e.stopPropagation()} />
-            ) : (<><span className="sg-tab__shortcut">{idx + 1}</span>{g.id === '__ungrouped__' ? t.uncategorized : g.title}<span className="sg-tab__count">{countAll(g)}</span></>)}
+            ) : (<><span className="sg-tab__shortcut">{idx + 1}</span>{g.id === UNGROUPED_ID ? t.uncategorized : g.title}<span className="sg-tab__count">{countAll(g)}</span></>)}
           </button>
         ))}
         {creatingGroup === 'tab' ? (

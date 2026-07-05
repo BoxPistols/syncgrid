@@ -1,5 +1,8 @@
 import { SYNCGRID_ROOT, type SyncGridGroup, type SyncGridItem } from '../types'
 
+/** タブレベルの未分類グループID（__SyncGrid__ルート直下の所属なしブックマークを集約） */
+export const UNGROUPED_ID = '__ungrouped__'
+
 /**
  * __SyncGrid__ ルートフォルダを取得（なければ作成）
  */
@@ -76,7 +79,7 @@ export async function loadGroups(): Promise<SyncGridGroup[]> {
 
   if (ungroupedItems.length > 0) {
     groups.push({
-      id: '__ungrouped__',
+      id: UNGROUPED_ID,
       title: '未分類',
       items: ungroupedItems,
       children: [],
@@ -194,6 +197,28 @@ export function flattenGroups(groups: SyncGridGroup[]): SyncGridGroup[] {
     result.push(...flattenGroups(group.children))
   }
   return result
+}
+
+/**
+ * 全グループ配下の全ブックマークアイテムを1次元配列で取得
+ */
+export function getAllItems(groups: SyncGridGroup[]): SyncGridItem[] {
+  const items: SyncGridItem[] = []
+  for (const group of flattenGroups(groups)) {
+    items.push(...group.items)
+  }
+  return items
+}
+
+/**
+ * ツリー全体からIDでブックマークアイテムを検索（中間配列を作らず走査）
+ */
+export function findItemById(groups: SyncGridGroup[], id: string): SyncGridItem | undefined {
+  for (const group of flattenGroups(groups)) {
+    const found = group.items.find((item) => item.id === id)
+    if (found) return found
+  }
+  return undefined
 }
 
 /** Chrome bookmark tree内のフォルダ情報 */

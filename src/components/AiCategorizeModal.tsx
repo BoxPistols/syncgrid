@@ -5,6 +5,7 @@ import { useState, useCallback } from 'react'
 import { Icon } from './Icon'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { suggestCategories } from '../utils/ai'
+import { ensureAiPermission } from '../utils/permissions'
 import { createGroup } from '../utils/bookmarks'
 import type { SyncGridItem, SyncGridGroup, AISettings } from '../types'
 import type { Messages } from '../i18n'
@@ -26,12 +27,16 @@ export function AiCategorizeModal({ items, parentFolder, aiSettings, onDone, onC
   const [categories, setCategories] = useState<Record<string, string[]>>({})
   const [error, setError] = useState('')
 
-  // 初回ロード
+  // 初回ロード（モーダルを開いたジェスチャー直後にAIホスト権限を確保）
   useState(() => {
-    suggestCategories(
-      items.map((i) => ({ title: i.title, url: i.url })),
-      aiSettings,
-    )
+    ensureAiPermission(aiSettings.provider)
+      .then((granted) => {
+        if (!granted) throw new Error('AI host permission not granted')
+        return suggestCategories(
+          items.map((i) => ({ title: i.title, url: i.url })),
+          aiSettings,
+        )
+      })
       .then((result) => {
         setCategories(result)
         setPhase('result')

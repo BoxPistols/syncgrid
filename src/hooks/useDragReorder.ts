@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { getRootId } from '../utils/bookmarks'
+import { getRootId, UNGROUPED_ID } from '../utils/bookmarks'
 
 type DragItemType = 'bookmark' | 'folder' | 'tab'
 type DropMode = 'before' | 'after' | 'into' | null
@@ -243,7 +243,7 @@ export function useDragReorder(selectedIds?: Set<string>, onKanbanDrop?: (bookma
             }
           } else {
             // カード/フォルダ → タブへ移動（複数選択対応）
-            const targetId = tabId === '__ungrouped__' ? await getRootId() : tabId
+            const targetId = tabId === UNGROUPED_ID ? await getRootId() : tabId
             const idsToMove =
               selectedIds && selectedIds.size > 1 && selectedIds.has(data.id) ? [...selectedIds] : [data.id]
             for (const moveId of idsToMove) {
