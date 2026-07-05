@@ -135,11 +135,18 @@ export const KanbanBoard = memo(function KanbanBoard({
       const rect = e.currentTarget.getBoundingClientRect()
       const relY = (e.clientY - rect.top) / rect.height
       const columnItems = kanbanColumns[targetColumn]
-      // before: ターゲットの直前 / after: ターゲットの次のカードの直前（末尾なら null）
-      const beforeId =
-        relY < 0.5
-          ? targetBookmarkId
-          : columnItems[targetIndex + 1]?.id ?? null
+      // before: ターゲットの直前。after: ターゲット以降でドラッグ対象自身を除いた最初のカードの直前
+      // （対象自身をアンカーにすると moveInKanban で除外され末尾送りになるため必ずスキップ）
+      let beforeId: string | null = targetBookmarkId
+      if (relY >= 0.5) {
+        beforeId = null
+        for (let i = targetIndex + 1; i < columnItems.length; i++) {
+          if (columnItems[i].id !== data.bookmarkId) {
+            beforeId = columnItems[i].id
+            break
+          }
+        }
+      }
 
       onMoveItem(data.bookmarkId, targetColumn, beforeId)
       if (targetColumn === 'done' && onMarkRead) onMarkRead(data.bookmarkId)
