@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import type { Messages } from '../i18n'
 import type { AISettings } from '../types'
 import { generateTitle } from '../utils/ai'
+import { ensureAiPermission } from '../utils/permissions'
 import { fetchPageTitle, fetchPageTitleWithPermission } from '../utils/fetchTitle'
 import { Icon } from './Icon'
 import { isModKey, isComposing, MOD_LABEL, ENTER_LABEL } from '../utils/keyboard'
@@ -107,6 +108,12 @@ export function AddBookmarkForm({ onAdd, onCancel, t, aiSettings }: Props) {
     setAiLoading(true)
     setAiError('')
     try {
+      // AIホスト権限をこのユーザージェスチャー中に確保（未付与ならリクエスト）
+      if (!(await ensureAiPermission(aiSettings.provider))) {
+        setAiError(t.aiPermissionDenied)
+        setTimeout(() => setAiError(''), 3000)
+        return
+      }
       const generated = await generateTitle(finalUrl, aiSettings)
       setTitle(generated)
     } catch {

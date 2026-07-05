@@ -85,22 +85,30 @@ export async function saveMeta(bookmarkId: string, meta: BookmarkMeta): Promise<
 
 /**
  * 現存しないブックマークの孤立メタデータ（meta_*）を削除する。
+ * 走査ついでに生存メタを返すので、呼び出し側は追加の loadAllMeta が不要。
  * @param validBookmarkIds 現存するブックマークIDの集合
- * @returns 削除した孤立メタの件数
+ * @returns removed=削除件数、metas=生存メタのマップ
  */
-export async function pruneOrphanMeta(validBookmarkIds: Set<string>): Promise<number> {
+export async function pruneOrphanMeta(
+  validBookmarkIds: Set<string>,
+): Promise<{ removed: number; metas: Record<string, BookmarkMeta> }> {
   const all = await chrome.storage.local.get(null)
   const orphanKeys: string[] = []
-  for (const key of Object.keys(all)) {
+  const metas: Record<string, BookmarkMeta> = {}
+  for (const [key, value] of Object.entries(all)) {
     if (key.startsWith(META_PREFIX)) {
       const id = key.slice(META_PREFIX.length)
-      if (!validBookmarkIds.has(id)) orphanKeys.push(key)
+      if (validBookmarkIds.has(id)) {
+        metas[id] = value as BookmarkMeta
+      } else {
+        orphanKeys.push(key)
+      }
     }
   }
   if (orphanKeys.length > 0) {
     await chrome.storage.local.remove(orphanKeys)
   }
-  return orphanKeys.length
+  return { removed: orphanKeys.length, metas }
 }
 
 /**

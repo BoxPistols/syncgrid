@@ -29,8 +29,9 @@ export function useMetadata(groups: SyncGridGroup[]) {
     }
     if (validIds.size === 0) return
     prunedRef.current = true
-    pruneOrphanMeta(validIds).then((removed) => {
-      if (removed > 0) loadAllMeta().then(setAllMeta)
+    pruneOrphanMeta(validIds).then(({ removed, metas }) => {
+      // 走査ついでに得た生存メタで直接更新（追加のloadAllMeta不要）
+      if (removed > 0) setAllMeta(metas)
     })
   }, [groups])
 
