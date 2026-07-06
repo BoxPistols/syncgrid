@@ -90,4 +90,9 @@ describe('chromeMock bookmarks.move — 実機Chromeとの意味論パリティ'
     expect(node.id).toBe('B')
     expect(node.parentId).toBe('f')
   })
+
+  it('bookmarks.get は1件でも未検出なら reject する(実機挙動と同じ)', async () => {
+    await expect(chrome.bookmarks.get('nonexistent')).rejects.toThrow()
+    await expect(chrome.bookmarks.get(['A', 'nonexistent'])).rejects.toThrow()
+  })
 })

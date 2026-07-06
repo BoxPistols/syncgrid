@@ -202,22 +202,26 @@ export function createMockChrome(seedRoot?: MockNode): typeof chrome {
   const storageSync: Record<string, unknown> = {}
 
   function makeStorageArea(data: Record<string, unknown>, areaName: string) {
+    // 実Chromeのstorageはstructured cloneで必ずコピーを返す。
+    // 参照を共有すると呼び出し側のミューテーションがstorage内まで書き換わり、実機と挙動が乖離する
+    const clone = <T>(v: T): T => (v === undefined ? v : structuredClone(v))
     return {
       get: (keys: string | string[] | null) => {
-        if (keys === null) return Promise.resolve({ ...data })
+        if (keys === null) return Promise.resolve(clone({ ...data }))
         const keyList = typeof keys === 'string' ? [keys] : keys
         const result: Record<string, unknown> = {}
         for (const k of keyList) {
-          if (k in data) result[k] = data[k]
+          if (k in data) result[k] = clone(data[k])
         }
         return Promise.resolve(result)
       },
       set: (items: Record<string, unknown>) => {
         const changes: Record<string, { oldValue?: unknown; newValue?: unknown }> = {}
         for (const [k, v] of Object.entries(items)) {
-          changes[k] = { oldValue: data[k], newValue: v }
+          const stored = clone(v)
+          changes[k] = { oldValue: data[k], newValue: clone(stored) }
+          data[k] = stored
         }
-        Object.assign(data, items)
         storageOnChanged.fire(changes, areaName)
         return Promise.resolve()
       },
@@ -242,10 +246,12 @@ export function createMockChrome(seedRoot?: MockNode): typeof chrome {
     bookmarks: {
       get: (idOrList: string | string[]) => {
         const ids = typeof idOrList === 'string' ? [idOrList] : idOrList
-        const nodes = ids
-          .map((i) => findNode(root, i))
-          .filter((n): n is MockNode => n !== null)
-        return Promise.resolve(nodes.map(toTreeNode))
+        const nodes = ids.map((i) => findNode(root, i))
+        // 実Chromeは1件でも未検出なら全体をrejectする（部分結果は返さない）
+        if (nodes.some((n) => n === null)) {
+          return Promise.reject(new Error("Can't find bookmark for id."))
+        }
+        return Promise.resolve(nodes.map((n) => toTreeNode(n as MockNode)))
       },
       getTree: () => {
         return Promise.resolve([toTreeNode(root)])

@@ -237,6 +237,7 @@ export const en = {
   toastDismiss: 'Dismiss notification',
   kanbanSaveError: 'Failed to save the Kanban board (storage limit may have been reached)',
   kanbanSyncError: 'Failed to sync to other devices (saved on this device)',
+  kanbanSyncConflict: 'Your change was not applied — a newer update from another device exists',
   sortSwitchedToManual: 'Sort switched to "Manual" to apply your reordering',
   actionFailed: 'Something went wrong. Please try again.',
   // Uncategorized folder

@@ -213,13 +213,20 @@ export function useDragReorder(
         const data = dragDataRef.current
         if (!data || data.type === 'tab') return
         const nearest = findNearestCard(e.currentTarget as HTMLElement, e.clientX, e.clientY)
-        if (!nearest && !fallbackParentId) return
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
+        if (nearest || fallbackParentId) {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+        }
         if (nearest && nearest.id !== data.id) {
           setDragState((prev) => {
             if (prev.dropTargetId === nearest.id && prev.dropMode === nearest.mode) return prev
             return { ...prev, dropTargetId: nearest.id, dropMode: nearest.mode, dropTabId: null }
+          })
+        } else {
+          // 最近傍がドラッグ中のカード自身（または不在）: 残留インジケータをクリア
+          setDragState((prev) => {
+            if (prev.dropTargetId === null && prev.dropMode === null) return prev
+            return { ...prev, dropTargetId: null, dropMode: null }
           })
         }
       },

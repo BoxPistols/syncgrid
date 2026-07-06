@@ -263,6 +263,7 @@ export const ja = {
   toastDismiss: '通知を閉じる',
   kanbanSaveError: 'カンバンの保存に失敗しました（容量制限の可能性があります）',
   kanbanSyncError: '他の端末への同期に失敗しました（この端末には保存済みです）',
+  kanbanSyncConflict: '他の端末の新しい変更があるため、この操作は反映されませんでした',
   sortSwitchedToManual: '並べ替えを反映するため、ソートを「手動」に切り替えました',
   actionFailed: '操作に失敗しました。もう一度お試しください。',
   // 未分類フォルダ

@@ -16,20 +16,24 @@ interface UseKanbanOptions {
   onError?: () => void
   /** local保存は成功したが他端末へのsyncミラーが失敗した時に呼ばれる */
   onSyncError?: () => void
+  /** 他端末の新しい変更に負けて操作が反映されなかった時に呼ばれる */
+  onSyncConflict?: () => void
 }
 
 export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {}) {
-  const { onError, onSyncError } = options
+  const { onError, onSyncError, onSyncConflict } = options
   const [kanbanState, setKanbanState] = useState<KanbanState>({ items: [] })
   const [now, setNow] = useState(() => Date.now())
 
-  // 最新の onError / onSyncError を ref 経由で参照（コールバックの依存を安定させる）
+  // 最新のコールバックを ref 経由で参照（コールバックの依存を安定させる）
   const onErrorRef = useRef(onError)
   const onSyncErrorRef = useRef(onSyncError)
+  const onSyncConflictRef = useRef(onSyncConflict)
   useEffect(() => {
     onErrorRef.current = onError
     onSyncErrorRef.current = onSyncError
-  }, [onError, onSyncError])
+    onSyncConflictRef.current = onSyncConflict
+  }, [onError, onSyncError, onSyncConflict])
 
   // onChanged ハンドラから最新 state を参照するための ref
   const kanbanStateRef = useRef(kanbanState)
@@ -118,9 +122,10 @@ export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {
   // storage 書き込みを実行し、成功時に state 反映・失敗時にロールバック（再読込）＋通知する
   const runMutation = useCallback(async (fn: () => Promise<KanbanMutationResult>) => {
     try {
-      const { state, synced } = await fn()
+      const { state, synced, conflict } = await fn()
       setKanbanState(state)
-      if (!synced) onSyncErrorRef.current?.()
+      if (conflict) onSyncConflictRef.current?.()
+      else if (!synced) onSyncErrorRef.current?.()
     } catch {
       // local 保存に失敗（quota 超過など）: 永続化された状態へ巻き戻す
       onErrorRef.current?.()

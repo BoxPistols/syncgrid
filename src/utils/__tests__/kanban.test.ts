@@ -77,17 +77,18 @@ describe('saveKanban — updatedAt スタンプと sync 上書きガード', () 
     expect(sync?.updatedAt).toBe(local?.updatedAt)
   })
 
-  it('sync に自分より新しい状態がある場合は sync を上書きせず synced=false を返す', async () => {
+  it('sync に自分より新しい状態がある場合は上書きせず、remote を採用して conflictState を返す', async () => {
     const future = Date.now() + 10_000_000
     await chrome.storage.sync.set({ [KEY]: stateAt('https://remote-newer.example/', future) })
 
     const result = await saveKanban(stateAt('https://mine.example/'))
 
     expect(result.synced).toBe(false)
+    expect(result.conflictState?.items[0].url).toBe('https://remote-newer.example/')
     // sync はリモートの新しい状態のまま
     expect((await getStored('sync'))?.items[0].url).toBe('https://remote-newer.example/')
-    // local には自分の状態が保存されている
-    expect((await getStored('local'))?.items[0].url).toBe('https://mine.example/')
+    // local にも remote を反映（放置すると次回ロードで黙って巻き戻るため）
+    expect((await getStored('local'))?.items[0].url).toBe('https://remote-newer.example/')
   })
 })
 
@@ -107,5 +108,18 @@ describe('addToKanban — 変更系ヘルパの synced 伝搬', () => {
     const { state, synced } = await addToKanban('https://x.example/')
     expect(synced).toBe(true)
     expect(state.items).toHaveLength(1)
+  })
+
+  it('他端末の新しい変更と競合した追加は conflict=true で remote 状態を返す', async () => {
+    const future = Date.now() + 10_000_000
+    await chrome.storage.sync.set({ [KEY]: stateAt('https://remote.example/', future) })
+
+    const { state, synced, conflict } = await addToKanban('https://mine.example/')
+
+    expect(conflict).toBe(true)
+    expect(synced).toBe(false)
+    // UIへは remote の最新状態が返る(自分の追加は反映されない)
+    expect(state.items).toHaveLength(1)
+    expect(state.items[0].url).toBe('https://remote.example/')
   })
 })

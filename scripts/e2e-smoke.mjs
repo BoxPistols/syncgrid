@@ -145,6 +145,11 @@ const CHECKS_EXPRESSION = `(async () => {
 })()`
 
 async function main() {
+  // 組み込みWebSocketクライアントはNode 22.4+で安定（Node 20は --experimental-websocket が必要）
+  if (typeof WebSocket === 'undefined') {
+    console.error('このスクリプトは Node 22.4 以降が必要です（組み込み WebSocket を使用）')
+    process.exit(1)
+  }
   if (!existsSync(join(DIST, 'manifest.json'))) {
     console.error('dist/ がありません。先に npm run build を実行してください')
     process.exit(1)
