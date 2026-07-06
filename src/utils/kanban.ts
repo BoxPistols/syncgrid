@@ -4,8 +4,14 @@ const STORAGE_KEY = 'syncgrid_kanban'
 
 const EMPTY_STATE: KanbanState = { items: [] }
 
-/** 保存結果。synced=false は sync ミラーが失敗（quota等）した場合。local保存は成功している */
+/** 保存結果。synced=false は sync ミラーが失敗（quota・衝突等）した場合。local保存は成功している */
 export interface SaveResult {
+  synced: boolean
+}
+
+/** 変更系ヘルパの結果。synced=false のときUIで同期失敗を通知する */
+export interface KanbanMutationResult {
+  state: KanbanState
   synced: boolean
 }
 
@@ -31,25 +37,40 @@ function migrate(stored: KanbanState): { state: KanbanState; changed: boolean } 
 
 /**
  * カンバン状態を読み込む。
- * 主保存は chrome.storage.local。local に無ければ sync ミラーから復元する
- * （新デバイスでの初回起動など）。
+ * local と sync の両方を読み、updatedAt が新しい方を採用する（board単位のlast-write-wins）。
+ * sync の方が新しければ local へ書き戻し、古い local が以降の保存で sync を潰すのを防ぐ。
  */
 export async function loadKanban(): Promise<KanbanState> {
   const local = globalThis.chrome?.storage?.local
   const sync = globalThis.chrome?.storage?.sync
 
-  let stored: unknown
+  let localState: KanbanState | undefined
   if (local?.get) {
     const result = await local.get(STORAGE_KEY)
-    stored = result[STORAGE_KEY]
+    if (isValidState(result[STORAGE_KEY])) localState = result[STORAGE_KEY]
   }
-  // local に無ければ sync から復元
-  if (!isValidState(stored) && sync?.get) {
-    const result = await sync.get(STORAGE_KEY)
-    stored = result[STORAGE_KEY]
+  let syncState: KanbanState | undefined
+  if (sync?.get) {
+    try {
+      const result = await sync.get(STORAGE_KEY)
+      if (isValidState(result[STORAGE_KEY])) syncState = result[STORAGE_KEY]
+    } catch {
+      // sync が読めない環境では local のみで動作する
+    }
   }
 
-  if (!isValidState(stored)) return { ...EMPTY_STATE }
+  let stored: KanbanState | undefined
+  if (syncState && (!localState || (syncState.updatedAt ?? 0) > (localState.updatedAt ?? 0))) {
+    stored = syncState
+    if (local?.set) {
+      // 他端末の新しい状態を local へ反映（updatedAt はそのまま = 再スタンプしない）
+      await local.set({ [STORAGE_KEY]: syncState })
+    }
+  } else {
+    stored = localState
+  }
+
+  if (!stored) return { ...EMPTY_STATE }
 
   const { state, changed } = migrate(stored)
   if (changed) {
@@ -65,6 +86,9 @@ export async function loadKanban(): Promise<KanbanState> {
  * sync へはベストエフォートでミラーする（quota 超過等は握りつぶし synced=false を返す）。
  */
 export async function saveKanban(state: KanbanState): Promise<SaveResult> {
+  // board単位のlast-write-wins用タイムスタンプ
+  state.updatedAt = Date.now()
+
   const local = globalThis.chrome?.storage?.local
   if (local?.set) {
     // 主保存。失敗（QUOTA_BYTES 超過など）は呼び出し側へ伝播させる
@@ -74,6 +98,14 @@ export async function saveKanban(state: KanbanState): Promise<SaveResult> {
   const sync = globalThis.chrome?.storage?.sync
   if (sync?.set) {
     try {
+      // 他端末がより新しい状態を書いていたら上書きしない（古い状態でsyncを潰す事故の防止）
+      if (sync.get) {
+        const result = await sync.get(STORAGE_KEY)
+        const current = result[STORAGE_KEY]
+        if (isValidState(current) && (current.updatedAt ?? 0) > (state.updatedAt ?? 0)) {
+          return { synced: false }
+        }
+      }
       await sync.set({ [STORAGE_KEY]: state })
       return { synced: true }
     } catch {
@@ -84,22 +116,25 @@ export async function saveKanban(state: KanbanState): Promise<SaveResult> {
   return { synced: false }
 }
 
-export async function addToKanban(url: string, column: KanbanColumn = 'todo'): Promise<KanbanState> {
+export async function addToKanban(
+  url: string,
+  column: KanbanColumn = 'todo',
+): Promise<KanbanMutationResult> {
   const state = await loadKanban()
-  if (state.items.some((i) => i.url === url)) return state
+  if (state.items.some((i) => i.url === url)) return { state, synced: true }
   const maxOrder = state.items
     .filter((i) => i.column === column)
     .reduce((max, i) => Math.max(max, i.order), -1)
   state.items.push({ url, column, order: maxOrder + 1 })
-  await saveKanban(state)
-  return state
+  const { synced } = await saveKanban(state)
+  return { state, synced }
 }
 
-export async function removeFromKanban(url: string): Promise<KanbanState> {
+export async function removeFromKanban(url: string): Promise<KanbanMutationResult> {
   const state = await loadKanban()
   state.items = state.items.filter((i) => i.url !== url)
-  await saveKanban(state)
-  return state
+  const { synced } = await saveKanban(state)
+  return { state, synced }
 }
 
 /**
@@ -111,10 +146,10 @@ export async function moveInKanban(
   url: string,
   toColumn: KanbanColumn,
   beforeUrl: string | null,
-): Promise<KanbanState> {
+): Promise<KanbanMutationResult> {
   const state = await loadKanban()
   const item = state.items.find((i) => i.url === url)
-  if (!item) return state
+  if (!item) return { state, synced: true }
 
   const fromColumn = item.column
   item.column = toColumn
@@ -136,21 +171,21 @@ export async function moveInKanban(
   colItems.splice(insertAt, 0, item)
   colItems.forEach((ci, idx) => { ci.order = idx })
 
-  await saveKanban(state)
-  return state
+  const { synced } = await saveKanban(state)
+  return { state, synced }
 }
 
 /** 期限を設定/解除 */
 export async function setDueDateInKanban(
   url: string,
   dueDate: number | undefined,
-): Promise<KanbanState> {
+): Promise<KanbanMutationResult> {
   const state = await loadKanban()
   const item = state.items.find((i) => i.url === url)
-  if (!item) return state
+  if (!item) return { state, synced: true }
   item.dueDate = dueDate
-  await saveKanban(state)
-  return state
+  const { synced } = await saveKanban(state)
+  return { state, synced }
 }
 
 /** ブックマークに存在しないURLをカンバンから除去 */

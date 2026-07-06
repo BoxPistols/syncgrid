@@ -92,6 +92,8 @@ export interface KanbanItem {
 /** カンバン永続化データ */
 export interface KanbanState {
   items: KanbanItem[]
+  /** 最終更新時刻（board単位のlast-write-wins用。旧データは欠落=0扱い） */
+  updatedAt?: number
 }
 
 /** ローカルメタデータ（chrome.storage.local） */
