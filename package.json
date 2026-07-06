@@ -29,7 +29,8 @@
     "fix": "eslint . --fix && prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "e2e:smoke": "node scripts/e2e-smoke.mjs"
   },
   "dependencies": {
     "react": "^19.2.0",

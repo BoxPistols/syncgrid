@@ -4,6 +4,8 @@
  * service worker経由でfetchすることでhost_permissionsを活用する
  */
 
+import { isFetchableUrl } from './utils/urlGuard'
+
 chrome.runtime.onMessage.addListener(
   (message: { type: string; url: string }, _sender, sendResponse) => {
     if (message.type !== 'FETCH_HTML') return false
@@ -17,6 +19,8 @@ chrome.runtime.onMessage.addListener(
 )
 
 async function fetchHtml(url: string): Promise<string | null> {
+  // file:// や保護オリジンはfetchが常に失敗し拡張のエラーページに記録され続けるため事前に弾く
+  if (!isFetchableUrl(url)) return null
   const res = await fetch(url, {
     signal: AbortSignal.timeout(8000),
     headers: { Accept: 'text/html' },

@@ -4,6 +4,7 @@
  */
 
 import { hasTitleFetchPermission, requestTitleFetchPermission } from './permissions'
+import { isFetchableUrl } from './urlGuard'
 import type { OgpData } from '../types'
 
 /**
@@ -133,6 +134,8 @@ async function fetchOembedTitle(url: string): Promise<string | null> {
  * background service worker 経由でfetchすることでCORSを回避
  */
 async function fetchHead(url: string): Promise<string | null> {
+  // 非httpスキーム・保護オリジンはbackgroundへ送らず即null（エラーページ汚染防止）
+  if (!isFetchableUrl(url)) return null
   try {
     // background service workerが利用可能な場合はそちらを使う（CORS回避）
     if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {

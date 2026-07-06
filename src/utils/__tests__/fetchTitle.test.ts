@@ -104,8 +104,10 @@ describe('HTML <title> タグ取得', () => {
   for (const [name, titleTag, expected] of cases) {
     it(name, async () => {
       // oEmbed非対応URL → fetchOembedTitleはfetch呼ばず即null
+      // ホスト名に空白は使えないため除去（"Stack Overflow" → stackoverflow）
+      const host = name.toLowerCase().replace(/\s+/g, '')
       mockHtml(`<html><head>${titleTag}</head></html>`)
-      expect(await fetchPageTitle(`https://${name.toLowerCase()}.example.com/`)).toBe(expected)
+      expect(await fetchPageTitle(`https://${host}.example.com/`)).toBe(expected)
     })
   }
 })
@@ -206,5 +208,27 @@ describe('refetchTitle 強制再取得', () => {
   it('oEmbed非対応 → HTMLフォールバック', async () => {
     mockHtml('<html><head><title>Fallback</title></head></html>')
     expect(await refetchTitle('https://example.com/')).toBe('Fallback')
+  })
+})
+
+// =====================
+// URLガード（file://・保護オリジンでfetchしない）
+// =====================
+describe('URLガード — fetch自体を発生させない', () => {
+  it('file:// URL → fetchを一切呼ばず null', async () => {
+    const r = await fetchOgp('file:///Users/x/Desktop/onboarding/pdf/onboarding-all.html')
+    expect(r).toBeNull()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('Chrome Web Store の保護オリジン → fetchを一切呼ばず null', async () => {
+    const r = await fetchOgp('https://chromewebstore.google.com/detail/crx-gcal-url-opener/abc')
+    expect(r).toBeNull()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('file:// URL の refetchTitle → fetchを呼ばず null', async () => {
+    expect(await refetchTitle('file:///tmp/x.html')).toBeNull()
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 })
