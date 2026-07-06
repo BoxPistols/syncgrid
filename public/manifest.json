@@ -4,6 +4,7 @@
   "version": "2.0.0",
   "description": "__MSG_appDescription__",
   "default_locale": "en",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4RmWuYGSSOommGC5EYbjsNziPV/9KwApW5RFrGgPYUZOsJDpDGgdaNfSJfgvm69xu+ttC9R8lyAwEvB/dGRkvVzb3hi5BBjRs3bCnzhzXKtLz1MnhT+2akOU7o73C5+IuX/6z1UDKy4K2R40ce+egcuq0IcrB8iNuto2kX4bMeqCP1EvnL7ijscsiceennIrAHqfwdh9ODaLiDShc756lKBh+hoyRttXf/IfHWC90Cwn9CrI9jQ5K9t6pWi4it32vx4KdPGOVNWoF432866EOxaxVDnnLeEBJM0uX4s2tMlhlgi7wJZOjUqRV7M7Z5H26sPnagzti1BYJPS/u4539QIDAQAB",
   "chrome_url_overrides": {
     "newtab": "index.html"
   },
