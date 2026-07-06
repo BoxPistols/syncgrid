@@ -1,10 +1,12 @@
 /**
  * 検索・フィルタリング・ソート・フラット表示
  */
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import type { SyncGridItem, SyncGridGroup, SortMode, ReadStatus, BookmarkMeta } from '../types'
 import { flattenGroups } from '../utils/bookmarks'
 import { getDomain } from '../utils/favicon'
+
+const FILTER_STATUS_KEY = 'syncgrid_filter_status'
 
 export function useFiltering(
   groups: SyncGridGroup[],
@@ -15,7 +17,21 @@ export function useFiltering(
   const [query, setQuery] = useState('')
   const [localQuery, setLocalQuery] = useState('')
   const [filterTag, setFilterTag] = useState<string | null>(null)
-  const [filterStatus, setFilterStatus] = useState<ReadStatus | null>(null)
+  // ステータスフィルタ（すべて/未読/後で読む/…）はタブを閉じても維持する（useCollapseと同じ方式で永続化）
+  const [filterStatus, setFilterStatusState] = useState<ReadStatus | null>(null)
+
+  useEffect(() => {
+    chrome.storage.local.get(FILTER_STATUS_KEY).then((result) => {
+      const stored = result[FILTER_STATUS_KEY] as ReadStatus | undefined
+      if (stored) setFilterStatusState(stored)
+    })
+  }, [])
+
+  const setFilterStatus = useCallback((status: ReadStatus | null) => {
+    setFilterStatusState(status)
+    if (status) chrome.storage.local.set({ [FILTER_STATUS_KEY]: status })
+    else chrome.storage.local.remove(FILTER_STATUS_KEY)
+  }, [])
   // グローバル検索（全ブックマーク横断）
   const searchResults = useMemo(() => {
     if (!query.trim()) return null

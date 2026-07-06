@@ -169,8 +169,10 @@ async function callOpenAI(prompt: string, apiKey: string, model: string, maxToke
         },
         { role: 'user', content: prompt },
       ],
-      max_tokens: maxTokens,
-      temperature: 0.3,
+      // max_tokensは新しめのモデル(gpt-5系/o系)で拒否される。max_completion_tokensは全現行モデル対応。
+      // 推論系モデルは思考トークンもこの上限に含むため、小さすぎると本文が空になる。下限1024を確保
+      max_completion_tokens: Math.max(maxTokens, 1024),
+      // temperatureも同系モデルはデフォルト値以外を拒否するため指定しない
     }),
   })
 
