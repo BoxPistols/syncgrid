@@ -7,24 +7,39 @@ import {
   moveInKanban as moveInKanbanStorage,
   setDueDateInKanban,
   cleanupKanban,
+  type KanbanMutationResult,
 } from '../utils/kanban'
 import { flattenGroups } from '../utils/bookmarks'
 
 interface UseKanbanOptions {
   /** 保存失敗時に呼ばれる（トースト表示など） */
   onError?: () => void
+  /** local保存は成功したが他端末へのsyncミラーが失敗した時に呼ばれる */
+  onSyncError?: () => void
+  /** 他端末の新しい変更に負けて操作が反映されなかった時に呼ばれる */
+  onSyncConflict?: () => void
 }
 
 export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {}) {
-  const { onError } = options
+  const { onError, onSyncError, onSyncConflict } = options
   const [kanbanState, setKanbanState] = useState<KanbanState>({ items: [] })
   const [now, setNow] = useState(() => Date.now())
 
-  // 最新の onError を ref 経由で参照（コールバックの依存を安定させる）
+  // 最新のコールバックを ref 経由で参照（コールバックの依存を安定させる）
   const onErrorRef = useRef(onError)
+  const onSyncErrorRef = useRef(onSyncError)
+  const onSyncConflictRef = useRef(onSyncConflict)
   useEffect(() => {
     onErrorRef.current = onError
-  }, [onError])
+    onSyncErrorRef.current = onSyncError
+    onSyncConflictRef.current = onSyncConflict
+  }, [onError, onSyncError, onSyncConflict])
+
+  // onChanged ハンドラから最新 state を参照するための ref
+  const kanbanStateRef = useRef(kanbanState)
+  useEffect(() => {
+    kanbanStateRef.current = kanbanState
+  }, [kanbanState])
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000)
@@ -62,8 +77,16 @@ export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {
   // 他端末（sync）・同一端末の別タブ（local）からの変更を検知してUIに反映
   useEffect(() => {
     const handleChange = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
-      if ((areaName === 'sync' || areaName === 'local') && changes.syncgrid_kanban?.newValue) {
-        setKanbanState(changes.syncgrid_kanban.newValue as KanbanState)
+      if (areaName !== 'sync' && areaName !== 'local') return
+      const newValue = changes.syncgrid_kanban?.newValue as KanbanState | undefined
+      if (!newValue || !Array.isArray(newValue.items)) return
+      // 自分の書き込みのエコーや古い変更は無視（board単位のlast-write-wins）
+      if ((newValue.updatedAt ?? 0) <= (kanbanStateRef.current.updatedAt ?? 0)) return
+
+      setKanbanState(newValue)
+      if (areaName === 'sync') {
+        // 他端末の変更を local へ書き戻し、次回起動時に古い local へ巻き戻るのを防ぐ
+        chrome.storage.local.set({ syncgrid_kanban: newValue }).catch(() => {})
       }
     }
     chrome.storage.onChanged.addListener(handleChange)
@@ -97,10 +120,12 @@ export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {
   )
 
   // storage 書き込みを実行し、成功時に state 反映・失敗時にロールバック（再読込）＋通知する
-  const runMutation = useCallback(async (fn: () => Promise<KanbanState>) => {
+  const runMutation = useCallback(async (fn: () => Promise<KanbanMutationResult>) => {
     try {
-      const state = await fn()
+      const { state, synced, conflict } = await fn()
       setKanbanState(state)
+      if (conflict) onSyncConflictRef.current?.()
+      else if (!synced) onSyncErrorRef.current?.()
     } catch {
       // local 保存に失敗（quota 超過など）: 永続化された状態へ巻き戻す
       onErrorRef.current?.()

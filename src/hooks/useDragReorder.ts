@@ -55,7 +55,61 @@ const INITIAL_STATE: DragState = {
   dropTabId: null,
 }
 
-export function useDragReorder(selectedIds?: Set<string>, onKanbanDrop?: (bookmarkId: string) => void) {
+/**
+ * ターゲットカードの隣（before/after）へ移動する。移動が成立したら true。
+ * bookmarks.moveのindexは「移動前リスト上の挿入位置」解釈。
+ * 同一親内の前方移動はChrome側が内部補正するため、こちらで-1補正すると二重になる(2026-07実測)
+ */
+async function moveRelativeTo(
+  sourceId: string,
+  targetId: string,
+  mode: 'before' | 'after',
+): Promise<boolean> {
+  const [targetNode] = await chrome.bookmarks.get(targetId)
+  const parentId = targetNode.parentId!
+  const [parentTree] = await chrome.bookmarks.getSubTree(parentId)
+  const chromeChildren = parentTree.children ?? []
+
+  const targetChromeIdx = chromeChildren.findIndex((c) => c.id === targetId)
+  if (targetChromeIdx < 0) return false
+
+  const moveIdx = mode === 'before' ? targetChromeIdx : targetChromeIdx + 1
+  await chrome.bookmarks.move(sourceId, { parentId, index: moveIdx })
+  return true
+}
+
+/** コンテナ内の最近傍カード（隙間・行末・背景へのドロップ先解決） */
+function findNearestCard(
+  container: HTMLElement,
+  x: number,
+  y: number,
+): { id: string; mode: 'before' | 'after' } | null {
+  let best: HTMLElement | null = null
+  let bestDist = Infinity
+  for (const el of container.querySelectorAll<HTMLElement>('[data-sg-card-id]')) {
+    const r = el.getBoundingClientRect()
+    if (r.width === 0 && r.height === 0) continue // 折りたたみ等で非表示のカードは除外
+    const dx = Math.max(r.left - x, 0, x - r.right)
+    const dy = Math.max(r.top - y, 0, y - r.bottom)
+    const dist = dx * dx + dy * dy
+    if (dist < bestDist) {
+      bestDist = dist
+      best = el
+    }
+  }
+  if (!best) return null
+  const rect = best.getBoundingClientRect()
+  return {
+    id: best.dataset.sgCardId as string,
+    mode: x < rect.left + rect.width / 2 ? 'before' : 'after',
+  }
+}
+
+export function useDragReorder(
+  selectedIds?: Set<string>,
+  onKanbanDrop?: (bookmarkId: string) => void,
+  onReorderDone?: () => void,
+) {
   const [dragState, setDragState] = useState<DragState>(INITIAL_STATE)
 
   const dragDataRef = useRef<{
@@ -90,6 +144,7 @@ export function useDragReorder(selectedIds?: Set<string>, onKanbanDrop?: (bookma
         const data = dragDataRef.current
         if (!data || data.id === id) return
         e.preventDefault()
+        e.stopPropagation() // コンテナ側の最近傍判定と二重処理しない
         e.dataTransfer.dropEffect = 'move'
 
         const rect = e.currentTarget.getBoundingClientRect()
@@ -119,6 +174,7 @@ export function useDragReorder(selectedIds?: Set<string>, onKanbanDrop?: (bookma
 
       async onDrop(e: React.DragEvent) {
         e.preventDefault()
+        e.stopPropagation() // コンテナ側の最近傍判定と二重処理しない
         const data = dragDataRef.current
         if (!data || data.id === id) return
 
@@ -135,24 +191,9 @@ export function useDragReorder(selectedIds?: Set<string>, onKanbanDrop?: (bookma
             for (const moveId of idsToMove) {
               if (moveId !== id) await chrome.bookmarks.move(moveId, { parentId: id })
             }
-          } else {
-            // ドロップターゲットの実際の親フォルダを取得（異なるフォルダ間のドロップに対応）
-            const [targetNode] = await chrome.bookmarks.get(id)
-            const parentId = targetNode.parentId!
-            const [parentTree] = await chrome.bookmarks.getSubTree(parentId)
-            const chromeChildren = parentTree.children ?? []
-
-            const targetChromeIdx = chromeChildren.findIndex((c) => c.id === id)
-            if (targetChromeIdx < 0) return
-
-            // ソースが同じ親内にあるかチェック（異なる親ならindexのオフセット不要）
-            const sourceChromeIdx = chromeChildren.findIndex((c) => c.id === data.id)
-            let moveIdx = mode === 'before' ? targetChromeIdx : targetChromeIdx + 1
-            if (sourceChromeIdx >= 0 && sourceChromeIdx < moveIdx) {
-              moveIdx -= 1
-            }
-
-            await chrome.bookmarks.move(data.id, { parentId, index: moveIdx })
+          } else if (mode) {
+            // 並べ替えが成立した時のみ通知（表示ソートがmanual以外なら呼び出し側で切替）
+            if (await moveRelativeTo(data.id, id, mode)) onReorderDone?.()
           }
         } catch (err) {
           console.error('[SyncGrid] Drop failed:', err)
@@ -162,7 +203,56 @@ export function useDragReorder(selectedIds?: Set<string>, onKanbanDrop?: (bookma
         }
       },
     }),
-    [selectedIds],
+    [selectedIds, onReorderDone],
+  )
+
+  // --- Container handlers (グリッドの隙間・行末・背景へのドロップを最近傍カードに解決) ---
+  const getContainerHandlers = useCallback(
+    (fallbackParentId?: string) => ({
+      onDragOver(e: React.DragEvent) {
+        const data = dragDataRef.current
+        if (!data || data.type === 'tab') return
+        const nearest = findNearestCard(e.currentTarget as HTMLElement, e.clientX, e.clientY)
+        if (nearest || fallbackParentId) {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+        }
+        if (nearest && nearest.id !== data.id) {
+          setDragState((prev) => {
+            if (prev.dropTargetId === nearest.id && prev.dropMode === nearest.mode) return prev
+            return { ...prev, dropTargetId: nearest.id, dropMode: nearest.mode, dropTabId: null }
+          })
+        } else {
+          // 最近傍がドラッグ中のカード自身（または不在）: 残留インジケータをクリア
+          setDragState((prev) => {
+            if (prev.dropTargetId === null && prev.dropMode === null) return prev
+            return { ...prev, dropTargetId: null, dropMode: null }
+          })
+        }
+      },
+
+      async onDrop(e: React.DragEvent) {
+        const data = dragDataRef.current
+        if (!data || data.type === 'tab') return
+        e.preventDefault()
+
+        try {
+          const nearest = findNearestCard(e.currentTarget as HTMLElement, e.clientX, e.clientY)
+          if (nearest && nearest.id !== data.id) {
+            if (await moveRelativeTo(data.id, nearest.id, nearest.mode)) onReorderDone?.()
+          } else if (!nearest && fallbackParentId) {
+            // カードが1枚もないビュー: フォルダ末尾へ移動
+            await chrome.bookmarks.move(data.id, { parentId: fallbackParentId })
+          }
+        } catch (err) {
+          console.error('[SyncGrid] Container drop failed:', err)
+        } finally {
+          dragDataRef.current = null
+          setDragState(INITIAL_STATE)
+        }
+      },
+    }),
+    [onReorderDone],
   )
 
   // --- Tab unified handlers (タブ自体のD&D + アイテム→タブへのドロップを統合) ---
@@ -261,5 +351,5 @@ export function useDragReorder(selectedIds?: Set<string>, onKanbanDrop?: (bookma
     [selectedIds, onKanbanDrop],
   )
 
-  return { dragState, getDragHandlers, getTabHandlers }
+  return { dragState, getDragHandlers, getTabHandlers, getContainerHandlers }
 }

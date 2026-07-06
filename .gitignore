@@ -23,3 +23,6 @@ Thumbs.db
 
 # Vite dev キャッシュ
 .vite/
+
+# 計画ファイル（公開repoのためコミットしない — fable-emu §C）
+plans/

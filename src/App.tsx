@@ -80,7 +80,9 @@ export default function App() {
   } = useFiltering(groups, nav.currentFolder, allMeta, settings.sort)
   const { collapsedIds, toggleCollapse, expandAll, collapseAll } = useCollapse()
   const handleKanbanError = useCallback(() => showToast(t.kanbanSaveError, 'error'), [showToast, t])
-  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems, reloadKanban } = useKanban(groups, { onError: handleKanbanError })
+  const handleKanbanSyncError = useCallback(() => showToast(t.kanbanSyncError, 'error'), [showToast, t])
+  const handleKanbanSyncConflict = useCallback(() => showToast(t.kanbanSyncConflict, 'error'), [showToast, t])
+  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems, reloadKanban } = useKanban(groups, { onError: handleKanbanError, onSyncError: handleKanbanSyncError, onSyncConflict: handleKanbanSyncConflict })
 
   // タブ直下の未分類ブックマークを折りたためる仮想フォルダにまとめる。
   // サブフォルダが存在する場合のみ（フラットなフォルダは素のグリッドのまま）。
@@ -206,9 +208,17 @@ export default function App() {
     (bookmarkId: string) => { addToKanban(bookmarkId) },
     [addToKanban],
   )
-  const { dragState, getDragHandlers, getTabHandlers } = useDragReorder(
+  // 並べ替えドロップ成立時: manual以外のソートでは結果が表示に反映されないため、手動ソートへ自動切替
+  const handleReorderDone = useCallback(() => {
+    if (settings.sort !== 'manual') {
+      updateSettings({ sort: 'manual' })
+      showToast(t.sortSwitchedToManual, 'success')
+    }
+  }, [settings.sort, updateSettings, showToast, t])
+  const { dragState, getDragHandlers, getTabHandlers, getContainerHandlers } = useDragReorder(
     selectedIds,
     handleKanbanDrop,
+    handleReorderDone,
   )
 
   // Tab切替時に選択解除をラップ
@@ -773,16 +783,16 @@ export default function App() {
             t={t}
           />
         ) : searchResults ? (
-          <div className="sg-dial">
+          <div className="sg-dial" {...getContainerHandlers()}>
             <div className="sg-toolbar"><span className="sg-toolbar__title">{t.searchResults(query, searchResults.length)}</span></div>
             {searchResults.length > 0 ? (
-              <div className={gridClass}>{searchResults.map((item) => (<BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} />))}</div>
+              <div className={gridClass}>{searchResults.map((item) => (<BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} />))}</div>
             ) : (
               <div className="sg-empty"><div className="sg-empty__icon"><Icon name="search" size={48} /></div><p className="sg-empty__text">{t.noSearchResults}</p></div>
             )}
           </div>
         ) : nav.allItems ? (
-          <div className="sg-dial">
+          <div className="sg-dial" {...getContainerHandlers()}>
             <div className="sg-toolbar">
               <span className="sg-toolbar__title">{t.allBookmarks} ({nav.allItems.length})</span>
               {statusFilterChips}
@@ -790,14 +800,14 @@ export default function App() {
             </div>
             <div className={gridClass}>
               {applyFiltersAndSort(nav.allItems).map((item) => (
-                <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
+                <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
               ))}
             </div>
           </div>
         ) : groups.length === 0 ? (
           <div className="sg-empty"><div className="sg-empty__icon"><Icon name="folder" size={48} /></div><p className="sg-empty__text sg-preline">{t.noGroups}</p></div>
         ) : nav.currentFolder ? (
-          <div className="sg-dial">
+          <div className="sg-dial" {...getContainerHandlers(nav.currentFolder.id)}>
             <div className="sg-toolbar">
               <input
                 type="text"
@@ -849,7 +859,7 @@ export default function App() {
               ) : (
                 <div className={gridClass}>
                   {applyFiltersAndSort(localSearchResults).map((item) => (
-                    <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} t={t} locale={settings.locale} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
+                    <BookmarkCard key={item.id} item={item} onContextMenu={handleBookmarkContext} dragHandlers={getDragHandlers(item.id, 'bookmark')} isDragging={dragState.draggingId === item.id} isDropTarget={dragState.dropTargetId === item.id} dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null} t={t} locale={settings.locale} tags={allMeta[item.id]?.tags} status={allMeta[item.id]?.status} ogp={allMeta[item.id]?.ogp} onOpen={(id) => handleSetStatus(id, 'read')} />
                   ))}
                 </div>
               )
