@@ -20,7 +20,6 @@ const REPO = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DIST = join(REPO, 'dist')
 const PROFILE = '/tmp/sg-e2e-profile'
 const PORT = 9339
-const EXT_ID = 'gegdfmoopgebdeicfakccabpfjiilgal' // dist のパス由来で安定
 
 const CFT_SUFFIX = join(
   'chrome-mac-arm64',
@@ -178,12 +177,21 @@ async function main() {
       15000,
       'CDP port',
     )
-    await fetch(`http://localhost:${PORT}/json/new?chrome-extension://${EXT_ID}/index.html`, {
+    // 拡張IDは「distの絶対パス」由来で環境ごとに変わるため、service worker ターゲットから動的に発見する
+    const extId = await waitFor(async () => {
+      const list = await (await fetch(`http://localhost:${PORT}/json/list`)).json()
+      const sw = list.find(
+        (t) => t.type === 'service_worker' && t.url.endsWith('/background.js'),
+      )
+      return sw ? new URL(sw.url).hostname : null
+    }, 15000, 'extension service worker (background.js)')
+    console.log(`extension id: ${extId}`)
+    await fetch(`http://localhost:${PORT}/json/new?chrome-extension://${extId}/index.html`, {
       method: 'PUT',
     })
     const target = await waitFor(async () => {
       const list = await (await fetch(`http://localhost:${PORT}/json/list`)).json()
-      return list.find((t) => t.type === 'page' && t.url.includes(`${EXT_ID}/index.html`))
+      return list.find((t) => t.type === 'page' && t.url.includes(`${extId}/index.html`))
     }, 15000, 'extension page target')
 
     // 拡張ページのアプリ初期化(onChangedリスナ登録)を待つ

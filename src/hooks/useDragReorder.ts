@@ -56,7 +56,7 @@ const INITIAL_STATE: DragState = {
 }
 
 /**
- * ターゲットカードの隣（before/after）へ移動する。
+ * ターゲットカードの隣（before/after）へ移動する。移動が成立したら true。
  * bookmarks.moveのindexは「移動前リスト上の挿入位置」解釈。
  * 同一親内の前方移動はChrome側が内部補正するため、こちらで-1補正すると二重になる(2026-07実測)
  */
@@ -64,17 +64,18 @@ async function moveRelativeTo(
   sourceId: string,
   targetId: string,
   mode: 'before' | 'after',
-): Promise<void> {
+): Promise<boolean> {
   const [targetNode] = await chrome.bookmarks.get(targetId)
   const parentId = targetNode.parentId!
   const [parentTree] = await chrome.bookmarks.getSubTree(parentId)
   const chromeChildren = parentTree.children ?? []
 
   const targetChromeIdx = chromeChildren.findIndex((c) => c.id === targetId)
-  if (targetChromeIdx < 0) return
+  if (targetChromeIdx < 0) return false
 
   const moveIdx = mode === 'before' ? targetChromeIdx : targetChromeIdx + 1
   await chrome.bookmarks.move(sourceId, { parentId, index: moveIdx })
+  return true
 }
 
 /** コンテナ内の最近傍カード（隙間・行末・背景へのドロップ先解決） */
@@ -191,9 +192,8 @@ export function useDragReorder(
               if (moveId !== id) await chrome.bookmarks.move(moveId, { parentId: id })
             }
           } else if (mode) {
-            await moveRelativeTo(data.id, id, mode)
-            // 並べ替えが成立した（表示ソートがmanual以外なら呼び出し側で切替できるよう通知）
-            onReorderDone?.()
+            // 並べ替えが成立した時のみ通知（表示ソートがmanual以外なら呼び出し側で切替）
+            if (await moveRelativeTo(data.id, id, mode)) onReorderDone?.()
           }
         } catch (err) {
           console.error('[SyncGrid] Drop failed:', err)
@@ -232,8 +232,7 @@ export function useDragReorder(
         try {
           const nearest = findNearestCard(e.currentTarget as HTMLElement, e.clientX, e.clientY)
           if (nearest && nearest.id !== data.id) {
-            await moveRelativeTo(data.id, nearest.id, nearest.mode)
-            onReorderDone?.()
+            if (await moveRelativeTo(data.id, nearest.id, nearest.mode)) onReorderDone?.()
           } else if (!nearest && fallbackParentId) {
             // カードが1枚もないビュー: フォルダ末尾へ移動
             await chrome.bookmarks.move(data.id, { parentId: fallbackParentId })
