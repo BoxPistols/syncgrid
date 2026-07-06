@@ -17,21 +17,22 @@ export function getAppVersion(): string {
   }
 }
 
-if (!IS_EXTENSION) {
+export interface MockNode {
+  id: string
+  parentId?: string
+  title: string
+  url?: string
+  dateAdded?: number
+  children?: MockNode[]
+}
+
+// テストからも同一実装を使えるようファクトリとしてエクスポート(dev環境では末尾で自動マウント)
+export function createMockChrome(seedRoot?: MockNode): typeof chrome {
   // --- Mock Data ---
   let nextId = 100
   const genId = () => String(nextId++)
 
-  interface MockNode {
-    id: string
-    parentId?: string
-    title: string
-    url?: string
-    dateAdded?: number
-    children?: MockNode[]
-  }
-
-  const root: MockNode = {
+  const root: MockNode = seedRoot ?? {
     id: '0',
     title: '',
     children: [
@@ -236,12 +237,16 @@ if (!IS_EXTENSION) {
     }
   }
 
-  // --- Mount mocks ---
-  const g = globalThis as unknown as { chrome: typeof chrome }
-
-  g.chrome = {
+  return {
     runtime: { id: '' },
     bookmarks: {
+      get: (idOrList: string | string[]) => {
+        const ids = typeof idOrList === 'string' ? [idOrList] : idOrList
+        const nodes = ids
+          .map((i) => findNode(root, i))
+          .filter((n): n is MockNode => n !== null)
+        return Promise.resolve(nodes.map(toTreeNode))
+      },
       getTree: () => {
         return Promise.resolve([toTreeNode(root)])
       },
@@ -302,13 +307,18 @@ if (!IS_EXTENSION) {
         const parent = findParent(root, id)
         const node = findNode(root, id)
         if (parent?.children && node) {
+          const sameParent = node.parentId === dest.parentId
           const idx = parent.children.findIndex((c) => c.id === id)
           if (idx >= 0) parent.children.splice(idx, 1)
           const newParent = findNode(root, dest.parentId)
           if (newParent?.children) {
             node.parentId = dest.parentId
             if (dest.index !== undefined) {
-              newParent.children.splice(dest.index, 0, node)
+              // 実Chromeのindexは「移動前リスト上の挿入位置」解釈。
+              // 同一親内の前方移動はChrome内部で-1補正される(2026-07実測)ため、mockも揃える
+              const insertIdx =
+                sameParent && idx >= 0 && idx < dest.index ? dest.index - 1 : dest.index
+              newParent.children.splice(insertIdx, 0, node)
             } else {
               newParent.children.push(node)
             }
@@ -335,6 +345,10 @@ if (!IS_EXTENSION) {
       request: () => Promise.resolve(true),
     },
   } as unknown as typeof chrome
+}
 
+if (!IS_EXTENSION) {
+  const g = globalThis as unknown as { chrome: typeof chrome }
+  g.chrome = createMockChrome()
   console.info('[SyncGrid] Dev mode: using mock Chrome APIs')
 }

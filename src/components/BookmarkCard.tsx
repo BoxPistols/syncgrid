@@ -81,6 +81,7 @@ export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dr
     <>
       <div
         className={className}
+        data-sg-card-id={item.id}
         role="link"
         tabIndex={0}
         onClick={(e) => {
