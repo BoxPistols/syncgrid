@@ -10,6 +10,7 @@
 import type { SyncGridGroup, SyncGridExport, SyncGridExportGroup, KanbanState } from '../types'
 import { SYNCGRID_ROOT } from '../types'
 import { loadKanban, saveKanban } from './kanban'
+import { migrateToV2 } from './kanbanMerge'
 
 // ===== EXPORT =====
 
@@ -172,13 +173,17 @@ function parseKanbanFromImport(raw: unknown): KanbanState | undefined {
   if (!raw || typeof raw !== 'object') return undefined
   const obj = raw as Record<string, unknown>
   if (!Array.isArray(obj.items)) return undefined
-  const items = obj.items.filter((i: unknown) => {
-    if (!i || typeof i !== 'object') return false
-    const item = i as Record<string, unknown>
-    return typeof item.url === 'string' && typeof item.column === 'string' && VALID_COLUMNS.includes(item.column) && typeof item.order === 'number'
-  })
-  if (items.length === 0) return undefined
-  return { items } as KanbanState
+  const filtered = {
+    ...obj,
+    items: obj.items.filter((i: unknown) => {
+      if (!i || typeof i !== 'object') return false
+      const item = i as Record<string, unknown>
+      return typeof item.url === 'string' && typeof item.column === 'string' && VALID_COLUMNS.includes(item.column) && typeof item.order === 'number'
+    }),
+  }
+  const state = migrateToV2(filtered)
+  if (state.items.length === 0) return undefined
+  return state
 }
 
 export async function importToBookmarks(data: SyncGridExportGroup[]): Promise<void> {

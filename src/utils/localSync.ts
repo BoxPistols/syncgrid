@@ -13,7 +13,8 @@
 
 import type { SyncGridGroup, SyncGridExport, KanbanState } from '../types'
 import { exportData } from './dataTransfer'
-import { saveKanban } from './kanban'
+import { loadKanban, saveKanban } from './kanban'
+import { mergeKanban, migrateToV2 } from './kanbanMerge'
 
 const SYNC_FILENAME = 'syncgrid-sync.json'
 const IDB_NAME = 'syncgrid-fs'
@@ -173,11 +174,18 @@ export async function readKanbanFromSyncFolder(
   }
 }
 
-/** Pull kanban from sync file and save locally */
+/**
+ * Pull kanban from sync file and merge with the local state (item-level last-write-wins).
+ * Uses mergeKanban instead of overwriting local, so a card added on this device while
+ * another device's file is stale does not get silently dropped.
+ */
 export async function pullKanbanFromSync(): Promise<boolean> {
-  const kanban = await readKanbanFromSyncFolder()
-  if (!kanban || kanban.items.length === 0) return false
-  await saveKanban(kanban)
+  const remote = await readKanbanFromSyncFolder()
+  if (!remote) return false
+  const remoteState = migrateToV2(remote)
+  const local = await loadKanban()
+  const merged = mergeKanban([local, remoteState])
+  await saveKanban(merged)
   return true
 }
 

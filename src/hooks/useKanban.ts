@@ -14,26 +14,18 @@ import { flattenGroups } from '../utils/bookmarks'
 interface UseKanbanOptions {
   /** 保存失敗時に呼ばれる（トースト表示など） */
   onError?: () => void
-  /** local保存は成功したが他端末へのsyncミラーが失敗した時に呼ばれる */
-  onSyncError?: () => void
-  /** 他端末の新しい変更に負けて操作が反映されなかった時に呼ばれる */
-  onSyncConflict?: () => void
 }
 
 export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {}) {
-  const { onError, onSyncError, onSyncConflict } = options
-  const [kanbanState, setKanbanState] = useState<KanbanState>({ items: [] })
+  const { onError } = options
+  const [kanbanState, setKanbanState] = useState<KanbanState>({ schema: 2, items: [], updatedAt: 0 })
   const [now, setNow] = useState(() => Date.now())
 
   // 最新のコールバックを ref 経由で参照（コールバックの依存を安定させる）
   const onErrorRef = useRef(onError)
-  const onSyncErrorRef = useRef(onSyncError)
-  const onSyncConflictRef = useRef(onSyncConflict)
   useEffect(() => {
     onErrorRef.current = onError
-    onSyncErrorRef.current = onSyncError
-    onSyncConflictRef.current = onSyncConflict
-  }, [onError, onSyncError, onSyncConflict])
+  }, [onError])
 
   // onChanged ハンドラから最新 state を参照するための ref
   const kanbanStateRef = useRef(kanbanState)
@@ -74,20 +66,15 @@ export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {
     cleanupKanban(new Set(urlMap.keys())).then(setKanbanState)
   }, [urlMap])
 
-  // 他端末（sync）・同一端末の別タブ（local）からの変更を検知してUIに反映
+  // 同一端末の別タブ・フォルダ同期の取り込み（local書き込み）からの変更をUIに反映
   useEffect(() => {
     const handleChange = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
-      if (areaName !== 'sync' && areaName !== 'local') return
+      if (areaName !== 'local') return
       const newValue = changes.syncgrid_kanban?.newValue as KanbanState | undefined
       if (!newValue || !Array.isArray(newValue.items)) return
-      // 自分の書き込みのエコーや古い変更は無視（board単位のlast-write-wins）
+      // 自分の書き込みのエコーや古い変更は無視
       if ((newValue.updatedAt ?? 0) <= (kanbanStateRef.current.updatedAt ?? 0)) return
-
       setKanbanState(newValue)
-      if (areaName === 'sync') {
-        // 他端末の変更を local へ書き戻し、次回起動時に古い local へ巻き戻るのを防ぐ
-        chrome.storage.local.set({ syncgrid_kanban: newValue }).catch(() => {})
-      }
     }
     chrome.storage.onChanged.addListener(handleChange)
     return () => chrome.storage.onChanged.removeListener(handleChange)
@@ -100,7 +87,9 @@ export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {
       doing: [],
       done: [],
     }
-    const sorted = [...kanbanState.items].sort((a, b) => a.order - b.order)
+    const sorted = [...kanbanState.items]
+      .filter((ki) => !ki.deletedAt)
+      .sort((a, b) => a.order - b.order)
     for (const ki of sorted) {
       const item = urlMap.get(ki.url)
       if (item) cols[ki.column].push(item)
@@ -108,13 +97,13 @@ export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {
     return cols
   }, [kanbanState, urlMap])
 
-  const kanbanItemCount = kanbanState.items.length
+  const kanbanItemCount = kanbanState.items.filter((i) => !i.deletedAt).length
 
   // 外部API: bookmarkIdで判定（内部でURL変換）
   const isInKanban = useCallback(
     (bookmarkId: string) => {
       const url = idToUrl.get(bookmarkId)
-      return url ? kanbanState.items.some((i) => i.url === url) : false
+      return url ? kanbanState.items.some((i) => i.url === url && !i.deletedAt) : false
     },
     [kanbanState, idToUrl],
   )
@@ -122,10 +111,8 @@ export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {
   // storage 書き込みを実行し、成功時に state 反映・失敗時にロールバック（再読込）＋通知する
   const runMutation = useCallback(async (fn: () => Promise<KanbanMutationResult>) => {
     try {
-      const { state, synced, conflict } = await fn()
+      const { state } = await fn()
       setKanbanState(state)
-      if (conflict) onSyncConflictRef.current?.()
-      else if (!synced) onSyncErrorRef.current?.()
     } catch {
       // local 保存に失敗（quota 超過など）: 永続化された状態へ巻き戻す
       onErrorRef.current?.()
@@ -178,7 +165,7 @@ export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {
   const dueDates = useMemo(() => {
     const map = new Map<string, number>()
     for (const ki of kanbanState.items) {
-      if (ki.dueDate) {
+      if (ki.dueDate && !ki.deletedAt) {
         const item = urlMap.get(ki.url)
         if (item) map.set(item.id, ki.dueDate)
       }
@@ -189,7 +176,7 @@ export function useKanban(groups: SyncGridGroup[], options: UseKanbanOptions = {
   // 期限超過アイテム（done列以外）
   const overdueItems = useMemo(() => {
     return kanbanState.items
-      .filter((ki) => ki.dueDate && ki.dueDate < now && ki.column !== 'done')
+      .filter((ki) => !ki.deletedAt && ki.dueDate && ki.dueDate < now && ki.column !== 'done')
       .map((ki) => urlMap.get(ki.url))
       .filter((item): item is SyncGridItem => !!item)
   }, [kanbanState, urlMap, now])

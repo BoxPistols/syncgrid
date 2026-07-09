@@ -84,16 +84,23 @@ export interface KanbanItem {
   /** 端末間の安定識別子 */
   url: string
   column: KanbanColumn
+  /** 列内順序（疎な値。1000刻み推奨で挿入コストを軽減） */
   order: number
   /** 期限（UTCタイムスタンプ） */
   dueDate?: number
+  /** このアイテムが最後に変更された時刻（アイテム単位last-write-wins用） */
+  updatedAt: number
+  /** 削除トゥームストーン（削除時刻）。存在する間はUI非表示、マージで「削除 vs 更新」を裁定 */
+  deletedAt?: number
 }
 
-/** カンバン永続化データ */
+/** カンバン永続化データ（v2: アイテム単位マージ） */
 export interface KanbanState {
+  /** スキーマバージョン。v1（schema欠落）はロード時にv2へマイグレーションされる */
+  schema: 2
   items: KanbanItem[]
-  /** 最終更新時刻（board単位のlast-write-wins用。旧データは欠落=0扱い） */
-  updatedAt?: number
+  /** board全体の最終更新時刻（表示用。マージ判定には使わない） */
+  updatedAt: number
 }
 
 /** ローカルメタデータ（chrome.storage.local） */

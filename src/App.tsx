@@ -81,8 +81,7 @@ export default function App() {
   const { collapsedIds, toggleCollapse, expandAll, collapseAll } = useCollapse()
   const handleKanbanError = useCallback(() => showToast(t.kanbanSaveError, 'error'), [showToast, t])
   const handleKanbanSyncError = useCallback(() => showToast(t.kanbanSyncError, 'error'), [showToast, t])
-  const handleKanbanSyncConflict = useCallback(() => showToast(t.kanbanSyncConflict, 'error'), [showToast, t])
-  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems, reloadKanban } = useKanban(groups, { onError: handleKanbanError, onSyncError: handleKanbanSyncError, onSyncConflict: handleKanbanSyncConflict })
+  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems, reloadKanban } = useKanban(groups, { onError: handleKanbanError })
 
   // タブ直下の未分類ブックマークを折りたためる仮想フォルダにまとめる。
   // サブフォルダが存在する場合のみ（フラットなフォルダは素のグリッドのまま）。
@@ -174,7 +173,7 @@ export default function App() {
     (syncedAt: string) => updateSettings({ lastSyncedAt: syncedAt }),
     [updateSettings],
   )
-  useAutoSync(groups, handleSynced)
+  useAutoSync(groups, handleSynced, reloadKanban, handleKanbanSyncError)
 
   // --- UI State ---
   const [editItem, setEditItem] = useState<SyncGridItem | null>(null)

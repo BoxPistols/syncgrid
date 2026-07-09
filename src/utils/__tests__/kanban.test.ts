@@ -1,125 +1,129 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createMockChrome } from '../chromeMock'
-import { loadKanban, saveKanban, addToKanban } from '../kanban'
+import { loadKanban, saveKanban, addToKanban, removeFromKanban, moveInKanban } from '../kanban'
 import type { KanbanState } from '../../types'
 
 /**
- * Kanban 永続化の複数端末同期(board単位 last-write-wins)テスト
- * - local と sync の新しい方を採用し、sync が新しければ local へ書き戻す
- * - sync により新しい状態があるときは古い状態で上書きしない
+ * Kanban 永続化(v2: アイテム単位last-write-wins + 削除トゥームストーン)テスト
+ * - 同期経路は File System Access API 経由のフォルダ同期(localSync.ts)へ移管され、
+ *   chrome.storage.local はローカル主保存のみを担う
  */
 
 const KEY = 'syncgrid_kanban'
 
-const stateAt = (url: string, updatedAt?: number): KanbanState => ({
-  items: [{ url, column: 'todo', order: 0 }],
-  updatedAt,
-})
-
-async function getStored(area: 'local' | 'sync'): Promise<KanbanState | undefined> {
-  const result = await chrome.storage[area].get(KEY)
+async function getLocal(): Promise<KanbanState | undefined> {
+  const result = await chrome.storage.local.get(KEY)
   return result[KEY] as KanbanState | undefined
 }
 
-describe('loadKanban — local/sync の新しい方を採用', () => {
+describe('loadKanban / saveKanban — v2ローカル保存', () => {
   beforeEach(() => {
     ;(globalThis as unknown as { chrome: typeof chrome }).chrome = createMockChrome()
   })
 
-  it('sync が新しい起動: sync を採用し local へ書き戻す(巻き戻り防止)', async () => {
-    await chrome.storage.local.set({ [KEY]: stateAt('https://old.example/', 1000) })
-    await chrome.storage.sync.set({ [KEY]: stateAt('https://new.example/', 2000) })
-
+  it('未保存状態は空のv2状態を返す', async () => {
     const state = await loadKanban()
-
-    expect(state.items[0].url).toBe('https://new.example/')
-    const local = await getStored('local')
-    expect(local?.updatedAt).toBe(2000)
-    expect(local?.items[0].url).toBe('https://new.example/')
+    expect(state.schema).toBe(2)
+    expect(state.items).toHaveLength(0)
   })
 
-  it('local が新しい起動: local を採用する', async () => {
-    await chrome.storage.local.set({ [KEY]: stateAt('https://mine.example/', 3000) })
-    await chrome.storage.sync.set({ [KEY]: stateAt('https://remote.example/', 2000) })
-
-    const state = await loadKanban()
-    expect(state.items[0].url).toBe('https://mine.example/')
+  it('保存時にschema:2とupdatedAtを付与する', async () => {
+    const { state } = await saveKanban({ schema: 2, items: [{ url: 'https://a.example/', column: 'todo', order: 0, updatedAt: 1 }], updatedAt: 0 })
+    expect(state.schema).toBe(2)
+    expect(state.updatedAt).toBeGreaterThan(0)
+    const local = await getLocal()
+    expect(local?.items[0].url).toBe('https://a.example/')
   })
 
-  it('updatedAt を持たない旧データ(local のみ)も読める(後方互換)', async () => {
-    await chrome.storage.local.set({ [KEY]: { items: [{ url: 'https://legacy.example/', column: 'todo', order: 0 }] } })
+  it('旧v1形式(schema欠落、updatedAtなし)は読み込み時にv2へマイグレーションされる', async () => {
+    await chrome.storage.local.set({
+      [KEY]: { items: [{ url: 'https://legacy.example/', column: 'todo', order: 0 }], updatedAt: 500 },
+    })
 
     const state = await loadKanban()
+    expect(state.schema).toBe(2)
     expect(state.items[0].url).toBe('https://legacy.example/')
+    expect(state.items[0].updatedAt).toBe(500)
   })
 
-  it('local が空で sync にデータがある(新デバイス初回): sync から復元し local へ書き戻す', async () => {
-    await chrome.storage.sync.set({ [KEY]: stateAt('https://synced.example/', 500) })
+  it('旧bookmarkId形式(urlなし)が新形式と混在していても、後続のurl付きアイテムが誤って破棄されない', async () => {
+    await chrome.storage.local.set({
+      [KEY]: {
+        items: [
+          { bookmarkId: 'legacy-1', column: 'todo', order: 0 },
+          { url: 'https://survivor.example/', column: 'todo', order: 1 },
+        ],
+        updatedAt: 500,
+      },
+    })
 
     const state = await loadKanban()
-    expect(state.items[0].url).toBe('https://synced.example/')
-    expect((await getStored('local'))?.items[0].url).toBe('https://synced.example/')
-  })
-})
-
-describe('saveKanban — updatedAt スタンプと sync 上書きガード', () => {
-  beforeEach(() => {
-    ;(globalThis as unknown as { chrome: typeof chrome }).chrome = createMockChrome()
-  })
-
-  it('保存時に updatedAt を付与し local と sync の両方へ書く', async () => {
-    const result = await saveKanban(stateAt('https://a.example/'))
-
-    expect(result.synced).toBe(true)
-    const local = await getStored('local')
-    const sync = await getStored('sync')
-    expect(local?.updatedAt).toBeGreaterThan(0)
-    expect(sync?.updatedAt).toBe(local?.updatedAt)
-  })
-
-  it('sync に自分より新しい状態がある場合は上書きせず、remote を採用して conflictState を返す', async () => {
-    const future = Date.now() + 10_000_000
-    await chrome.storage.sync.set({ [KEY]: stateAt('https://remote-newer.example/', future) })
-
-    const result = await saveKanban(stateAt('https://mine.example/'))
-
-    expect(result.synced).toBe(false)
-    expect(result.conflictState?.items[0].url).toBe('https://remote-newer.example/')
-    // sync はリモートの新しい状態のまま
-    expect((await getStored('sync'))?.items[0].url).toBe('https://remote-newer.example/')
-    // local にも remote を反映（放置すると次回ロードで黙って巻き戻るため）
-    expect((await getStored('local'))?.items[0].url).toBe('https://remote-newer.example/')
-  })
-})
-
-describe('addToKanban — 変更系ヘルパの synced 伝搬', () => {
-  beforeEach(() => {
-    ;(globalThis as unknown as { chrome: typeof chrome }).chrome = createMockChrome()
-  })
-
-  it('追加が成功し sync ミラーも成功すると synced=true', async () => {
-    const { state, synced } = await addToKanban('https://x.example/')
-    expect(synced).toBe(true)
     expect(state.items).toHaveLength(1)
+    expect(state.items[0].url).toBe('https://survivor.example/')
   })
 
-  it('重複追加は保存せず synced=true(通知を出さない)', async () => {
+  it('旧 chrome.storage.sync ミラーが残っていれば一度だけ取り込み、sync側は削除する', async () => {
+    await chrome.storage.local.set({
+      [KEY]: { items: [{ url: 'https://local-only.example/', column: 'todo', order: 0, updatedAt: 100 }], updatedAt: 100 },
+    })
+    await chrome.storage.sync.set({
+      [KEY]: { items: [{ url: 'https://synced-only.example/', column: 'doing', order: 0, updatedAt: 200 }], updatedAt: 200 },
+    })
+
+    const state = await loadKanban()
+    const urls = state.items.map((i) => i.url).sort()
+    expect(urls).toEqual(['https://local-only.example/', 'https://synced-only.example/'])
+
+    const syncAfter = await chrome.storage.sync.get(KEY)
+    expect(syncAfter[KEY]).toBeUndefined()
+  })
+})
+
+describe('addToKanban / removeFromKanban — アイテム単位の追加・削除', () => {
+  beforeEach(() => {
+    ;(globalThis as unknown as { chrome: typeof chrome }).chrome = createMockChrome()
+  })
+
+  it('追加したアイテムが読み込める', async () => {
+    const { state } = await addToKanban('https://x.example/')
+    expect(state.items).toHaveLength(1)
+    expect(state.items[0].deletedAt).toBeUndefined()
+  })
+
+  it('重複追加は無視される', async () => {
     await addToKanban('https://x.example/')
-    const { state, synced } = await addToKanban('https://x.example/')
-    expect(synced).toBe(true)
+    const { state } = await addToKanban('https://x.example/')
     expect(state.items).toHaveLength(1)
   })
 
-  it('他端末の新しい変更と競合した追加は conflict=true で remote 状態を返す', async () => {
-    const future = Date.now() + 10_000_000
-    await chrome.storage.sync.set({ [KEY]: stateAt('https://remote.example/', future) })
-
-    const { state, synced, conflict } = await addToKanban('https://mine.example/')
-
-    expect(conflict).toBe(true)
-    expect(synced).toBe(false)
-    // UIへは remote の最新状態が返る(自分の追加は反映されない)
+  it('削除はトゥームストーン化され、物理削除されない', async () => {
+    await addToKanban('https://x.example/')
+    const { state } = await removeFromKanban('https://x.example/')
     expect(state.items).toHaveLength(1)
-    expect(state.items[0].url).toBe('https://remote.example/')
+    expect(state.items[0].deletedAt).toBeGreaterThan(0)
+  })
+
+  it('削除済みアイテムを再追加すると復活する', async () => {
+    await addToKanban('https://x.example/')
+    await removeFromKanban('https://x.example/')
+    const { state } = await addToKanban('https://x.example/')
+    expect(state.items).toHaveLength(1)
+    expect(state.items[0].deletedAt).toBeUndefined()
+  })
+})
+
+describe('moveInKanban — トゥームストーンを除いた並び替え', () => {
+  beforeEach(() => {
+    ;(globalThis as unknown as { chrome: typeof chrome }).chrome = createMockChrome()
+  })
+
+  it('削除済みアイテムはアンカー解決の対象から除外される', async () => {
+    await addToKanban('https://a.example/')
+    await addToKanban('https://b.example/')
+    await removeFromKanban('https://a.example/')
+
+    const { state } = await moveInKanban('https://b.example/', 'doing', null)
+    const b = state.items.find((i) => i.url === 'https://b.example/')
+    expect(b?.column).toBe('doing')
   })
 })
