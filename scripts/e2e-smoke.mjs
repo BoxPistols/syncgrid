@@ -5,7 +5,7 @@
  *   1. bookmarks.move の index 意味論(mock と実機の乖離 = 「devで動くが実機で壊れる」の再発防止)
  *   2. background service worker の生存と FETCH_HTML の URL ガード
  *      (background.ts に import が増えると manifest の type:module なしで SW が黙って死ぬ)
- *   3. Kanban sync の write-through(リモート変更が local へ書き戻される)
+ *   3. Kanban の旧 chrome.storage.sync ミラー取り込み(loadKanban実行時に一度だけマージしsyncを消す)
  *
  * 使い方: npm run build && npm run e2e:smoke
  * 前提: Chrome for Testing(puppeteer / playwright のキャッシュ、または CFT_PATH 環境変数)
@@ -92,6 +92,34 @@ function evaluate(wsUrl, expression) {
   })
 }
 
+/** ページを再読み込みし、load完了を待つ(アプリ再マウント→loadKanban()の再実行を発生させる) */
+function reloadPage(wsUrl) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(wsUrl)
+    const timer = setTimeout(() => {
+      ws.close()
+      reject(new Error('Page.reload timeout'))
+    }, 20000)
+    ws.onerror = (e) => {
+      clearTimeout(timer)
+      reject(new Error(`ws error: ${e.message ?? e}`))
+    }
+    ws.onopen = () => ws.send(JSON.stringify({ id: 1, method: 'Page.enable' }))
+    ws.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data)
+      if (msg.id === 1) {
+        ws.send(JSON.stringify({ id: 2, method: 'Page.reload' }))
+        return
+      }
+      if (msg.method === 'Page.loadEventFired') {
+        clearTimeout(timer)
+        ws.close()
+        resolve()
+      }
+    }
+  })
+}
+
 const CHECKS_EXPRESSION = `(async () => {
   const results = { pass: true, checks: {} }
   const record = (name, ok, detail) => {
@@ -124,24 +152,33 @@ const CHECKS_EXPRESSION = `(async () => {
     record('fetch-html-guard(fast=no-fetch)', elapsed < 3000, elapsed + 'ms')
   }
 
-  // --- 3. Kanban sync write-through(リモート変更 → local 書き戻し) ---
-  {
-    const KEY = 'syncgrid_kanban'
-    const backup = (await chrome.storage.local.get(KEY))[KEY]
-    const syncBackup = (await chrome.storage.sync.get(KEY))[KEY]
-    await chrome.storage.local.set({ [KEY]: { items: [], updatedAt: 1000 } })
-    const remote = { items: [{ url: 'https://e2e.example/', column: 'doing', order: 0 }], updatedAt: Date.now() + 1000 }
-    await chrome.storage.sync.set({ [KEY]: remote })
-    await new Promise((r) => setTimeout(r, 800))
-    const local = (await chrome.storage.local.get(KEY))[KEY]
-    const ok = !!local && local.updatedAt === remote.updatedAt && local.items.length === 1
-    record('kanban-sync-write-through', ok, JSON.stringify(local))
-    // 原状復元
-    if (backup) await chrome.storage.local.set({ [KEY]: backup }); else await chrome.storage.local.remove(KEY)
-    if (syncBackup) await chrome.storage.sync.set({ [KEY]: syncBackup }); else await chrome.storage.sync.remove(KEY)
-  }
-
   return JSON.stringify(results)
+})()`
+
+// --- 3a. Kanban 旧sync混入シナリオを仕込む(プロファイルは使い捨てのため原状復元は不要) ---
+// loadKanban()はReact側のcleanupKanban(実ブックマークURL集合でフィルタ)経由でしか
+// 呼ばれないため、対象URLをブックマークとしても作っておく(そうしないとurlMap空でeffect自体が動かない)
+const SEED_KANBAN_EXPRESSION = `(async () => {
+  const KEY = 'syncgrid_kanban'
+  const results = await chrome.bookmarks.search({ title: '__SyncGrid__' })
+  const root = results.find((n) => !n.url && n.title === '__SyncGrid__')
+    ?? await chrome.bookmarks.create({ parentId: '2', title: '__SyncGrid__' })
+  await chrome.bookmarks.create({ parentId: root.id, title: 'E2E local', url: 'https://local.e2e.example/' })
+  await chrome.bookmarks.create({ parentId: root.id, title: 'E2E synced', url: 'https://synced.e2e.example/' })
+  await chrome.storage.local.set({ [KEY]: { items: [{ url: 'https://local.e2e.example/', column: 'todo', order: 0 }], updatedAt: 100 } })
+  await chrome.storage.sync.set({ [KEY]: { items: [{ url: 'https://synced.e2e.example/', column: 'doing', order: 0 }], updatedAt: 200 } })
+  return true
+})()`
+
+// --- 3b. リロード後、loadKanban()が旧syncミラーを一度だけ取り込みマージしたか検証 ---
+const VERIFY_KANBAN_EXPRESSION = `(async () => {
+  const KEY = 'syncgrid_kanban'
+  const local = (await chrome.storage.local.get(KEY))[KEY]
+  const syncAfter = (await chrome.storage.sync.get(KEY))[KEY]
+  const urls = (local?.items ?? []).map((i) => i.url).sort()
+  const merged = JSON.stringify(urls) === JSON.stringify(['https://local.e2e.example/', 'https://synced.e2e.example/'])
+  const ok = merged && syncAfter === undefined
+  return JSON.stringify({ ok, detail: JSON.stringify({ urls, syncAfter }) })
 })()`
 
 async function main() {
@@ -183,13 +220,14 @@ async function main() {
       'CDP port',
     )
     // 拡張IDは「distの絶対パス」由来で環境ごとに変わるため、service worker ターゲットから動的に発見する
+    // (background の出力ファイル名はビルド構成依存のため固定しない。読み込む拡張は1つのみの前提)
     const extId = await waitFor(async () => {
       const list = await (await fetch(`http://localhost:${PORT}/json/list`)).json()
       const sw = list.find(
-        (t) => t.type === 'service_worker' && t.url.endsWith('/background.js'),
+        (t) => t.type === 'service_worker' && t.url.startsWith('chrome-extension://'),
       )
       return sw ? new URL(sw.url).hostname : null
-    }, 15000, 'extension service worker (background.js)')
+    }, 15000, 'extension service worker')
     console.log(`extension id: ${extId}`)
     await fetch(`http://localhost:${PORT}/json/new?chrome-extension://${extId}/index.html`, {
       method: 'PUT',
@@ -204,6 +242,16 @@ async function main() {
 
     const raw = await evaluate(target.webSocketDebuggerUrl, CHECKS_EXPRESSION)
     const results = JSON.parse(raw)
+
+    // 旧sync混入シナリオを仕込んでからページを再読み込みし、loadKanban()の一度きり取り込みを検証する
+    await evaluate(target.webSocketDebuggerUrl, SEED_KANBAN_EXPRESSION)
+    await reloadPage(target.webSocketDebuggerUrl)
+    await new Promise((r) => setTimeout(r, 1500))
+    const kanbanRaw = await evaluate(target.webSocketDebuggerUrl, VERIFY_KANBAN_EXPRESSION)
+    const kanbanResult = JSON.parse(kanbanRaw)
+    results.checks['kanban-legacy-sync-migration'] = kanbanResult
+    if (!kanbanResult.ok) results.pass = false
+
     for (const [name, { ok, detail }] of Object.entries(results.checks)) {
       console.log(`${ok ? '✅' : '❌'} ${name}  ${detail}`)
     }
