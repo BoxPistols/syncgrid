@@ -1,6 +1,6 @@
 {
   "name": "syncgrid",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Secure, synced bookmark dashboard for Chrome new tabs — Speed Dial UI with zero telemetry",
   "license": "MIT",
   "keywords": [
