@@ -1,22 +1,13 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { crx } from '@crxjs/vite-plugin'
+import manifest from './manifest.config'
 
 export default defineConfig({
-  plugins: [react()],
-  base: './',
+  plugins: [react(), crx({ manifest })],
   build: {
     outDir: 'dist',
-    rollupOptions: {
-      input: {
-        newtab: 'index.html',
-        background: 'src/background.ts',
-      },
-      output: {
-        entryFileNames: (chunkInfo) =>
-          chunkInfo.name === 'background' ? 'background.js' : 'assets/[name]-[hash].js',
-      },
-    },
   },
   test: {
     globals: true,
