@@ -181,22 +181,6 @@ export const en = {
   staleReminder: (n: number) => `${n} "Read Later" bookmarks haven't been touched for over a week`,
   staleReminderAction: 'Review',
   staleReminderDismiss: 'Dismiss',
-  // Kanban
-  kanban: 'Kanban',
-  kanbanTodo: 'Todo',
-  kanbanDoing: 'Doing',
-  kanbanDone: 'Done',
-  addToKanban: 'Add to Kanban',
-  removeFromKanban: 'Remove from Kanban',
-  kanbanEmpty: 'Kanban board is empty\nAdd bookmarks via right-click or drag & drop',
-  kanbanColumnEmpty: 'No items',
-  kanbanSetDueDate: 'Set due date',
-  kanbanClearDueDate: 'Clear due date',
-  kanbanOverdue: (n: number) => `${n} kanban items are past due`,
-  kanbanOverdueAction: 'View Kanban',
-  kanbanDueToday: 'Due today',
-  kanbanDueTomorrow: 'Due tomorrow',
-  kanbanOverdueLabel: 'Overdue',
   // AI categorize
   aiCategorizeBtn: 'AI Categorize',
   aiCategorizing: 'Categorizing…',
@@ -235,9 +219,6 @@ export const en = {
   helpRefSyncDesc: 'Select a local folder synced with a cloud drive (Google Drive, OneDrive, etc.) for auto backup',
   // Toast / error notifications
   toastDismiss: 'Dismiss notification',
-  kanbanSaveError: 'Failed to save the Kanban board (storage limit may have been reached)',
-  kanbanSyncError: 'Failed to sync to other devices (saved on this device)',
-  kanbanSyncConflict: 'Your change was not applied — a newer update from another device exists',
   sortSwitchedToManual: 'Sort switched to "Manual" to apply your reordering',
   actionFailed: 'Something went wrong. Please try again.',
   // Uncategorized folder

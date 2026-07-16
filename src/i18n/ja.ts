@@ -207,22 +207,6 @@ export const ja = {
   staleReminder: (n: number) => `${n}件の「あとで読む」が1週間以上放置されています`,
   staleReminderAction: '確認する',
   staleReminderDismiss: '非表示',
-  // カンバン
-  kanban: 'カンバン',
-  kanbanTodo: '次にやること',
-  kanbanDoing: '今やっていること',
-  kanbanDone: '終わったもの',
-  addToKanban: 'カンバンに追加',
-  removeFromKanban: 'カンバンから除外',
-  kanbanEmpty: 'カンバンボードは空です\n右クリックメニューまたはドラッグ＆ドロップでブックマークを追加できます',
-  kanbanColumnEmpty: 'アイテムなし',
-  kanbanSetDueDate: '期限を設定',
-  kanbanClearDueDate: '期限を解除',
-  kanbanOverdue: (n: number) => `${n}件のカンバンアイテムが期限を超過しています`,
-  kanbanOverdueAction: 'カンバンを確認',
-  kanbanDueToday: '今日まで',
-  kanbanDueTomorrow: '明日まで',
-  kanbanOverdueLabel: '期限超過',
   // AI分類
   aiCategorizeBtn: 'AI分類',
   aiCategorizing: '分類中…',
@@ -261,9 +245,6 @@ export const ja = {
   helpRefSyncDesc: 'クラウドドライブ（Google Drive, OneDrive等）と同期されたローカルフォルダを選択して自動バックアップ',
   // Toast / エラー通知
   toastDismiss: '通知を閉じる',
-  kanbanSaveError: 'カンバンの保存に失敗しました（容量制限の可能性があります）',
-  kanbanSyncError: '他の端末への同期に失敗しました（この端末には保存済みです）',
-  kanbanSyncConflict: '他の端末の新しい変更があるため、この操作は反映されませんでした',
   sortSwitchedToManual: '並べ替えを反映するため、ソートを「手動」に切り替えました',
   actionFailed: '操作に失敗しました。もう一度お試しください。',
   // 未分類フォルダ
