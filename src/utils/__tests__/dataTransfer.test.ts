@@ -117,4 +117,24 @@ describe('validateImport', () => {
     expect(await validateImport('42')).toBeNull()
     expect(await validateImport('null')).toBeNull()
   })
+
+  // カンバン機能廃止（2026-07）の後方互換: 旧フォーマット（v1.1〜v2.0）の
+  // kanban フィールド入り JSON はインポート成功し、kanban は黙って無視される。
+  // checksum は data のみを対象とするため kanban の有無で検証は壊れない
+  it('accepts legacy JSON with kanban field and silently ignores it', async () => {
+    const exported = await exportData(mockGroups)
+    const legacy = {
+      ...exported,
+      kanban: {
+        items: [{ url: 'https://github.com', column: 'doing', order: 0 }],
+        updatedAt: 1720000000000,
+      },
+    }
+
+    const result = await validateImport(JSON.stringify(legacy))
+
+    expect(result).not.toBeNull()
+    expect(result!.data).toHaveLength(2)
+    expect(result).not.toHaveProperty('kanban')
+  })
 })

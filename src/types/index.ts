@@ -76,26 +76,6 @@ export interface TrashItem {
 /** ブックマーク閲覧ステータス */
 export type ReadStatus = 'unread' | 'read' | 'later' | 'starred'
 
-/** カンバン列 */
-export type KanbanColumn = 'todo' | 'doing' | 'done'
-
-/** カンバンアイテム（URLベースで端末間同期対応） */
-export interface KanbanItem {
-  /** 端末間の安定識別子 */
-  url: string
-  column: KanbanColumn
-  order: number
-  /** 期限（UTCタイムスタンプ） */
-  dueDate?: number
-}
-
-/** カンバン永続化データ */
-export interface KanbanState {
-  items: KanbanItem[]
-  /** 最終更新時刻（board単位のlast-write-wins用。旧データは欠落=0扱い） */
-  updatedAt?: number
-}
-
 /** ローカルメタデータ（chrome.storage.local） */
 export interface BookmarkMeta {
   memo: string
@@ -196,15 +176,13 @@ export const DEFAULT_SETTINGS: SyncGridSettings = {
   shortcuts: DEFAULT_SHORTCUTS,
 }
 
-/** エクスポートデータ形式 */
+/** エクスポートデータ形式（旧フォーマットの kanban フィールドはインポート時に黙って無視される） */
 export interface SyncGridExport {
   version: 1
   exportedAt: string
   appName: 'SyncGrid'
   checksum: string
   data: SyncGridExportGroup[]
-  /** カンバンデータ（v1.1〜） */
-  kanban?: KanbanState
 }
 
 export interface SyncGridExportGroup {

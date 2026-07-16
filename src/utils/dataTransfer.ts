@@ -7,9 +7,8 @@
  * - No eval() or innerHTML — pure JSON parsing
  */
 
-import type { SyncGridGroup, SyncGridExport, SyncGridExportGroup, KanbanState } from '../types'
+import type { SyncGridGroup, SyncGridExport, SyncGridExportGroup } from '../types'
 import { SYNCGRID_ROOT } from '../types'
-import { loadKanban, saveKanban } from './kanban'
 
 // ===== EXPORT =====
 
@@ -31,7 +30,6 @@ async function sha256(data: string): Promise<string> {
 
 export async function exportData(groups: SyncGridGroup[]): Promise<SyncGridExport> {
   const data = groups.map(groupToExport)
-  const kanban = await loadKanban()
   const dataStr = JSON.stringify(data)
   const checksum = await sha256(dataStr)
 
@@ -41,7 +39,6 @@ export async function exportData(groups: SyncGridGroup[]): Promise<SyncGridExpor
     appName: 'SyncGrid',
     checksum,
     data,
-    kanban: kanban.items.length > 0 ? kanban : undefined,
   }
 }
 
@@ -140,8 +137,8 @@ export async function validateImport(text: string): Promise<SyncGridExport | nul
   // Sanitize
   const sanitized = sanitizeExportData(obj.data as SyncGridExportGroup[])
 
-  // カンバンデータの読み込み（optional）
-  const kanban = parseKanbanFromImport(obj.kanban)
+  // 注: 旧フォーマット(v1.1〜v2.0)の kanban フィールドは検証・取り込みの対象外として
+  // 黙って無視する（checksum は data のみを対象とするため互換性は壊れない）
 
   return {
     version: 1,
@@ -149,7 +146,6 @@ export async function validateImport(text: string): Promise<SyncGridExport | nul
     appName: 'SyncGrid',
     checksum: obj.checksum as string,
     data: sanitized,
-    kanban,
   }
 }
 
@@ -164,21 +160,6 @@ function sanitizeExportData(groups: SyncGridExportGroup[]): SyncGridExportGroup[
       })),
     children: sanitizeExportData(g.children),
   }))
-}
-
-const VALID_COLUMNS = ['todo', 'doing', 'done']
-
-function parseKanbanFromImport(raw: unknown): KanbanState | undefined {
-  if (!raw || typeof raw !== 'object') return undefined
-  const obj = raw as Record<string, unknown>
-  if (!Array.isArray(obj.items)) return undefined
-  const items = obj.items.filter((i: unknown) => {
-    if (!i || typeof i !== 'object') return false
-    const item = i as Record<string, unknown>
-    return typeof item.url === 'string' && typeof item.column === 'string' && VALID_COLUMNS.includes(item.column) && typeof item.order === 'number'
-  })
-  if (items.length === 0) return undefined
-  return { items } as KanbanState
 }
 
 export async function importToBookmarks(data: SyncGridExportGroup[]): Promise<void> {
@@ -209,12 +190,6 @@ async function restoreGroups(groups: SyncGridExportGroup[], parentId: string): P
     }
     await restoreGroups(group.children, folder.id)
   }
-}
-
-/** インポートしたカンバン状態を保存（存在する場合のみ） */
-export async function importKanban(kanban: KanbanState | undefined): Promise<void> {
-  if (!kanban || kanban.items.length === 0) return
-  await saveKanban(kanban)
 }
 
 export function readFileAsText(file: File): Promise<string> {
