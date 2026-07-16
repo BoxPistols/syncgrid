@@ -1,8 +1,8 @@
 # Dependencies
 node_modules/
 
-# Build output
-dist/
+# Build output（dist は OneDrive 配布用 symlink のこともあるためスラッシュなしで一致させる）
+dist
 
 # Packaged extension
 *.zip
