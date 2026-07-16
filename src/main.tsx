@@ -8,3 +8,8 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// 開発用オートリロード（本番ビルドでは MODE ガードで丸ごと除去される）
+if (import.meta.env.MODE === 'development') {
+  import('./devReload').then((m) => m.startDevReload()).catch(() => {})
+}
