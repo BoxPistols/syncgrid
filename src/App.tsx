@@ -259,7 +259,7 @@ export default function App() {
     'sg-dial__grid',
     `sg-dial__grid--${settings.layout}`,
     (settings.layout === 'card' || settings.layout === 'magazine') && settings.cardSize !== 'md' && `sg-dial__grid--size-${settings.cardSize}`,
-    settings.layout !== 'list' && settings.gridColumns !== 'auto' && `sg-dial__grid--cols-${settings.gridColumns}`,
+    settings.gridColumns !== 'auto' && `sg-dial__grid--cols-${settings.gridColumns}`,
   ]
     .filter(Boolean)
     .join(' ')

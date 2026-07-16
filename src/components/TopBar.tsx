@@ -147,25 +147,23 @@ export function TopBar({ query, onQueryChange, theme, onToggleTheme, onOpenSetti
           </div>
         )}
 
-        {/* 列数セレクト（card/magazine表示時のみ） */}
-        {layout !== 'list' && (
-          <select
-            className="sg-cols-select"
-            value={String(gridColumns)}
-            onChange={(e) => {
-              const v = e.target.value
-              onChangeGridColumns(v === 'auto' ? 'auto' : (Number(v) as GridColumns))
-            }}
-            aria-label="Grid columns"
-          >
-            <option value="auto">Auto</option>
-            <option value="2">2列</option>
-            <option value="3">3列</option>
-            <option value="4">4列</option>
-            <option value="5">5列</option>
-            <option value="6">6列</option>
-          </select>
-        )}
+        {/* 列数セレクト（全レイアウトで表示。list は Auto=1列 / 2〜6列で複数カラム化） */}
+        <select
+          className="sg-cols-select"
+          value={String(gridColumns)}
+          onChange={(e) => {
+            const v = e.target.value
+            onChangeGridColumns(v === 'auto' ? 'auto' : (Number(v) as GridColumns))
+          }}
+          aria-label="Grid columns"
+        >
+          <option value="auto">{layout === 'list' ? 'Auto (1列)' : 'Auto'}</option>
+          <option value="2">2列</option>
+          <option value="3">3列</option>
+          <option value="4">4列</option>
+          <option value="5">5列</option>
+          <option value="6">6列</option>
+        </select>
 
         <button className={`sg-btn--icon sg-btn--icon-label ${isKanbanActive ? 'sg-btn--icon--active' : ''}`} onClick={onToggleKanban} title={t.kanban}>
           <Icon name="columns" size={14} />

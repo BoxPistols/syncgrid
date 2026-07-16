@@ -1981,6 +1981,60 @@ button {
 /* =====================
    LAYOUT: LIST
    ===================== */
+/* =====================
+   LAYOUT: CARD (大カード — テキスト左寄せ・コンパクト)
+   ===================== */
+.sg-dial__grid--card .sg-card {
+  align-items: stretch; /* テキストブロックを幅いっぱいに（左寄せを効かせる） */
+  text-align: left; /* 中央寄せは折り返しが早く切れるため左寄せ */
+  padding: 12px 12px 10px; /* 縦を詰める */
+  gap: 6px;
+}
+.sg-dial__grid--card .sg-card__icon {
+  align-self: center; /* アイコンは中央のまま一回り小さく: 48→40 */
+  width: 40px;
+  height: 40px;
+}
+.sg-dial__grid--card .sg-card__icon img {
+  width: 40px;
+  height: 40px;
+}
+.sg-dial__grid--card .sg-favicon--lg {
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+}
+.sg-dial__grid--card .sg-card__meta {
+  justify-content: flex-start;
+}
+.sg-dial__grid--card .sg-card__domain,
+.sg-dial__grid--card .sg-card__date {
+  font-size: 9px; /* キャプションを一回り小さく */
+}
+/* card + small: アイコン 32→28 */
+.sg-dial__grid--card.sg-dial__grid--size-sm .sg-card {
+  padding: 10px 8px 8px;
+}
+.sg-dial__grid--card.sg-dial__grid--size-sm .sg-card__icon,
+.sg-dial__grid--card.sg-dial__grid--size-sm .sg-card__icon img,
+.sg-dial__grid--card.sg-dial__grid--size-sm .sg-favicon--lg {
+  width: 28px;
+  height: 28px;
+}
+.sg-dial__grid--card.sg-dial__grid--size-sm .sg-favicon--lg {
+  font-size: 12px;
+}
+/* card + large: アイコン 64→52 */
+.sg-dial__grid--card.sg-dial__grid--size-lg .sg-card__icon,
+.sg-dial__grid--card.sg-dial__grid--size-lg .sg-card__icon img,
+.sg-dial__grid--card.sg-dial__grid--size-lg .sg-favicon--lg {
+  width: 52px;
+  height: 52px;
+}
+.sg-dial__grid--card.sg-dial__grid--size-lg .sg-favicon--lg {
+  font-size: 24px;
+}
+
 .sg-dial__grid--list {
   display: flex;
   flex-direction: column;
@@ -2040,13 +2094,32 @@ button {
   position: static;
   flex-shrink: 0;
 }
+/* list の複数カラム化（列切替。Auto=1列、2〜6列でグリッド化） */
+.sg-dial__grid--list.sg-dial__grid--cols-2,
+.sg-dial__grid--list.sg-dial__grid--cols-3,
+.sg-dial__grid--list.sg-dial__grid--cols-4,
+.sg-dial__grid--list.sg-dial__grid--cols-5,
+.sg-dial__grid--list.sg-dial__grid--cols-6 {
+  display: grid;
+  column-gap: 16px;
+  row-gap: 2px;
+}
+/* グリッド化した行の下線は列内で完結させる（1列時のみ最終行の線を消す挙動を維持） */
+.sg-dial__grid--list.sg-dial__grid--cols-2 .sg-card:last-child,
+.sg-dial__grid--list.sg-dial__grid--cols-3 .sg-card:last-child,
+.sg-dial__grid--list.sg-dial__grid--cols-4 .sg-card:last-child,
+.sg-dial__grid--list.sg-dial__grid--cols-5 .sg-card:last-child,
+.sg-dial__grid--list.sg-dial__grid--cols-6 .sg-card:last-child {
+  border-bottom: 1px solid var(--sg-border);
+}
 
 /* =====================
    LAYOUT: MAGAZINE (小カードグリッド — Feedly Cards風)
    ===================== */
 .sg-dial__grid--magazine {
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
+  /* 縮小: 最小幅 240→190 で列を詰める */
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
 }
 .sg-dial__grid--magazine .sg-card {
   padding: 0;
@@ -2054,10 +2127,12 @@ button {
   overflow: hidden;
   text-align: left;
   align-items: stretch;
-  height: 300px;
+  /* 縮小: 300→200 (約1/1.5) */
+  height: 200px;
 }
 .sg-dial__grid--magazine .sg-card__ogp-image {
-  height: 140px;
+  /* 縮小: 140→96 */
+  height: 96px;
   max-height: none;
   border-radius: 0;
   margin-bottom: 0;
@@ -2069,7 +2144,8 @@ button {
 }
 .sg-dial__grid--magazine .sg-card__icon {
   width: 100%;
-  height: 140px;
+  /* 縮小: 140→96 */
+  height: 96px;
   border-radius: 0;
   background: var(--sg-bg-input);
   display: flex;
@@ -2078,22 +2154,22 @@ button {
   flex-shrink: 0;
 }
 .sg-dial__grid--magazine .sg-card__title {
-  padding: 10px 12px 4px;
-  font-size: 13px;
+  padding: 8px 10px 2px;
+  font-size: 12px;
   font-weight: 600;
   white-space: normal;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 .sg-dial__grid--magazine .sg-card__desc {
-  padding: 2px 12px 0;
-  -webkit-line-clamp: 3;
-  font-size: 11px;
-  line-height: 1.4;
+  padding: 2px 10px 0;
+  -webkit-line-clamp: 2;
+  font-size: 10px;
+  line-height: 1.35;
 }
 .sg-dial__grid--magazine .sg-card__meta {
-  padding: 4px 12px 10px;
+  padding: 4px 10px 8px;
   gap: 4px;
   margin-top: auto;
 }
@@ -2110,25 +2186,28 @@ button {
   font-size: 10px;
 }
 .sg-dial__grid--magazine .sg-card__tags {
-  padding: 0 12px 8px;
+  padding: 0 10px 8px;
 }
 .sg-dial__grid--magazine .sg-card__menu {
   top: 8px;
   right: 8px;
 }
-/* magazine + small: コンパクトマガジン */
+/* magazine + small: コンパクトマガジン（縮小: 220→150） */
+.sg-dial__grid--magazine.sg-dial__grid--size-sm {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
 .sg-dial__grid--magazine.sg-dial__grid--size-sm .sg-card {
-  height: 220px;
+  height: 150px;
 }
 .sg-dial__grid--magazine.sg-dial__grid--size-sm .sg-card__ogp-image {
-  height: 100px;
+  height: 68px;
 }
 .sg-dial__grid--magazine.sg-dial__grid--size-sm .sg-card__icon {
   width: 100%;
-  height: 100px;
+  height: 68px;
 }
 .sg-dial__grid--magazine.sg-dial__grid--size-sm .sg-card__title {
-  padding: 6px 8px 2px;
+  padding: 5px 8px 2px;
   font-size: 11px;
   -webkit-line-clamp: 2;
 }
@@ -2138,7 +2217,26 @@ button {
   -webkit-line-clamp: 2;
 }
 .sg-dial__grid--magazine.sg-dial__grid--size-sm .sg-card__meta {
-  padding: 2px 8px 6px;
+  padding: 2px 8px 5px;
+}
+/* magazine + large: 縮小しつつ md より一回り大きく（元 300→260） */
+.sg-dial__grid--magazine.sg-dial__grid--size-lg {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+.sg-dial__grid--magazine.sg-dial__grid--size-lg .sg-card {
+  height: 260px;
+}
+.sg-dial__grid--magazine.sg-dial__grid--size-lg .sg-card__ogp-image,
+.sg-dial__grid--magazine.sg-dial__grid--size-lg .sg-card__icon {
+  height: 130px;
+}
+.sg-dial__grid--magazine.sg-dial__grid--size-lg .sg-card__title {
+  font-size: 13px;
+  -webkit-line-clamp: 3;
+}
+.sg-dial__grid--magazine.sg-dial__grid--size-lg .sg-card__desc {
+  -webkit-line-clamp: 3;
+  font-size: 11px;
 }
 
 /* list/magazine animation override */
