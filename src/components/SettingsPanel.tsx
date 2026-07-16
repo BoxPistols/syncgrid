@@ -7,7 +7,7 @@ import type { SyncGridSettings, SyncGridGroup, AIProvider } from '../types'
 import { OPENAI_MODELS, GEMINI_MODELS } from '../types'
 import type { Messages } from '../i18n'
 import type { Locale } from '../i18n'
-import { exportData, downloadExport, readFileAsText, validateImport, importToBookmarks, importKanban } from '../utils/dataTransfer'
+import { exportData, downloadExport, readFileAsText, validateImport, importToBookmarks } from '../utils/dataTransfer'
 import {
   isSyncSupported,
   pickSyncFolder,
@@ -84,7 +84,6 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
               return
             }
             await importToBookmarks(validated.data)
-            await importKanban(validated.kanban)
             setImportStatus('success')
             setTimeout(() => location.reload(), 1500)
           } catch {

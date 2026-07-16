@@ -62,7 +62,7 @@ function Harness({
   onApi: (a: HookApi) => void
   onReorderDone?: () => void
 }) {
-  const hookApi = useDragReorder(undefined, undefined, onReorderDone)
+  const hookApi = useDragReorder(undefined, onReorderDone)
   useEffect(() => {
     onApi(hookApi)
   })

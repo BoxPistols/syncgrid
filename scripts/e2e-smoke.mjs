@@ -1,11 +1,10 @@
 /**
  * E2E スモークテスト — 実ビルド拡張を headless Chrome for Testing にロードして検証する
  *
- * ユニットテスト(chromeMock)では検出できない実機依存の3点を確認する:
+ * ユニットテスト(chromeMock)では検出できない実機依存の2点を確認する:
  *   1. bookmarks.move の index 意味論(mock と実機の乖離 = 「devで動くが実機で壊れる」の再発防止)
  *   2. background service worker の生存と FETCH_HTML の URL ガード
  *      (background.ts に import が増えると manifest の type:module なしで SW が黙って死ぬ)
- *   3. Kanban sync の write-through(リモート変更が local へ書き戻される)
  *
  * 使い方: npm run build && npm run e2e:smoke
  * 前提: Chrome for Testing(puppeteer / playwright のキャッシュ、または CFT_PATH 環境変数)
@@ -122,23 +121,6 @@ const CHECKS_EXPRESSION = `(async () => {
     record('fetch-html-guard(file://)', r1 && r1.html === null, JSON.stringify(r1))
     record('fetch-html-guard(webstore)', r2 && r2.html === null, JSON.stringify(r2))
     record('fetch-html-guard(fast=no-fetch)', elapsed < 3000, elapsed + 'ms')
-  }
-
-  // --- 3. Kanban sync write-through(リモート変更 → local 書き戻し) ---
-  {
-    const KEY = 'syncgrid_kanban'
-    const backup = (await chrome.storage.local.get(KEY))[KEY]
-    const syncBackup = (await chrome.storage.sync.get(KEY))[KEY]
-    await chrome.storage.local.set({ [KEY]: { items: [], updatedAt: 1000 } })
-    const remote = { items: [{ url: 'https://e2e.example/', column: 'doing', order: 0 }], updatedAt: Date.now() + 1000 }
-    await chrome.storage.sync.set({ [KEY]: remote })
-    await new Promise((r) => setTimeout(r, 800))
-    const local = (await chrome.storage.local.get(KEY))[KEY]
-    const ok = !!local && local.updatedAt === remote.updatedAt && local.items.length === 1
-    record('kanban-sync-write-through', ok, JSON.stringify(local))
-    // 原状復元
-    if (backup) await chrome.storage.local.set({ [KEY]: backup }); else await chrome.storage.local.remove(KEY)
-    if (syncBackup) await chrome.storage.sync.set({ [KEY]: syncBackup }); else await chrome.storage.sync.remove(KEY)
   }
 
   return JSON.stringify(results)

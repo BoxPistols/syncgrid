@@ -14,12 +14,12 @@ export function useNavigation(
 ) {
   const activeTabId = useMemo(() => {
     const stored = settings.activeTabId
-    if (stored === '__all__' || stored === '__kanban__') return stored
+    if (stored === '__all__') return stored
     if (stored && groups.find((g) => g.id === stored)) return stored
     return groups[0]?.id || ''
   }, [settings.activeTabId, groups])
 
-  const activeGroup = activeTabId === '__all__' || activeTabId === '__kanban__' ? null : (groups.find((g) => g.id === activeTabId) ?? groups[0])
+  const activeGroup = activeTabId === '__all__' ? null : (groups.find((g) => g.id === activeTabId) ?? groups[0])
 
   // ALLタブ用: 全ブックマークをフラット化
   const allItems = useMemo<SyncGridItem[] | null>(() => {
@@ -33,7 +33,7 @@ export function useNavigation(
 
   // Persist fallback
   useEffect(() => {
-    if (loaded && groups.length > 0 && settings.activeTabId !== activeTabId && activeTabId !== '__all__' && activeTabId !== '__kanban__') {
+    if (loaded && groups.length > 0 && settings.activeTabId !== activeTabId && activeTabId !== '__all__') {
       updateSettings({ activeTabId })
     }
   }, [loaded, groups, settings.activeTabId, activeTabId, updateSettings])

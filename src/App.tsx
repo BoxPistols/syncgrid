@@ -10,7 +10,6 @@ import { useFiltering } from './hooks/useFiltering'
 import { useMetadata } from './hooks/useMetadata'
 import { useCollapse } from './hooks/useCollapse'
 import { useDragReorder } from './hooks/useDragReorder'
-import { useKanban } from './hooks/useKanban'
 import { TopBar } from './components/TopBar'
 import { BookmarkCard } from './components/BookmarkCard'
 import { FolderSection } from './components/FolderSection'
@@ -25,10 +24,8 @@ import { Icon } from './components/Icon'
 import { OnboardingTour } from './components/OnboardingTour'
 import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel'
 import { HelpPanel } from './components/HelpPanel'
-import { KanbanBoard } from './components/KanbanBoard'
 import { ToastContainer } from './components/Toast'
 import { useToast } from './hooks/useToast'
-import { useFocusTrap } from './hooks/useFocusTrap'
 import {
   addBookmark,
   removeBookmark,
@@ -47,7 +44,6 @@ import {
 import { addToTrash } from './utils/trash'
 import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
 import { isComposing, matchesBinding } from './utils/keyboard'
-import { pullKanbanFromSync } from './utils/localSync'
 
 import './styles/global.css'
 
@@ -67,9 +63,6 @@ export default function App() {
   // --- Toast (操作の成否通知) ---
   const { toasts, showToast, dismiss: dismissToast } = useToast()
 
-  // 期限設定モーダル用フォーカストラップ
-  const dueDateTrapRef = useFocusTrap<HTMLDivElement>()
-
   // --- Extracted hooks ---
   const { allMeta, handleSetStatus, handleSaveMeta } = useMetadata(groups)
   const nav = useNavigation(groups, settings, loaded, updateSettings)
@@ -79,10 +72,6 @@ export default function App() {
     allTagsInFolder, applyFiltersAndSort,
   } = useFiltering(groups, nav.currentFolder, allMeta, settings.sort)
   const { collapsedIds, toggleCollapse, expandAll, collapseAll } = useCollapse()
-  const handleKanbanError = useCallback(() => showToast(t.kanbanSaveError, 'error'), [showToast, t])
-  const handleKanbanSyncError = useCallback(() => showToast(t.kanbanSyncError, 'error'), [showToast, t])
-  const handleKanbanSyncConflict = useCallback(() => showToast(t.kanbanSyncConflict, 'error'), [showToast, t])
-  const { kanbanColumns, kanbanItemCount, isInKanban, addToKanban, removeFromKanban, moveItem: moveKanbanItem, setDueDate, dueDates, overdueItems, reloadKanban } = useKanban(groups, { onError: handleKanbanError, onSyncError: handleKanbanSyncError, onSyncConflict: handleKanbanSyncConflict })
 
   // タブ直下の未分類ブックマークを折りたためる仮想フォルダにまとめる。
   // サブフォルダが存在する場合のみ（フラットなフォルダは素のグリッドのまま）。
@@ -196,7 +185,6 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false)
   const [showAiCategorize, setShowAiCategorize] = useState(false)
   const [showTour, setShowTour] = useState(false)
-  const [dueDateTarget, setDueDateTarget] = useState<string | null>(null)
   const [showWelcome, setShowWelcome] = useState(false)
 
   // --- Selection ---
@@ -204,10 +192,6 @@ export default function App() {
     useSelection(nav.currentFolder, refresh, t, setConfirmDialog)
 
   // --- Drag & Drop ---
-  const handleKanbanDrop = useCallback(
-    (bookmarkId: string) => { addToKanban(bookmarkId) },
-    [addToKanban],
-  )
   // 並べ替えドロップ成立時: manual以外のソートでは結果が表示に反映されないため、手動ソートへ自動切替
   const handleReorderDone = useCallback(() => {
     if (settings.sort !== 'manual') {
@@ -217,7 +201,6 @@ export default function App() {
   }, [settings.sort, updateSettings, showToast, t])
   const { dragState, getDragHandlers, getTabHandlers, getContainerHandlers } = useDragReorder(
     selectedIds,
-    handleKanbanDrop,
     handleReorderDone,
   )
 
@@ -468,38 +451,11 @@ export default function App() {
           { label: t.statusStarred, icon: 'sparkle', shortcut: 'S', action: () => handleSetStatus(item.id, 'starred') },
           { label: t.statusRead, icon: 'check-circle', shortcut: 'R', action: () => handleSetStatus(item.id, 'read') },
           { label: '---', action: () => {} },
-          isInKanban(item.id)
-            ? { label: t.removeFromKanban, icon: 'columns', shortcut: 'K', action: () => removeFromKanban(item.id) }
-            : { label: t.addToKanban, icon: 'columns', shortcut: 'K', action: () => addToKanban(item.id) },
-          { label: '---', action: () => {} },
           { label: t.delete, icon: 'trash', danger: true, action: () => requestDeleteBookmark(item) },
         ],
       })
     },
-    [t, handleSetStatus, isInKanban, addToKanban, removeFromKanban, requestDeleteBookmark],
-  )
-
-  // カンバン内ブックマークのコンテキストメニュー
-  const handleKanbanContext = useCallback(
-    (item: SyncGridItem, x: number, y: number) => {
-      setCtxMenu({
-        x, y,
-        items: [
-          { label: t.openNewTab, icon: 'link', shortcut: 'O', action: () => { window.open(item.url, '_blank'); handleSetStatus(item.id, 'read') } },
-          { label: t.edit, icon: 'edit', shortcut: 'E', action: () => setEditItem(item) },
-          { label: '---', action: () => {} },
-          { label: t.kanbanTodo, icon: 'columns', action: () => moveKanbanItem(item.id, 'todo', null) },
-          { label: t.kanbanDoing, icon: 'columns', action: () => moveKanbanItem(item.id, 'doing', null) },
-          { label: t.kanbanDone, icon: 'columns', action: () => { moveKanbanItem(item.id, 'done', null); handleSetStatus(item.id, 'read') } },
-          { label: '---', action: () => {} },
-          { label: t.kanbanSetDueDate, icon: 'pin', action: () => setDueDateTarget(item.id) },
-          ...(dueDates.get(item.id) ? [{ label: t.kanbanClearDueDate, icon: 'close' as const, action: () => setDueDate(item.id, undefined) }] : []),
-          { label: '---', action: () => {} },
-          { label: t.removeFromKanban, icon: 'close', danger: true, action: () => removeFromKanban(item.id) },
-        ],
-      })
-    },
-    [t, handleSetStatus, moveKanbanItem, removeFromKanban, setDueDate, dueDates],
+    [t, handleSetStatus, requestDeleteBookmark],
   )
 
   const handleFolderContext = useCallback(
@@ -586,13 +542,6 @@ export default function App() {
       else if (matchesBinding(e, sc.selectAll)) { e.preventDefault(); selectAll() }
       else if (e.key === 'Escape' && selectedIds.size > 0) clearSelection()
       else if (e.key === '?' && !e.ctrlKey && !e.metaKey) setShowShortcutsPanel((v) => !v)
-      // K でカンバン切替（入力欄以外）
-      else if (e.key === 'k' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        const target = e.target as HTMLElement
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return
-        e.preventDefault()
-        handleSelectTab(nav.activeTabId === '__kanban__' ? '__all__' : '__kanban__')
-      }
       // Cmd+[ / Cmd+] でアクティブタブを左右に移動
       else if ((e.metaKey || e.ctrlKey) && e.key === '[') { e.preventDefault(); handleMoveTab(-1) }
       else if ((e.metaKey || e.ctrlKey) && e.key === ']') { e.preventDefault(); handleMoveTab(1) }
@@ -682,7 +631,7 @@ export default function App() {
 
   return (
     <>
-      <TopBar query={query} onQueryChange={setQuery} theme={settings.theme} onToggleTheme={handleToggleTheme} onOpenSettings={() => setShowSettings(true)} onOpenShortcuts={() => setShowShortcutsPanel(true)} onOpenHelp={() => setShowHelp(true)} onRefreshOgp={handleRefreshOgp} layout={settings.layout} cardSize={settings.cardSize} gridColumns={settings.gridColumns} onChangeLayout={handleChangeLayout} onChangeCardSize={(size) => updateSettings({ cardSize: size })} onChangeGridColumns={(cols) => updateSettings({ gridColumns: cols })} isKanbanActive={nav.activeTabId === '__kanban__'} kanbanItemCount={kanbanItemCount} onToggleKanban={() => handleSelectTab(nav.activeTabId === '__kanban__' ? '__all__' : '__kanban__')} t={t} />
+      <TopBar query={query} onQueryChange={setQuery} theme={settings.theme} onToggleTheme={handleToggleTheme} onOpenSettings={() => setShowSettings(true)} onOpenShortcuts={() => setShowShortcutsPanel(true)} onOpenHelp={() => setShowHelp(true)} onRefreshOgp={handleRefreshOgp} layout={settings.layout} cardSize={settings.cardSize} gridColumns={settings.gridColumns} onChangeLayout={handleChangeLayout} onChangeCardSize={(size) => updateSettings({ cardSize: size })} onChangeGridColumns={(cols) => updateSettings({ gridColumns: cols })} t={t} />
 
       {/* Tab Bar */}
       <div className="sg-tabbar" role="tablist">
@@ -742,17 +691,6 @@ export default function App() {
         </div>
       )}
 
-      {/* 期限超過バナー */}
-      {overdueItems.length > 0 && nav.activeTabId !== '__kanban__' && (
-        <div className="sg-stale-banner">
-          <Icon name="warning" size={14} />
-          <span>{t.kanbanOverdue(overdueItems.length)}</span>
-          <button className="sg-btn sg-btn--sm sg-btn--primary" onClick={() => handleSelectTab('__kanban__')}>
-            {t.kanbanOverdueAction}
-          </button>
-        </div>
-      )}
-
       {/* Selection bar */}
       {selectedIds.size > 0 && (
         <div className="sg-selection-bar">
@@ -769,20 +707,7 @@ export default function App() {
 
       {/* Content */}
       <div key={nav.pageKey} className="sg-page-transition">
-        {nav.activeTabId === '__kanban__' ? (
-          <KanbanBoard
-            kanbanColumns={kanbanColumns}
-            allMeta={allMeta}
-            dueDates={dueDates}
-            locale={settings.locale}
-            onMoveItem={moveKanbanItem}
-            onContextMenu={handleKanbanContext}
-            onOpen={(id) => { handleSetStatus(id, 'read') }}
-            onMarkRead={(id) => { handleSetStatus(id, 'read') }}
-            onReload={async () => { await pullKanbanFromSync(); await reloadKanban() }}
-            t={t}
-          />
-        ) : searchResults ? (
+        {searchResults ? (
           <div className="sg-dial" {...getContainerHandlers()}>
             <div className="sg-toolbar"><span className="sg-toolbar__title">{t.searchResults(query, searchResults.length)}</span></div>
             {searchResults.length > 0 ? (
@@ -896,19 +821,6 @@ export default function App() {
       {showTrash && (<TrashPanel onClose={() => setShowTrash(false)} onRestored={refresh} t={t} locale={settings.locale} />)}
       {showShortcutsPanel && (<KeyboardShortcutsPanel settings={settings} onUpdateSettings={updateSettings} onClose={() => setShowShortcutsPanel(false)} t={t} />)}
       {showHelp && (<HelpPanel onClose={() => setShowHelp(false)} t={t} />)}
-      {dueDateTarget && (
-        <div className="sg-modal-overlay" onClick={() => setDueDateTarget(null)}>
-          <div ref={dueDateTrapRef} className="sg-modal" role="dialog" aria-modal="true" aria-label={t.kanbanSetDueDate} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') setDueDateTarget(null) }}>
-            <div className="sg-modal__header">
-              <span className="sg-modal__title">{t.kanbanSetDueDate}</span>
-              <button className="sg-modal__close" onClick={() => setDueDateTarget(null)} aria-label={t.close}><Icon name="close" size={12} /></button>
-            </div>
-            <div className="sg-modal__body">
-              <input type="date" className="sg-add-form__input" defaultValue={dueDates.get(dueDateTarget) ? new Date(dueDates.get(dueDateTarget)!).toISOString().split('T')[0] : ''} autoFocus onChange={(e) => { const v = e.target.value; if (v) { setDueDate(dueDateTarget, new Date(v + 'T23:59:59').getTime()); setDueDateTarget(null) } }} />
-            </div>
-          </div>
-        </div>
-      )}
       {showAiCategorize && nav.currentFolder && (
         <AiCategorizeModal
           items={nav.currentFolder.items}

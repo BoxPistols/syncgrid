@@ -107,7 +107,6 @@ function findNearestCard(
 
 export function useDragReorder(
   selectedIds?: Set<string>,
-  onKanbanDrop?: (bookmarkId: string) => void,
   onReorderDone?: () => void,
 ) {
   const [dragState, setDragState] = useState<DragState>(INITIAL_STATE)
@@ -324,13 +323,6 @@ export function useDragReorder(
             if (sourceIdx < moveIdx) moveIdx += 1
 
             await chrome.bookmarks.move(data.id, { parentId: rootId, index: moveIdx })
-          } else if (tabId === '__kanban__') {
-            // カード → カンバンへ追加
-            if (onKanbanDrop) {
-              const idsToAdd =
-                selectedIds && selectedIds.size > 1 && selectedIds.has(data.id) ? [...selectedIds] : [data.id]
-              for (const addId of idsToAdd) onKanbanDrop(addId)
-            }
           } else {
             // カード/フォルダ → タブへ移動（複数選択対応）
             const targetId = tabId === UNGROUPED_ID ? await getRootId() : tabId
@@ -348,7 +340,7 @@ export function useDragReorder(
         }
       },
     }),
-    [selectedIds, onKanbanDrop],
+    [selectedIds],
   )
 
   return { dragState, getDragHandlers, getTabHandlers, getContainerHandlers }
