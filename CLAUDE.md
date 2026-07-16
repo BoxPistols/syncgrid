@@ -46,8 +46,8 @@ React 19 + TypeScript Strict + Vite 7 + Manifest V3。ランタイム依存はRe
 
 データソースは Chrome Bookmarks API が唯一の信頼源。独自DBは持たない。
 メタデータ（タグ、OGPキャッシュ、閲覧ステータス）は `chrome.storage.local` に保存。
-Kanban は `chrome.storage.local`（主）+ `chrome.storage.sync`（ミラー）に board 単位の
-last-write-wins（`updatedAt`）で保存。
+`chrome.storage.sync` は使用しない（旧カンバン機能とともに 2026-07 に全廃。
+残留キー `syncgrid_kanban` は起動時掃除が数リリースの間だけ削除し続ける）。
 
 ## 実機依存の鉄則（テストが通っても実機で壊れる領域）
 

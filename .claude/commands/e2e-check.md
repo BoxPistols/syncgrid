@@ -9,7 +9,6 @@ description: 実ビルド拡張のE2Eスモーク(headless Chrome for Testing + 
    - bookmarks.move の index 意味論(mock と実機の乖離検出)
    - background service worker の生存 + FETCH_HTML の URL ガード
      (background.ts に import を追加した場合、manifest の `"type": "module"` なしで SW が黙って死ぬ — この退行を検出する)
-   - Kanban sync の write-through(リモート変更の local 書き戻し)
 
 失敗した場合は該当チェック名と detail を分析して修正してください。
 Chrome for Testing が見つからない場合は `CFT_PATH` 環境変数でバイナリを指定できます。
@@ -17,5 +16,4 @@ Chrome for Testing が見つからない場合は `CFT_PATH` 環境変数でバ�
 実行が推奨されるタイミング:
 - `src/background.ts` / `public/manifest.json` を変更したとき(必須)
 - `src/hooks/useDragReorder.ts` / `src/utils/chromeMock.ts` を変更したとき
-- `src/utils/kanban.ts` / `src/hooks/useKanban.ts` の同期ロジックを変更したとき
 - ストア公開前(/store-publish の前提チェックとして)
