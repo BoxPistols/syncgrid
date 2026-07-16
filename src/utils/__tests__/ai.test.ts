@@ -92,6 +92,9 @@ describe('generateTitle', () => {
     expect(opts.headers['Authorization']).toBe('Bearer sk-test-key')
     const body = JSON.parse(opts.body)
     expect(body.model).toBe('gpt-4.1-nano')
+    // max_tokensは新モデルで400エラーになる → max_completion_tokensを使う
+    expect(body).not.toHaveProperty('max_tokens')
+    expect(body.max_completion_tokens).toBeGreaterThanOrEqual(1024)
   })
 
   it('calls Gemini API correctly', async () => {
