@@ -42,6 +42,7 @@ import {
   UNGROUPED_ID,
 } from './utils/bookmarks'
 import { addToTrash } from './utils/trash'
+import { cleanupLegacyKanbanStorage } from './utils/storage'
 import type { SyncGridItem, SyncGridGroup, LayoutMode, SortMode } from './types'
 import { isComposing, matchesBinding } from './utils/keyboard'
 
@@ -219,6 +220,11 @@ export default function App() {
     chrome.storage.local.get('syncgrid_onboarded').then((r) => {
       if (!r.syncgrid_onboarded) setShowWelcome(true)
     })
+  }, [])
+
+  // 旧カンバン機能（2026-07 廃止）の残留 storage キーを掃除（冪等。数リリース後に削除可）
+  useEffect(() => {
+    cleanupLegacyKanbanStorage()
   }, [])
 
   const handleCompleteTour = useCallback(() => {

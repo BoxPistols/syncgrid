@@ -12,6 +12,26 @@ import type { ShortcutConfig } from '../types'
 
 const SETTINGS_KEY = 'syncgrid_settings'
 const META_PREFIX = 'meta_'
+/** 旧カンバン機能（2026-07 廃止）が使っていた storage キー */
+const LEGACY_KANBAN_KEY = 'syncgrid_kanban'
+
+/**
+ * 旧カンバンの残留データを掃除する（毎起動・無条件・冪等 — pruneOrphanMeta と同じ流儀）。
+ * sync 側の削除は Chrome Sync で全端末へ伝播するため、一度実行されれば他端末の残留も消える。
+ * 数リリース後にこの掃除コードごと削除してよい。
+ */
+export async function cleanupLegacyKanbanStorage(): Promise<void> {
+  try {
+    await chrome.storage.local.remove(LEGACY_KANBAN_KEY)
+  } catch {
+    // 失敗しても実害なし（次回起動時に再試行される）
+  }
+  try {
+    await chrome.storage.sync.remove(LEGACY_KANBAN_KEY)
+  } catch {
+    // sync が使えない環境では無視（local が消えていれば表示への影響はない）
+  }
+}
 
 /**
  * 設定を読み込み（ネストされたオブジェクトもデフォルト値とマージ）
