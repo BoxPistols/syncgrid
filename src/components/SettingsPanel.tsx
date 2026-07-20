@@ -19,6 +19,9 @@ import {
 } from '../utils/localSync'
 import { testAiConnection } from '../utils/ai'
 import { hasTitleFetchPermission, requestTitleFetchPermission, hasAiPermission, requestAiPermission } from '../utils/permissions'
+import { WALLPAPER_PRESETS, fileToCompressedDataUrl, saveWallpaperImage, clearWallpaperImage } from '../utils/wallpaper'
+import { ensureGitHubPermission } from '../utils/permissions'
+import { testGitHubConnection, clearGitHubCache, saveGitHubCache, loadGitHubCache } from '../utils/github'
 
 interface Props {
   settings: SyncGridSettings
@@ -38,6 +41,11 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
   const [syncFolderName, setSyncFolderName] = useState<string | null>(null)
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const wallpaperFileRef = useRef<HTMLInputElement>(null)
+  const [wallpaperError, setWallpaperError] = useState(false)
+  const [ghTestStatus, setGhTestStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
+  const [ghLogin, setGhLogin] = useState('')
+  const [ghError, setGhError] = useState('')
   const [aiTestStatus, setAiTestStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
   const [aiTestError, setAiTestError] = useState('')
   const [syncTestStatus, setSyncTestStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
@@ -58,6 +66,58 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
   }, [])
 
   // --- Export ---
+  const handleGitHubTest = useCallback(async () => {
+    setGhTestStatus('testing')
+    setGhError('')
+    const granted = await ensureGitHubPermission()
+    if (!granted) {
+      setGhTestStatus('error')
+      setGhError('permission denied')
+      return
+    }
+    const result = await testGitHubConnection(settings.github.token)
+    if (result.ok) {
+      setGhTestStatus('ok')
+      setGhLogin(result.login ?? '')
+      // login をキャッシュに反映（ビューのヘッダ表示用）
+      const cache = await loadGitHubCache()
+      await saveGitHubCache({ login: result.login ?? '', items: cache?.items ?? [], fetchedAt: cache?.fetchedAt ?? 0, etag: cache?.etag })
+    } else {
+      setGhTestStatus('error')
+      setGhError(result.error ?? '')
+    }
+  }, [settings.github.token])
+
+  const handleGitHubDisconnect = useCallback(async () => {
+    await clearGitHubCache()
+    setGhTestStatus('idle')
+    setGhLogin('')
+    onUpdateSettings({ github: { token: '' } })
+  }, [onUpdateSettings])
+
+  const handleWallpaperFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      e.target.value = ''
+      if (!file) return
+      setWallpaperError(false)
+      try {
+        const dataUrl = await fileToCompressedDataUrl(file)
+        await saveWallpaperImage(dataUrl)
+        onUpdateSettings({ wallpaper: { ...settings.wallpaper, type: 'image' } })
+      } catch {
+        setWallpaperError(true)
+      }
+    },
+    [onUpdateSettings, settings.wallpaper],
+  )
+
+  const handleWallpaperReset = useCallback(async () => {
+    await clearWallpaperImage()
+    setWallpaperError(false)
+    onUpdateSettings({ wallpaper: { ...settings.wallpaper, type: 'default' } })
+  }, [onUpdateSettings, settings.wallpaper])
+
   const handleExport = useCallback(async () => {
     const data = await exportData(groups)
     downloadExport(data)
@@ -234,6 +294,72 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
               </div>
             </div>
 
+            {/* Wallpaper */}
+            <div className="sg-settings__section">
+              <h3 className="sg-settings__label">{t.wallpaper}</h3>
+              <div className="sg-settings__row sg-settings__row--btns">
+                <button
+                  className={`sg-btn sg-btn--sm ${settings.wallpaper.type === 'default' ? 'sg-btn--primary' : 'sg-btn--ghost'}`}
+                  onClick={handleWallpaperReset}
+                >
+                  {t.wallpaperDefault}
+                </button>
+                <button
+                  className={`sg-btn sg-btn--sm ${settings.wallpaper.type === 'image' ? 'sg-btn--primary' : 'sg-btn--ghost'}`}
+                  onClick={() => wallpaperFileRef.current?.click()}
+                >
+                  <Icon name="upload" size={12} /> {t.wallpaperUpload}
+                </button>
+              </div>
+              <div className="sg-wallpaper-swatches" role="radiogroup" aria-label={t.wallpaperPreset}>
+                {WALLPAPER_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    className={`sg-wallpaper-swatch${settings.wallpaper.type === 'preset' && settings.wallpaper.presetId === p.id ? ' sg-wallpaper-swatch--active' : ''}`}
+                    style={{ '--swatch-bg': p.css } as React.CSSProperties}
+                    onClick={() => onUpdateSettings({ wallpaper: { ...settings.wallpaper, type: 'preset', presetId: p.id } })}
+                    role="radio"
+                    aria-checked={settings.wallpaper.type === 'preset' && settings.wallpaper.presetId === p.id}
+                    aria-label={p.id}
+                    title={p.id}
+                  />
+                ))}
+                <label className="sg-wallpaper-swatch sg-wallpaper-swatch--color" title={t.wallpaperColor}>
+                  <input
+                    type="color"
+                    value={settings.wallpaper.color}
+                    onChange={(e) => onUpdateSettings({ wallpaper: { ...settings.wallpaper, type: 'color', color: e.target.value } })}
+                    aria-label={t.wallpaperColor}
+                  />
+                </label>
+              </div>
+              {settings.wallpaper.type !== 'default' && (
+                <div className="sg-settings__row">
+                  <label className="sg-settings__desc" htmlFor="sg-wallpaper-dim">{t.wallpaperDim}</label>
+                  <input
+                    id="sg-wallpaper-dim"
+                    type="range"
+                    min="0"
+                    max="0.6"
+                    step="0.05"
+                    value={settings.wallpaper.dim}
+                    onChange={(e) => onUpdateSettings({ wallpaper: { ...settings.wallpaper, dim: Number(e.target.value) } })}
+                  />
+                </div>
+              )}
+              {wallpaperError && (
+                <p className="sg-settings__status sg-settings__status--err"><Icon name="x-circle" size={14} /> {t.wallpaperTooLarge}</p>
+              )}
+              <input
+                ref={wallpaperFileRef}
+                type="file"
+                accept="image/*"
+                className="sg-sr-only"
+                onChange={handleWallpaperFile}
+                tabIndex={-1}
+              />
+            </div>
+
             <hr className="sg-settings__divider" />
 
             {/* Data export / import */}
@@ -272,10 +398,10 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
 
             <hr className="sg-settings__divider" />
 
-            {/* Local folder sync */}
+            {/* Kanban sync */}
             <div className="sg-settings__section">
               <h3 className="sg-settings__label">{t.localSync}</h3>
-              <p className="sg-settings__desc">{t.syncDesc}</p>
+              <p className="sg-settings__desc sg-preline">{t.syncDesc}</p>
 
               {isSyncSupported() ? (
                 syncFolderName ? (
@@ -439,6 +565,46 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
                     </p>
                   )}
                 </>
+              )}
+            </div>
+
+            <hr className="sg-settings__divider" />
+
+            {/* GitHub Integration */}
+            <div className="sg-settings__section">
+              <h3 className="sg-settings__label"><Icon name="github" size={14} /> {t.githubSettings}</h3>
+              <p className="sg-settings__desc">{t.githubDesc}</p>
+              <div className="sg-settings__row">
+                <input
+                  type="password"
+                  className="sg-input sg-input--sm"
+                  placeholder={t.githubTokenPlaceholder}
+                  value={settings.github.token}
+                  onChange={(e) => { setGhTestStatus('idle'); onUpdateSettings({ github: { token: e.target.value.trim() } }) }}
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-label={t.githubToken}
+                />
+              </div>
+              <div className="sg-settings__row sg-settings__row--btns">
+                <button
+                  className="sg-btn sg-btn--sm sg-btn--ghost"
+                  onClick={handleGitHubTest}
+                  disabled={!settings.github.token || ghTestStatus === 'testing'}
+                >
+                  {ghTestStatus === 'testing' ? <Icon name="spinner" size={12} className="sg-icon--spin" /> : <Icon name="check-circle" size={12} />} {t.githubConnectTest}
+                </button>
+                {settings.github.token && (
+                  <button className="sg-btn sg-btn--sm sg-btn--ghost" onClick={handleGitHubDisconnect}>
+                    <Icon name="close" size={12} /> {t.githubDisconnect}
+                  </button>
+                )}
+              </div>
+              {ghTestStatus === 'ok' && (
+                <p className="sg-settings__status sg-settings__status--ok"><Icon name="check-circle" size={14} /> {t.githubConnected(ghLogin)}</p>
+              )}
+              {ghTestStatus === 'error' && (
+                <p className="sg-settings__status sg-settings__status--err"><Icon name="x-circle" size={14} /> {t.connectionFailed}{ghError ? `: ${ghError}` : ''}</p>
               )}
             </div>
 

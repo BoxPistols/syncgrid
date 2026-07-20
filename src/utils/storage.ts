@@ -2,6 +2,8 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_AI_SETTINGS,
   DEFAULT_SHORTCUTS,
+  DEFAULT_WALLPAPER,
+  DEFAULT_GITHUB_SETTINGS,
   type SyncGridSettings,
   type BookmarkMeta,
   type LayoutMode,
@@ -23,29 +25,26 @@ export async function loadSettings(): Promise<SyncGridSettings> {
     return { ...DEFAULT_SETTINGS }
   }
   const s = stored as Partial<SyncGridSettings>
-  const VALID_LAYOUTS: LayoutMode[] = ['magazine', 'card', 'list']
-  const VALID_SORTS: SortMode[] = ['manual', 'name-asc', 'name-desc', 'date-new', 'date-old', 'domain', 'last-read']
+  const VALID_LAYOUTS: LayoutMode[] = ['tabmark', 'list']
+  const VALID_SORTS: SortMode[] = ['manual', 'name-asc', 'name-desc', 'date-new', 'date-old', 'domain', 'last-used']
   return {
     ...DEFAULT_SETTINGS,
     ...s,
     ai: { ...DEFAULT_AI_SETTINGS, ...(s.ai ?? {}) },
+    wallpaper: { ...DEFAULT_WALLPAPER, ...(s.wallpaper ?? {}) },
+    github: { ...DEFAULT_GITHUB_SETTINGS, ...(s.github ?? {}) },
     layout: VALID_LAYOUTS.includes(s.layout as LayoutMode) ? (s.layout as LayoutMode) : DEFAULT_SETTINGS.layout,
     sort: VALID_SORTS.includes(s.sort as SortMode) ? (s.sort as SortMode) : DEFAULT_SETTINGS.sort,
     shortcuts: migrateShortcuts(s.shortcuts),
   }
 }
 
-/** ショートカット設定のマイグレーション（旧compact→magazine） */
+/** ショートカット設定のマイグレーション（未知キーは自動破棄、既知キーのみ引き継ぐ） */
 function migrateShortcuts(stored: Partial<ShortcutConfig> | undefined): ShortcutConfig {
   if (!stored) return DEFAULT_SHORTCUTS
   const result = { ...DEFAULT_SHORTCUTS }
   for (const key of Object.keys(DEFAULT_SHORTCUTS) as (keyof ShortcutConfig)[]) {
     if (stored[key]) result[key] = stored[key]
-  }
-  if (!stored.layoutMagazine && (stored as Record<string, unknown>).layoutCompact) {
-    result.layoutMagazine = DEFAULT_SHORTCUTS.layoutMagazine
-    result.layoutCard = DEFAULT_SHORTCUTS.layoutCard
-    result.layoutList = DEFAULT_SHORTCUTS.layoutList
   }
   return result
 }

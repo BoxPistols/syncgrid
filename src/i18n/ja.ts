@@ -2,7 +2,8 @@ export const ja = {
   // App
   loading: '読み込み中…',
   // TopBar
-  searchPlaceholder: (modKey: string) => `ブックマークを検索… (${modKey}K)`,
+  searchPlaceholder: (modKey: string) => `Enterで検索、または ${modKey}+Enterですべての検索エンジンを検索`,
+  searchPlaceholderFolder: 'フォルダ内を絞り込み…',
   toggleTheme: 'テーマ切替',
   settings: '設定',
   // TabBar
@@ -16,9 +17,16 @@ export const ja = {
   // Search
   searchResults: (q: string, n: number) => `「${q}」の検索結果（${n}件）`,
   noSearchResults: '一致するブックマークが見つかりませんでした',
+  webSearchHint: 'ブックマークに見つかりません。',
+  webSearchAction: (q: string) => `Googleで「${q}」を検索`,
   // Empty
   noGroups: 'まだグループがありません。\n「＋」ボタンからグループを作成してブックマークを追加しましょう。',
   emptyFolder: 'このフォルダは空です。\n「＋ 追加」でブックマークを追加できます。',
+  // Pin
+  pin: 'ピン留め',
+  unpin: 'ピン留め解除',
+  pinnedSection: 'ピン留め',
+  pinLimitReached: (n: number) => `ピン留めは最大${n}件までです`,
   // Context menu
   openNewTab: '新しいタブで開く',
   edit: '編集',
@@ -45,6 +53,26 @@ export const ja = {
   themeLight: 'ライト',
   themeDark: 'ダーク',
   themeSystem: 'システム',
+  // GitHub
+  githubFolder: 'GitHub',
+  githubSettings: 'GitHub連携',
+  githubDesc: 'Personal Access Token を設定すると、サイドバーに直近のGitHub活動（コミット・PR・Issue等）が表示されます。通信はこのタブを開いた時と手動更新時のみ行われます。',
+  githubToken: 'GitHub Token',
+  githubTokenPlaceholder: 'ghp_... または github_pat_...',
+  githubConnected: (login: string) => `接続済み: @${login}`,
+  githubConnectTest: '接続テスト',
+  githubDisconnect: '切断',
+  githubRefresh: '更新',
+  githubEmpty: '直近のアクティビティはありません（公開＋自分のprivateイベント、最大300件/90日）',
+  githubError: '取得に失敗しました',
+  // Wallpaper
+  wallpaper: '背景',
+  wallpaperDefault: 'デフォルト',
+  wallpaperPreset: 'プリセット',
+  wallpaperColor: 'カラー',
+  wallpaperUpload: '画像を選択',
+  wallpaperTooLarge: '画像が大きすぎます（圧縮後5MBまで）',
+  wallpaperDim: '暗さ調整',
   // Data
   dataManagement: 'データ管理',
   exportData: 'データをエクスポート',
@@ -55,9 +83,9 @@ export const ja = {
   importError: 'インポートに失敗しました。ファイル形式を確認してください。',
   importConfirm: 'インポートすると現在のデータが上書きされます。続行しますか？',
   // Sync
-  localSync: 'ローカルフォルダ同期',
+  localSync: 'Kanban同期',
   syncDesc:
-    'クラウドドライブ（Google Drive, OneDrive, iCloud, Dropbox等）と同期されたローカルフォルダを指定すると、ブックマークデータが自動的にバックアップされます。',
+    'Kanbanボードのデータをクラウドドライブ経由で他の端末と同期します。\n※ 各端末でこの設定から同じフォルダを選択してください。ブックマーク自体はChromeアカウントで管理されます。',
   selectFolder: 'フォルダを選択',
   syncActive: '同期中',
   syncFolder: '同期先フォルダ',
@@ -113,10 +141,10 @@ export const ja = {
   sortDateNew: '新しい順',
   sortDateOld: '古い順',
   sortDomain: 'ドメイン順',
+  sortLastUsed: '最終利用順',
   // Layout
   layout: 'レイアウト',
-  layoutMagazine: 'マガジン',
-  layoutCard: 'カード',
+  layoutTabmark: 'コンパクト',
   layoutList: 'リスト',
   // Chrome bookmark import
   importChrome: 'Chromeブックマークからインポート',
@@ -135,8 +163,7 @@ export const ja = {
   shortcuts: 'キーボードショートカット',
   shortcutSearch: '検索',
   shortcutAddBookmark: 'ブックマーク追加',
-  shortcutLayoutMagazine: 'マガジン表示',
-  shortcutLayoutCard: 'カード表示',
+  shortcutLayoutTabmark: 'コンパクト表示',
   shortcutLayoutList: 'リスト表示',
   shortcutDeleteSelected: '選択削除',
   shortcutSelectAll: 'すべて選択',
@@ -176,7 +203,7 @@ export const ja = {
   skipTour: 'スキップ',
   restartTour: 'ツアーをもう一度見る',
   tourSearch: '検索バーからブックマークを即座に検索できます',
-  tourLayout: 'カード / リスト / コンパクトの3つのレイアウトを切り替えられます',
+  tourLayout: 'コンパクト / リストの2つのレイアウトを切り替えられます',
   tourAdd: 'ここからブックマークを追加。URLを入力するとタイトルが自動取得されます',
   tourSettings: 'テーマ・言語・AI設定・キーボードショートカットをカスタマイズ',
   tourShortcuts: '? キーでショートカット一覧を表示できます',
@@ -184,29 +211,18 @@ export const ja = {
   featureSearch: '即座に検索',
   featureSearchDesc: 'タイトル・URLで全ブックマークを横断検索',
   featureLayout: '3つのレイアウト',
-  featureLayoutDesc: 'カード・リスト・コンパクトをワンクリック切替',
+  featureLayoutDesc: 'コンパクト・リストをワンクリック切替',
   featureAi: 'AI機能',
   featureAiDesc: 'タイトル整理・自動タグ付けをAIがサポート',
   featureSync: 'ローカル同期',
   featureSyncDesc: 'クラウドドライブ経由で安全にバックアップ',
-  // ステータス
-  statusUnread: '未読',
-  statusRead: '既読',
-  statusLater: '後で読む',
-  statusStarred: 'お気に入り',
-  statusAll: 'すべて',
   allBookmarks: 'ALL',
-  sortLastRead: '最終閲覧順',
   sortDateAdded: '追加順',
   // Help
   help: 'ヘルプ',
   helpTagline: 'ブックマークを、',
   helpTaglineAccent: 'もっとスマートに。',
   helpPrivacy: 'セキュリティ & プライバシー',
-  // 積読サジェスト
-  staleReminder: (n: number) => `${n}件の「あとで読む」が1週間以上放置されています`,
-  staleReminderAction: '確認する',
-  staleReminderDismiss: '非表示',
   // カンバン
   kanban: 'カンバン',
   kanbanTodo: '次にやること',
@@ -244,11 +260,11 @@ export const ja = {
   // Help — 機能リファレンス
   helpFeatureRef: '機能リファレンス',
   helpRefLayout: 'レイアウト切替',
-  helpRefLayoutDesc: 'マガジン（小カードグリッド）・カード（大カード）・リスト（横長行）の3種類。⌘1/⌘2/⌘3で切替',
+  helpRefLayoutDesc: 'コンパクト（グリッド）・リスト（横長行）の2種類。⌘1/⌘2で切替',
   helpRefSearch: '検索',
   helpRefSearchDesc: '⌘K でグローバル検索。タブ内検索バーでタブ内のブックマークを絞り込み',
-  helpRefFilter: 'タグ・ステータスフィルター',
-  helpRefFilterDesc: 'ブックマークにタグを付けて分類。未読/既読/後で読む/お気に入りのステータスで絞り込み',
+  helpRefFilter: 'タグフィルター',
+  helpRefFilterDesc: 'ブックマークにタグを付けて分類。タグで絞り込み可能',
   helpRefOgp: 'リッチプレビュー',
   helpRefOgpDesc: 'OGP画像・説明文を自動取得して表示。設定画面で権限を許可してください',
   helpRefShortcuts: 'キーボードショートカット',

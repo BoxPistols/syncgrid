@@ -1,6 +1,6 @@
 {
   "name": "syncgrid",
-  "version": "2.1.0",
+  "version": "2.7.0",
   "description": "Secure, synced bookmark dashboard for Chrome new tabs — Speed Dial UI with zero telemetry",
   "license": "MIT",
   "keywords": [
@@ -21,6 +21,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "deploy": "npm run build && rsync -a --delete dist/ \"/Users/ai/Library/CloudStorage/OneDrive-個人用/Extensions/syncgrid/\"",
     "watch": "vite build --watch",
     "zip": "npm run build && cd dist && zip -r ../syncgrid-extension.zip . && echo '✅ syncgrid-extension.zip created'",
     "lint": "eslint .",

@@ -6,9 +6,9 @@ import { Icon } from './Icon'
 import { BookmarkCard } from './BookmarkCard'
 import { isComposing } from '../utils/keyboard'
 import { countAll } from '../utils/bookmarks'
-import type { SyncGridItem, SyncGridGroup, ReadStatus, BookmarkMeta } from '../types'
+import type { SyncGridItem, SyncGridGroup, BookmarkMeta } from '../types'
 import type { DragHandlers, DragState } from '../hooks/useDragReorder'
-import type { Messages } from '../i18n'
+import { useI18nContext } from '../context/i18n-context'
 
 interface Props {
   group: SyncGridGroup
@@ -22,13 +22,11 @@ interface Props {
   onFolderContext: (group: SyncGridGroup, x: number, y: number) => void
   applyFiltersAndSort: (items: SyncGridItem[]) => SyncGridItem[]
   allMeta: Record<string, BookmarkMeta>
-  handleSetStatus: (id: string, status: ReadStatus) => void
   selectedIds: Set<string>
   toggleSelect: (id: string, e: React.MouseEvent) => boolean
   getDragHandlers: (id: string, type: 'bookmark' | 'folder') => DragHandlers
   dragState: DragState
-  t: Messages
-  locale: string
+  pinnedUrls?: Record<string, number>
   renamingFolderId: string | null
   onStartRename: (id: string) => void
   onFolderRename: (id: string, name: string) => void
@@ -45,17 +43,16 @@ export const FolderSection = memo(function FolderSection({
   onFolderContext,
   applyFiltersAndSort,
   allMeta,
-  handleSetStatus,
   selectedIds,
   toggleSelect,
   getDragHandlers,
   dragState,
-  t,
-  locale,
+  pinnedUrls,
   renamingFolderId,
   onStartRename,
   onFolderRename,
 }: Props) {
+  const { t } = useI18nContext()
   const collapsed = collapsedIds.has(group.id)
   const totalItems = countAll(group)
   const isRenaming = renamingFolderId === group.id
@@ -156,14 +153,11 @@ export const FolderSection = memo(function FolderSection({
                   isDragging={dragState.draggingId === item.id}
                   isDropTarget={dragState.dropTargetId === item.id}
                   dropMode={dragState.dropTargetId === item.id && dragState.dropMode !== 'into' ? dragState.dropMode : null}
-                  t={t}
-                  locale={locale}
+                  isPinned={pinnedUrls ? item.url in pinnedUrls : false}
                   isSelected={selectedIds.has(item.id)}
                   onToggleSelect={toggleSelect}
                   tags={allMeta[item.id]?.tags}
-                  status={allMeta[item.id]?.status}
                   ogp={allMeta[item.id]?.ogp}
-                  onOpen={(id) => handleSetStatus(id, 'read')}
                 />
               ))}
             </div>
@@ -182,13 +176,11 @@ export const FolderSection = memo(function FolderSection({
               onFolderContext={onFolderContext}
               applyFiltersAndSort={applyFiltersAndSort}
               allMeta={allMeta}
-              handleSetStatus={handleSetStatus}
               selectedIds={selectedIds}
               toggleSelect={toggleSelect}
               getDragHandlers={getDragHandlers}
               dragState={dragState}
-              t={t}
-              locale={locale}
+              pinnedUrls={pinnedUrls}
               renamingFolderId={renamingFolderId}
               onStartRename={onStartRename}
               onFolderRename={onFolderRename}

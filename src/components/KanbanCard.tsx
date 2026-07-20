@@ -2,19 +2,18 @@ import { memo, useCallback, useMemo } from 'react'
 import { getFaviconUrl, getDomain } from '../utils/favicon'
 import type { SyncGridItem, BookmarkMeta } from '../types'
 import { Icon } from './Icon'
+import { useI18nContext } from '../context/i18n-context'
 import type { Messages } from '../i18n'
 
 interface Props {
   item: SyncGridItem
   meta?: BookmarkMeta
   dueDate?: number
-  locale: string
   onContextMenu: (item: SyncGridItem, x: number, y: number) => void
   onOpen: (id: string) => void
   isDragging?: boolean
   isDropBefore?: boolean
   isDropAfter?: boolean
-  t: Messages
   // D&D
   onDragStart: (e: React.DragEvent, bookmarkId: string) => void
   onDragOver: (e: React.DragEvent, bookmarkId: string) => void
@@ -47,19 +46,18 @@ export const KanbanCard = memo(function KanbanCard({
   item,
   meta,
   dueDate,
-  locale,
   onContextMenu,
   onOpen,
   isDragging,
   isDropBefore,
   isDropAfter,
-  t,
   onDragStart,
   onDragOver,
   onDragLeave,
   onDrop,
   onDragEnd,
 }: Props) {
+  const { t, locale } = useI18nContext()
   const domain = getDomain(item.url)
 
   const dueInfo = useMemo(

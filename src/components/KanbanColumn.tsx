@@ -1,7 +1,7 @@
 import { memo, useCallback } from 'react'
 import type { SyncGridItem, BookmarkMeta, KanbanColumn as KanbanColumnType } from '../types'
 import { KanbanCard } from './KanbanCard'
-import type { Messages } from '../i18n'
+import { useI18nContext } from '../context/i18n-context'
 
 interface Props {
   column: KanbanColumnType
@@ -9,10 +9,8 @@ interface Props {
   items: SyncGridItem[]
   allMeta: Record<string, BookmarkMeta>
   dueDates: Map<string, number>
-  locale: string
   onContextMenu: (item: SyncGridItem, x: number, y: number) => void
   onOpen: (id: string) => void
-  t: Messages
   // D&D state
   draggingId: string | null
   dropTargetId: string | null
@@ -35,10 +33,8 @@ export const KanbanColumnComponent = memo(function KanbanColumnComponent({
   items,
   allMeta,
   dueDates,
-  locale,
   onContextMenu,
   onOpen,
-  t,
   draggingId,
   dropTargetId,
   dropMode,
@@ -52,6 +48,7 @@ export const KanbanColumnComponent = memo(function KanbanColumnComponent({
   onColumnDragLeave,
   onColumnDrop,
 }: Props) {
+  const { t } = useI18nContext()
   const handleColumnDragOver = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
@@ -97,13 +94,11 @@ export const KanbanColumnComponent = memo(function KanbanColumnComponent({
               item={item}
               meta={allMeta[item.id]}
               dueDate={dueDates.get(item.id)}
-              locale={locale}
               onContextMenu={onContextMenu}
               onOpen={onOpen}
               isDragging={draggingId === item.id}
               isDropBefore={dropTargetId === item.id && dropMode === 'before'}
               isDropAfter={dropTargetId === item.id && dropMode === 'after'}
-              t={t}
               onDragStart={onCardDragStart}
               onDragOver={onCardDragOver}
               onDragLeave={onCardDragLeave}

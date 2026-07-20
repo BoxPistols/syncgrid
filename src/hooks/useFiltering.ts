@@ -1,37 +1,21 @@
 /**
  * 検索・フィルタリング・ソート・フラット表示
  */
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import type { SyncGridItem, SyncGridGroup, SortMode, ReadStatus, BookmarkMeta } from '../types'
+import { useState, useMemo, useCallback } from 'react'
+import type { SyncGridItem, SyncGridGroup, SortMode, BookmarkMeta } from '../types'
 import { flattenGroups } from '../utils/bookmarks'
 import { getDomain } from '../utils/favicon'
-
-const FILTER_STATUS_KEY = 'syncgrid_filter_status'
 
 export function useFiltering(
   groups: SyncGridGroup[],
   currentFolder: SyncGridGroup | null,
   allMeta: Record<string, BookmarkMeta>,
   sort: SortMode,
+  lastUsed: Record<string, number>,
 ) {
   const [query, setQuery] = useState('')
   const [localQuery, setLocalQuery] = useState('')
   const [filterTag, setFilterTag] = useState<string | null>(null)
-  // ステータスフィルタ（すべて/未読/後で読む/…）はタブを閉じても維持する（useCollapseと同じ方式で永続化）
-  const [filterStatus, setFilterStatusState] = useState<ReadStatus | null>(null)
-
-  useEffect(() => {
-    chrome.storage.local.get(FILTER_STATUS_KEY).then((result) => {
-      const stored = result[FILTER_STATUS_KEY] as ReadStatus | undefined
-      if (stored) setFilterStatusState(stored)
-    })
-  }, [])
-
-  const setFilterStatus = useCallback((status: ReadStatus | null) => {
-    setFilterStatusState(status)
-    if (status) chrome.storage.local.set({ [FILTER_STATUS_KEY]: status })
-    else chrome.storage.local.remove(FILTER_STATUS_KEY)
-  }, [])
   // グローバル検索（全ブックマーク横断）
   const searchResults = useMemo(() => {
     if (!query.trim()) return null
@@ -77,16 +61,10 @@ export function useFiltering(
 
   const filterItems = useCallback(
     (items: SyncGridItem[]): SyncGridItem[] => {
-      let result = items
-      if (filterTag) {
-        result = result.filter((item) => allMeta[item.id]?.tags?.includes(filterTag))
-      }
-      if (filterStatus) {
-        result = result.filter((item) => (allMeta[item.id]?.status ?? 'unread') === filterStatus)
-      }
-      return result
+      if (!filterTag) return items
+      return items.filter((item) => allMeta[item.id]?.tags?.includes(filterTag))
     },
-    [filterTag, filterStatus, allMeta],
+    [filterTag, allMeta],
   )
 
   const sortItems = useCallback(
@@ -104,13 +82,13 @@ export function useFiltering(
           return sorted.sort((a, b) => (a.dateAdded ?? 0) - (b.dateAdded ?? 0))
         case 'domain':
           return sorted.sort((a, b) => getDomain(a.url).localeCompare(getDomain(b.url)))
-        case 'last-read':
-          return sorted.sort((a, b) => (allMeta[b.id]?.lastReadAt ?? 0) - (allMeta[a.id]?.lastReadAt ?? 0))
+        case 'last-used':
+          return sorted.sort((a, b) => (lastUsed[b.id] ?? 0) - (lastUsed[a.id] ?? 0))
         default:
           return items
       }
     },
-    [sort, allMeta],
+    [sort, lastUsed],
   )
 
   const applyFiltersAndSort = useCallback(
@@ -127,8 +105,6 @@ export function useFiltering(
     localSearchResults,
     filterTag,
     setFilterTag,
-    filterStatus,
-    setFilterStatus,
     allTagsInFolder,
     filterItems,
     sortItems,

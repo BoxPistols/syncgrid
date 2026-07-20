@@ -38,11 +38,12 @@ React 19 + TypeScript Strict + Vite 7 + Manifest V3。ランタイム依存はRe
 
 - `src/components/` -- Reactコンポーネント（UI層）
 - `src/hooks/` -- カスタムフック（状態管理、Chrome API連携）
+- `src/context/` -- React Context（I18nContext: t/locale の配布のみ。drag状態・選択状態はContext化しない）
 - `src/utils/` -- ビジネスロジック（データ変換、検証、API呼び出し）
 - `src/types/index.ts` -- 全型定義とデフォルト値
 - `src/i18n/` -- 国際化（ja.ts, en.ts, index.ts）
 - `src/styles/global.css` -- デザイントークンとテーマ定義（melta-ui原則準拠）
-- `public/manifest.json` -- Chrome拡張マニフェスト（Manifest V3）
+- `manifest.config.ts` -- Chrome拡張マニフェストの唯一の定義元（Manifest V3。version は package.json から）
 
 データソースは Chrome Bookmarks API が唯一の信頼源。独自DBは持たない。
 メタデータ（タグ、OGPキャッシュ、閲覧ステータス）は `chrome.storage.local` に保存。
