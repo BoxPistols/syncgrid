@@ -2,19 +2,17 @@ import { useState, useCallback, useRef, memo } from 'react'
 import type { SyncGridItem, BookmarkMeta, KanbanColumn } from '../types'
 import { KanbanColumnComponent } from './KanbanColumn'
 import { Icon } from './Icon'
-import type { Messages } from '../i18n'
+import { useI18nContext } from '../context/i18n-context'
 
 interface Props {
   kanbanColumns: Record<KanbanColumn, SyncGridItem[]>
   allMeta: Record<string, BookmarkMeta>
   dueDates: Map<string, number>
-  locale: string
   onMoveItem: (bookmarkId: string, toColumn: KanbanColumn, beforeBookmarkId: string | null) => void
   onContextMenu: (item: SyncGridItem, x: number, y: number) => void
   onOpen: (id: string) => void
   onMarkRead?: (id: string) => void
   onReload: () => void
-  t: Messages
 }
 
 interface DragData {
@@ -32,14 +30,13 @@ export const KanbanBoard = memo(function KanbanBoard({
   kanbanColumns,
   allMeta,
   dueDates,
-  locale,
   onMoveItem,
   onContextMenu,
   onOpen,
   onMarkRead,
   onReload,
-  t,
 }: Props) {
+  const { t } = useI18nContext()
   const [syncing, setSyncing] = useState(false)
 
   const handleSync = useCallback(async () => {
@@ -235,10 +232,8 @@ export const KanbanBoard = memo(function KanbanBoard({
             items={kanbanColumns[col.key]}
             allMeta={allMeta}
             dueDates={dueDates}
-            locale={locale}
             onContextMenu={onContextMenu}
             onOpen={onOpen}
-            t={t}
             draggingId={draggingId}
             dropTargetId={dropTargetId}
             dropMode={dropMode}

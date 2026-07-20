@@ -13,8 +13,7 @@ interface Props {
 const ACTIONS: { key: ShortcutAction; labelKey: keyof Messages }[] = [
   { key: 'search', labelKey: 'shortcutSearch' },
   { key: 'addBookmark', labelKey: 'shortcutAddBookmark' },
-  { key: 'layoutMagazine', labelKey: 'shortcutLayoutMagazine' },
-  { key: 'layoutCard', labelKey: 'shortcutLayoutCard' },
+  { key: 'layoutTabmark', labelKey: 'shortcutLayoutTabmark' },
   { key: 'layoutList', labelKey: 'shortcutLayoutList' },
   { key: 'deleteSelected', labelKey: 'shortcutDeleteSelected' },
   { key: 'selectAll', labelKey: 'shortcutSelectAll' },

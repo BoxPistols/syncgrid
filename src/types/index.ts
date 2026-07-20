@@ -1,16 +1,10 @@
 import type { Locale } from '../i18n'
 
-/** レイアウトモード: magazine(小カードグリッド) / card(大カード) / list(横長行) */
-export type LayoutMode = 'magazine' | 'card' | 'list'
-
-/** カードサイズ */
-export type CardSize = 'sm' | 'md' | 'lg'
-
-/** グリッド列数 (auto=自動, 2-6=固定列数) */
-export type GridColumns = 'auto' | 2 | 3 | 4 | 5 | 6
+/** レイアウトモード: tabmark(コンパクトグリッド) / list(詳細リスト) */
+export type LayoutMode = 'tabmark' | 'list'
 
 /** ソートモード */
-export type SortMode = 'manual' | 'name-asc' | 'name-desc' | 'date-new' | 'date-old' | 'domain' | 'last-read'
+export type SortMode = 'manual' | 'name-asc' | 'name-desc' | 'date-new' | 'date-old' | 'domain' | 'last-used'
 
 /** キーバインド定義 */
 export interface KeyBinding {
@@ -25,8 +19,7 @@ export interface KeyBinding {
 export interface ShortcutConfig {
   search: KeyBinding
   addBookmark: KeyBinding
-  layoutMagazine: KeyBinding
-  layoutCard: KeyBinding
+  layoutTabmark: KeyBinding
   layoutList: KeyBinding
   deleteSelected: KeyBinding
   selectAll: KeyBinding
@@ -73,9 +66,6 @@ export interface TrashItem {
   deletedAt: number
 }
 
-/** ブックマーク閲覧ステータス */
-export type ReadStatus = 'unread' | 'read' | 'later' | 'starred'
-
 /** カンバン列 */
 export type KanbanColumn = 'todo' | 'doing' | 'done'
 
@@ -103,13 +93,17 @@ export interface KanbanState {
   updatedAt: number
 }
 
+/** ピン留め: URL → pinnedAt(ms)。URLキーで端末間同期に対応（Kanbanと同方針） */
+export type PinnedMap = Record<string, number>
+
+/** ピン留め上限（chrome.storage.sync の 8KB/item 制限内に収める） */
+export const MAX_PINNED = 100
+
 /** ローカルメタデータ（chrome.storage.local） */
 export interface BookmarkMeta {
   memo: string
   tags?: string[]
   ogp?: OgpData
-  status?: ReadStatus
-  lastReadAt?: number
 }
 
 /** AI プロバイダ */
@@ -144,6 +138,57 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
   geminiModel: 'gemini-2.5-flash',
 }
 
+/** GitHub 連携設定（Token は local のみ保存。sync には載せない） */
+export interface GitHubSettings {
+  token: string
+}
+
+export const DEFAULT_GITHUB_SETTINGS: GitHubSettings = { token: '' }
+
+/** GitHub アクティビティ種別 */
+export type GitHubEventKind = 'commit' | 'pr' | 'issue' | 'star' | 'release' | 'create'
+
+/** GitHub 仮想フォルダの1アイテム（読み取り専用。Bookmarks には書き込まない） */
+export interface GitHubActivityItem {
+  /** event.id（コミットは +sha サフィックス） */
+  id: string
+  kind: GitHubEventKind
+  title: string
+  url: string
+  /** "owner/name" */
+  repo: string
+  createdAt: number
+}
+
+/** GitHub アクティビティキャッシュ（chrome.storage.local、TTL管理） */
+export interface GitHubActivityCache {
+  login: string
+  items: GitHubActivityItem[]
+  fetchedAt: number
+  etag?: string
+}
+
+/** 壁紙タイプ */
+export type WallpaperType = 'default' | 'preset' | 'color' | 'image'
+
+/** 壁紙設定（軽量メタのみ。画像本体は専用キー syncgrid_wallpaper_image に分離） */
+export interface WallpaperSettings {
+  type: WallpaperType
+  /** WALLPAPER_PRESETS の id（type='preset' 時） */
+  presetId: string
+  /** 単色背景（type='color' 時） */
+  color: string
+  /** 前景コントラスト確保用オーバーレイ濃度 0–0.6 */
+  dim: number
+}
+
+export const DEFAULT_WALLPAPER: WallpaperSettings = {
+  type: 'default',
+  presetId: '',
+  color: '#04080f',
+  dim: 0.15,
+}
+
 /** アプリ設定 */
 export interface SyncGridSettings {
   theme: 'light' | 'dark' | 'system'
@@ -155,14 +200,14 @@ export interface SyncGridSettings {
   ai: AISettings
   /** レイアウトモード */
   layout: LayoutMode
-  /** カードサイズ */
-  cardSize: CardSize
-  /** グリッド列数 */
-  gridColumns: GridColumns
   /** ソートモード */
   sort: SortMode
   /** キーボードショートカット */
   shortcuts: ShortcutConfig
+  /** 壁紙設定 */
+  wallpaper: WallpaperSettings
+  /** GitHub 連携設定 */
+  github: GitHubSettings
 }
 
 const _isMac =
@@ -183,9 +228,8 @@ function kb(key: string, opts: { mod?: boolean; ctrl?: boolean; shift?: boolean;
 export const DEFAULT_SHORTCUTS: ShortcutConfig = {
   search: kb('k', { mod: true }),
   addBookmark: kb('n', { ctrl: true }),
-  layoutMagazine: kb('1', { mod: true }),
-  layoutCard: kb('2', { mod: true }),
-  layoutList: kb('3', { mod: true }),
+  layoutTabmark: kb('1', { mod: true }),
+  layoutList: kb('2', { mod: true }),
   deleteSelected: kb('Delete'),
   selectAll: kb('a', { mod: true }),
 }
@@ -196,11 +240,11 @@ export const DEFAULT_SETTINGS: SyncGridSettings = {
   activeTabId: '',
   lastSyncedAt: '',
   ai: DEFAULT_AI_SETTINGS,
-  layout: 'list', // magazine | card | list
-  cardSize: 'md',
-  gridColumns: 'auto' as GridColumns,
+  layout: 'list' as LayoutMode,
   sort: 'manual',
   shortcuts: DEFAULT_SHORTCUTS,
+  wallpaper: DEFAULT_WALLPAPER,
+  github: DEFAULT_GITHUB_SETTINGS,
 }
 
 /** エクスポートデータ形式 */

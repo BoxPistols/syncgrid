@@ -9,8 +9,13 @@
  *
  * 使い方: npm run build && npm run e2e:smoke
  * 前提: Chrome for Testing(puppeteer / playwright のキャッシュ、または CFT_PATH 環境変数)
+ *
+ * 既知の環境問題(2026-07 実測): Chrome for Testing 149 では --load-extension で読み込んだ
+ * 拡張の chrome.bookmarks API が全呼び出しハングする(storage は正常、headless/headful 両方)。
+ * 旧ビルドの拡張でも再現するため拡張側の問題ではない。動作する CFT バージョン(147以前は
+ * このmacOSで起動不可)が確保できるまで、bookmarks 依存のチェックは実行不能な場合がある。
  */
-import { existsSync, rmSync, readdirSync } from 'node:fs'
+import { existsSync, rmSync, readdirSync, readFileSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { homedir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -219,12 +224,18 @@ async function main() {
       15000,
       'CDP port',
     )
-    // 拡張IDは「distの絶対パス」由来で環境ごとに変わるため、service worker ターゲットから動的に発見する
-    // (background の出力ファイル名はビルド構成依存のため固定しない。読み込む拡張は1つのみの前提)
+    // service worker ターゲットから拡張IDを動的に発見する。
+    // 新しめの Chrome for Testing は内蔵コンポーネント拡張のSW(例: thunk.js)も持つため、
+    // dist/manifest.json の background.service_worker ファイル名と一致するターゲットに限定する
+    const swPath = JSON.parse(readFileSync(join(DIST, 'manifest.json'), 'utf8')).background
+      .service_worker
     const extId = await waitFor(async () => {
       const list = await (await fetch(`http://localhost:${PORT}/json/list`)).json()
       const sw = list.find(
-        (t) => t.type === 'service_worker' && t.url.startsWith('chrome-extension://'),
+        (t) =>
+          t.type === 'service_worker' &&
+          t.url.startsWith('chrome-extension://') &&
+          t.url.endsWith(`/${swPath}`),
       )
       return sw ? new URL(sw.url).hostname : null
     }, 15000, 'extension service worker')

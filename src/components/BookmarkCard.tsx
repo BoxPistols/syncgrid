@@ -2,11 +2,11 @@ import { useState, useRef, useCallback, useEffect, memo } from 'react'
 import { getFaviconUrl, getDomain } from '../utils/favicon'
 import { formatRelativeDate } from '../utils/date'
 import { UrlPreview } from './UrlPreview'
-import type { SyncGridItem, ReadStatus, OgpData } from '../types'
+import type { SyncGridItem, OgpData } from '../types'
 import { Icon } from './Icon'
 import { isComposing } from '../utils/keyboard'
 import type { DragHandlers } from '../hooks/useDragReorder'
-import type { Messages } from '../i18n'
+import { useI18nContext } from '../context/i18n-context'
 
 interface Props {
   item: SyncGridItem
@@ -15,24 +15,16 @@ interface Props {
   isDragging?: boolean
   isDropTarget?: boolean
   dropMode?: 'before' | 'after' | null
-  t: Messages
-  locale?: string
+  isPinned?: boolean
   isSelected?: boolean
   onToggleSelect?: (id: string, e: React.MouseEvent) => boolean
   tags?: string[]
-  status?: ReadStatus
   onOpen?: (id: string) => void
   ogp?: OgpData
 }
 
-const STATUS_ICONS: Record<ReadStatus, { icon: 'check-circle' | 'sparkle' | 'pin'; cls: string }> = {
-  unread: { icon: 'sparkle', cls: 'sg-status--unread' },
-  read: { icon: 'check-circle', cls: 'sg-status--read' },
-  later: { icon: 'pin', cls: 'sg-status--later' },
-  starred: { icon: 'sparkle', cls: 'sg-status--starred' },
-}
-
-export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, t, locale, isSelected, onToggleSelect, tags, status, onOpen, ogp }: Props) {
+export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dragHandlers, isDragging, isDropTarget, dropMode, isPinned, isSelected, onToggleSelect, tags, onOpen, ogp }: Props) {
+  const { t, locale } = useI18nContext()
   const [imgFailed, setImgFailed] = useState(false)
   const [preview, setPreview] = useState<{ x: number; y: number } | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -68,7 +60,6 @@ export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dr
 
   const className = [
     'sg-card',
-    status && status !== 'read' && `sg-card--${status}`,
     isSelected && 'sg-card--selected',
     isDragging && 'sg-card--dragging',
     isDropTarget && dropMode === 'before' && 'sg-card--drop-before',
@@ -127,9 +118,7 @@ export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dr
           </div>
         )}
         <span className="sg-card__title">
-          {status && status !== 'unread' && (
-            <Icon name={STATUS_ICONS[status].icon} size={12} className={STATUS_ICONS[status].cls} />
-          )}{' '}
+          {isPinned && <span className="sg-card__pin-badge" aria-hidden="true"><Icon name="pin" size={10} /></span>}
           {item.title}
         </span>
         {ogp?.description && (
@@ -144,7 +133,7 @@ export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dr
         )}
         <span className="sg-card__meta">
           <span className="sg-card__domain">{domain}</span>
-          <span className="sg-card__date">{formatRelativeDate(item.dateAdded, locale ?? 'ja')}</span>
+          <span className="sg-card__date">{formatRelativeDate(item.dateAdded, locale)}</span>
         </span>
         <button
           className="sg-card__menu"

@@ -3,7 +3,7 @@
  * OGPはバックグラウンドでfetch + 24hキャッシュ
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { SyncGridGroup, BookmarkMeta, ReadStatus, SyncGridItem, OgpData } from '../types'
+import type { SyncGridGroup, BookmarkMeta, SyncGridItem, OgpData } from '../types'
 import { loadAllMeta, saveMeta, pruneOrphanMeta } from '../utils/storage'
 import { fetchOgp } from '../utils/fetchTitle'
 import { flattenGroups } from '../utils/bookmarks'
@@ -64,35 +64,20 @@ export function useMetadata(groups: SyncGridGroup[]) {
         // 取得失敗でも fetchedAt を記録して無限リトライを防止（1時間後に再試行）
         const result: OgpData = ogp ?? { fetchedAt: Date.now() }
         const existing = allMeta[item.id]
-        saveMeta(item.id, { memo: existing?.memo ?? '', tags: existing?.tags, ogp: result, status: existing?.status, lastReadAt: existing?.lastReadAt })
+        saveMeta(item.id, { memo: existing?.memo ?? '', tags: existing?.tags, ogp: result })
         setAllMeta((prev) => ({ ...prev, [item.id]: { ...prev[item.id], memo: prev[item.id]?.memo ?? '', ogp: result } }))
       })
     }
   }, [groups, allMeta])
 
-  const handleSetStatus = useCallback(
-    async (id: string, newStatus: ReadStatus) => {
-      const meta = allMeta[id]
-      await saveMeta(id, {
-        memo: meta?.memo ?? '',
-        tags: meta?.tags,
-        ogp: meta?.ogp,
-        status: newStatus,
-        lastReadAt: newStatus === 'read' ? Date.now() : meta?.lastReadAt,
-      })
-      loadAllMeta().then(setAllMeta)
-    },
-    [allMeta],
-  )
-
   const handleSaveMeta = useCallback(
     async (id: string, tags: string[]) => {
       const existingMeta = allMeta[id]
-      await saveMeta(id, { memo: existingMeta?.memo ?? '', tags, ogp: existingMeta?.ogp, status: existingMeta?.status, lastReadAt: existingMeta?.lastReadAt })
+      await saveMeta(id, { memo: existingMeta?.memo ?? '', tags, ogp: existingMeta?.ogp })
       loadAllMeta().then(setAllMeta)
     },
     [allMeta],
   )
 
-  return { allMeta, handleSetStatus, handleSaveMeta }
+  return { allMeta, handleSaveMeta }
 }

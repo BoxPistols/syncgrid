@@ -62,3 +62,29 @@ export async function ensureAiPermission(provider: string): Promise<boolean> {
   if (await hasAiPermission(provider)) return true
   return requestAiPermission(provider)
 }
+
+/** GitHub API のホスト権限（AI と同じ opt-in パターン） */
+const GITHUB_ORIGIN = 'https://api.github.com/*'
+
+export async function hasGitHubPermission(): Promise<boolean> {
+  try {
+    return await chrome.permissions.contains({ origins: [GITHUB_ORIGIN] })
+  } catch {
+    return false
+  }
+}
+
+/** GitHub ホスト権限をリクエスト（ユーザージェスチャー必須） */
+export async function requestGitHubPermission(): Promise<boolean> {
+  try {
+    return await chrome.permissions.request({ origins: [GITHUB_ORIGIN] })
+  } catch {
+    return false
+  }
+}
+
+/** GitHub ホスト権限を確保する（未付与ならリクエスト） */
+export async function ensureGitHubPermission(): Promise<boolean> {
+  if (await hasGitHubPermission()) return true
+  return requestGitHubPermission()
+}
