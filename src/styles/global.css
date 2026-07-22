@@ -2030,8 +2030,9 @@ button {
 .sg-dial__grid--list .sg-card {
   flex-direction: row;
   align-items: center;
-  padding: 10px 16px;
-  gap: 12px;
+  /* 複数列表示で余白が間延びしないよう詰める（10px 16px / gap 12px から縮小） */
+  padding: 6px 10px;
+  gap: 8px;
   text-align: left;
   border-radius: var(--sg-radius-sm);
 }
