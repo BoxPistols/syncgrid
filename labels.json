@@ -35,6 +35,21 @@
       "name": "ci",
       "color": "9ca3af",
       "description": "CI/CDの設定変更"
+    },
+    {
+      "name": "bug",
+      "color": "d73a4a",
+      "description": "バグ・不具合"
+    },
+    {
+      "name": "docs",
+      "color": "0ea5e9",
+      "description": "ドキュメントの追加・修正"
+    },
+    {
+      "name": "chore",
+      "color": "64748b",
+      "description": "ビルド・依存・雑務(コード動作に影響しない変更)"
     }
   ]
 }
