@@ -39,6 +39,7 @@ export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dr
   const leaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const domain = getDomain(item.url)
   const initial = domain.charAt(0).toUpperCase()
+  const faviconUrl = getFaviconUrl(item.url, 64)
 
   // スクロール時にプレビュー消す
   useEffect(() => {
@@ -111,11 +112,11 @@ export const BookmarkCard = memo(function BookmarkCard({ item, onContextMenu, dr
           </div>
         ) : (
           <div className="sg-card__icon">
-            {imgFailed ? (
+            {imgFailed || !faviconUrl ? (
               <div className="sg-favicon sg-favicon--lg">{initial}</div>
             ) : (
               <img
-                src={getFaviconUrl(item.url, 64)}
+                src={faviconUrl}
                 alt=""
                 width={48}
                 height={48}
