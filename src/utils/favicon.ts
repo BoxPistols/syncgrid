@@ -6,9 +6,13 @@
 export function getFaviconUrl(url: string, size: number = 32): string {
   try {
     const pageUrl = new URL(url).href
+    const extensionId = typeof chrome !== 'undefined' ? chrome.runtime?.id : undefined
+    // The favicon endpoint is only available inside the loaded extension.
+    // Avoid emitting an invalid chrome-extension:/// URL in Vite dev mode.
+    if (!extensionId) return ''
     // Chrome favicon2 API: キャッシュ済みファビコンを取得
     // show_fallback_monogram: ファビコンが無い場合にイニシャルアイコンを表示
-    return `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=${size}`
+    return `chrome-extension://${extensionId}/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=${size}`
   } catch {
     // 不正なURLの場合は空文字（BookmarkCardのfallback UIが表示される）
     return ''

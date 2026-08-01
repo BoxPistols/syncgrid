@@ -39,4 +39,15 @@ describe('getFaviconUrl', () => {
     const result = getFaviconUrl('https://example.com')
     expect(result).toContain('size=32')
   })
+
+  it('returns empty string outside an extension context', () => {
+    const originalId = chrome.runtime.id
+    chrome.runtime.id = ''
+
+    try {
+      expect(getFaviconUrl('https://example.com')).toBe('')
+    } finally {
+      chrome.runtime.id = originalId
+    }
+  })
 })
