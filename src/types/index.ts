@@ -98,8 +98,7 @@ export interface AISettings {
 }
 
 export const OPENAI_MODELS = [
-  { id: 'gpt-5.4-nano', label: 'GPT-5.4 Nano' },
-  { id: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
+  { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' },
   { id: 'gpt-5-nano', label: 'GPT-5 Nano' },
   { id: 'gpt-5-mini', label: 'GPT-5 Mini' },
 ] as const
@@ -112,7 +111,7 @@ export const GEMINI_MODELS = [
 export const DEFAULT_AI_SETTINGS: AISettings = {
   provider: 'none',
   openaiApiKey: '',
-  openaiModel: 'gpt-5.4-nano',
+  openaiModel: 'gpt-5.6-luna',
   geminiApiKey: '',
   geminiModel: 'gemini-2.5-flash',
 }
