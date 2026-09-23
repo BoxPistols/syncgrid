@@ -103,16 +103,15 @@ export const OPENAI_MODELS = [
   { id: 'gpt-5-mini', label: 'GPT-5 Mini' },
 ] as const
 
-export const GEMINI_MODELS = [
-  { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
-] as const
+/** 選択肢に出すGeminiモデル。gemini-3.8-flashは応答を確認できなかったため外し、現在は無い */
+export const GEMINI_MODELS: readonly { id: string; label: string }[] = []
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
   provider: 'none',
   openaiApiKey: '',
   openaiModel: 'gpt-6-luna',
   geminiApiKey: '',
-  geminiModel: 'gemini-3.8-flash',
+  geminiModel: '',
 }
 
 /** アプリ設定 */

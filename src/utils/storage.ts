@@ -63,6 +63,10 @@ function normalizeAISettings(stored: Partial<AISettings> | undefined): AISetting
   if (!GEMINI_MODELS.some((m) => m.id === ai.geminiModel)) {
     ai.geminiModel = DEFAULT_AI_SETTINGS.geminiModel
   }
+  // Geminiはプロバイダの選択肢から外した。保存値がgeminiならOpenAI（キー未設定なら無効）に戻す
+  if (ai.provider === 'gemini') {
+    ai.provider = ai.openaiApiKey ? 'openai' : 'none'
+  }
   return ai
 }
 
