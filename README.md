@@ -137,8 +137,8 @@ SyncGridはクラウドAPIに直接接続しません。**File System Access API
 URLからブックマークのタイトルをAIで自動生成する機能です。デフォルトでは無効になっています。
 
 **対応プロバイダ:**
-- **OpenAI**: GPT-6 Luna / GPT-5 Nano / GPT-5 Mini
-- **Gemini**: Gemini 3.8 Flash
+- **OpenAI**: GPT-6 Luna
+- **Gemini**: Gemini 3.5 Flash-Lite
 
 **設定手順:**
 1. 設定パネルでAIプロバイダを選択
@@ -428,8 +428,8 @@ SyncGrid does not connect to any cloud API directly. It uses the **File System A
 Auto-generate bookmark titles from URLs using AI. Disabled by default.
 
 **Supported providers:**
-- **OpenAI**: GPT-6 Luna / GPT-5 Nano / GPT-5 Mini
-- **Gemini**: Gemini 3.8 Flash
+- **OpenAI**: GPT-6 Luna
+- **Gemini**: Gemini 3.5 Flash-Lite
 
 **Setup:**
 1. Select an AI provider in the Settings panel

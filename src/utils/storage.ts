@@ -3,6 +3,7 @@ import {
   DEFAULT_AI_SETTINGS,
   DEFAULT_SHORTCUTS,
   GEMINI_MODELS,
+  OPENAI_MODELS,
   type SyncGridSettings,
   type AISettings,
   type BookmarkMeta,
@@ -62,6 +63,10 @@ function normalizeAISettings(stored: Partial<AISettings> | undefined): AISetting
   const ai = { ...DEFAULT_AI_SETTINGS, ...(stored ?? {}) }
   if (!GEMINI_MODELS.some((m) => m.id === ai.geminiModel)) {
     ai.geminiModel = DEFAULT_AI_SETTINGS.geminiModel
+  }
+  // OpenAIも同じく、一覧から外したモデル（gpt-5-nano等）は既定値に戻す
+  if (!OPENAI_MODELS.some((m) => m.id === ai.openaiModel)) {
+    ai.openaiModel = DEFAULT_AI_SETTINGS.openaiModel
   }
   return ai
 }

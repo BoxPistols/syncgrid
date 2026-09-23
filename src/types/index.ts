@@ -99,12 +99,10 @@ export interface AISettings {
 
 export const OPENAI_MODELS = [
   { id: 'gpt-6-luna', label: 'GPT-6 Luna' },
-  { id: 'gpt-5-nano', label: 'GPT-5 Nano' },
-  { id: 'gpt-5-mini', label: 'GPT-5 Mini' },
 ] as const
 
 export const GEMINI_MODELS = [
-  { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
+  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite' },
 ] as const
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
@@ -112,7 +110,7 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
   openaiApiKey: '',
   openaiModel: 'gpt-6-luna',
   geminiApiKey: '',
-  geminiModel: 'gemini-3.8-flash',
+  geminiModel: 'gemini-3.5-flash-lite',
 }
 
 /** アプリ設定 */

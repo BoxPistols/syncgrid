@@ -65,15 +65,34 @@ describe('loadSettings のGeminiモデル', () => {
       syncgrid_settings: { ai: { provider: 'gemini', geminiApiKey: 'k', geminiModel: 'gemini-2.5-pro' } },
     })
     const s = await loadSettings()
-    expect(s.ai.geminiModel).toBe('gemini-3.8-flash')
+    expect(s.ai.geminiModel).toBe('gemini-3.5-flash-lite')
     // 他のAI設定は温存される
     expect(s.ai.provider).toBe('gemini')
     expect(s.ai.geminiApiKey).toBe('k')
   })
 
   it('一覧にあるモデルはそのまま残す', async () => {
-    await chrome.storage.local.set({ syncgrid_settings: { ai: { geminiModel: 'gemini-3.8-flash' } } })
+    await chrome.storage.local.set({ syncgrid_settings: { ai: { geminiModel: 'gemini-3.5-flash-lite', openaiModel: 'gpt-6-luna' } } })
     const s = await loadSettings()
-    expect(s.ai.geminiModel).toBe('gemini-3.8-flash')
+    expect(s.ai.geminiModel).toBe('gemini-3.5-flash-lite')
+    expect(s.ai.openaiModel).toBe('gpt-6-luna')
+  })
+
+  it('gemini-3.8-flashが保存されていれば3.5 Flash-Liteに戻し、providerはgeminiのまま残す', async () => {
+    await chrome.storage.local.set({
+      syncgrid_settings: { ai: { provider: 'gemini', geminiApiKey: 'k', geminiModel: 'gemini-3.8-flash' } },
+    })
+    const s = await loadSettings()
+    expect(s.ai.geminiModel).toBe('gemini-3.5-flash-lite')
+    expect(s.ai.provider).toBe('gemini')
+  })
+
+  it('一覧から外したOpenAIモデルが保存されていればgpt-6-lunaに戻す', async () => {
+    for (const id of ['gpt-5-nano', 'gpt-5-mini']) {
+      await chrome.storage.local.set({ syncgrid_settings: { ai: { provider: 'openai', openaiApiKey: 'sk', openaiModel: id } } })
+      const s = await loadSettings()
+      expect(s.ai.openaiModel, id).toBe('gpt-6-luna')
+      expect(s.ai.openaiApiKey).toBe('sk')
+    }
   })
 })
