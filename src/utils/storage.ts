@@ -2,7 +2,9 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_AI_SETTINGS,
   DEFAULT_SHORTCUTS,
+  GEMINI_MODELS,
   type SyncGridSettings,
+  type AISettings,
   type BookmarkMeta,
   type LayoutMode,
   type SortMode,
@@ -48,11 +50,20 @@ export async function loadSettings(): Promise<SyncGridSettings> {
   return {
     ...DEFAULT_SETTINGS,
     ...s,
-    ai: { ...DEFAULT_AI_SETTINGS, ...(s.ai ?? {}) },
+    ai: normalizeAISettings(s.ai),
     layout: VALID_LAYOUTS.includes(s.layout as LayoutMode) ? (s.layout as LayoutMode) : DEFAULT_SETTINGS.layout,
     sort: VALID_SORTS.includes(s.sort as SortMode) ? (s.sort as SortMode) : DEFAULT_SETTINGS.sort,
     shortcuts: migrateShortcuts(s.shortcuts),
   }
+}
+
+/** AI設定のマージ。一覧から外したGeminiモデル（gemini-2.5-pro等）が保存値に残っていれば既定値に戻す */
+function normalizeAISettings(stored: Partial<AISettings> | undefined): AISettings {
+  const ai = { ...DEFAULT_AI_SETTINGS, ...(stored ?? {}) }
+  if (!GEMINI_MODELS.some((m) => m.id === ai.geminiModel)) {
+    ai.geminiModel = DEFAULT_AI_SETTINGS.geminiModel
+  }
+  return ai
 }
 
 /** ショートカット設定のマイグレーション（旧compact→magazine） */

@@ -7,7 +7,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createMockChrome } from '../chromeMock'
-import { cleanupLegacyKanbanStorage } from '../storage'
+import { cleanupLegacyKanbanStorage, loadSettings } from '../storage'
 
 const KEY = 'syncgrid_kanban'
 
@@ -52,5 +52,28 @@ describe('cleanupLegacyKanbanStorage', () => {
 
     await expect(cleanupLegacyKanbanStorage()).resolves.toBeUndefined()
     expect(await chrome.storage.local.get(KEY)).toEqual({})
+  })
+})
+
+describe('loadSettings のGeminiモデル', () => {
+  beforeEach(() => {
+    ;(globalThis as unknown as { chrome: typeof chrome }).chrome = createMockChrome()
+  })
+
+  it('一覧から外したgemini-2.5-proが保存されていれば既定値に戻す', async () => {
+    await chrome.storage.local.set({
+      syncgrid_settings: { ai: { provider: 'gemini', geminiApiKey: 'k', geminiModel: 'gemini-2.5-pro' } },
+    })
+    const s = await loadSettings()
+    expect(s.ai.geminiModel).toBe('gemini-3.8-flash')
+    // 他のAI設定は温存される
+    expect(s.ai.provider).toBe('gemini')
+    expect(s.ai.geminiApiKey).toBe('k')
+  })
+
+  it('一覧にあるモデルはそのまま残す', async () => {
+    await chrome.storage.local.set({ syncgrid_settings: { ai: { geminiModel: 'gemini-3.8-flash' } } })
+    const s = await loadSettings()
+    expect(s.ai.geminiModel).toBe('gemini-3.8-flash')
   })
 })

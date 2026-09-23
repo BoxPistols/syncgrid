@@ -105,7 +105,6 @@ export const OPENAI_MODELS = [
 
 export const GEMINI_MODELS = [
   { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
-  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
 ] as const
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
