@@ -4,7 +4,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap'
 import { ConfirmDialog } from './ConfirmDialog'
 import { BookmarkImport } from './BookmarkImport'
 import type { SyncGridSettings, SyncGridGroup, AIProvider } from '../types'
-import { OPENAI_MODELS } from '../types'
+import { OPENAI_MODELS, GEMINI_MODELS } from '../types'
 import type { Messages } from '../i18n'
 import type { Locale } from '../i18n'
 import { exportData, downloadExport, readFileAsText, validateImport, importToBookmarks } from '../utils/dataTransfer'
@@ -337,13 +337,13 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
               {/* Provider */}
               <label className="sg-label">{t.aiProvider}</label>
               <div className="sg-settings__row sg-settings__row--btns">
-                {(['none', 'openai'] as const).map((p) => (
+                {(['none', 'openai', 'gemini'] as const).map((p) => (
                   <button
                     key={p}
                     className={`sg-btn sg-btn--sm ${settings.ai.provider === p ? 'sg-btn--primary' : 'sg-btn--ghost'}`}
                     onClick={() => onUpdateSettings({ ai: { ...settings.ai, provider: p as AIProvider } })}
                   >
-                    {p === 'none' ? t.aiProviderNone : t.aiProviderOpenai}
+                    {p === 'none' ? t.aiProviderNone : p === 'openai' ? t.aiProviderOpenai : t.aiProviderGemini}
                   </button>
                 ))}
               </div>
@@ -394,6 +394,51 @@ export function SettingsPanel({ settings, groups, t, onUpdateSettings, onClose, 
                 </>
               )}
 
+              {/* Gemini Settings */}
+              {settings.ai.provider === 'gemini' && (
+                <>
+                  <label className="sg-label">{t.aiApiKey}</label>
+                  <input
+                    type="password"
+                    className="sg-input"
+                    placeholder="AIza..."
+                    value={settings.ai.geminiApiKey}
+                    onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, geminiApiKey: e.target.value } })}
+                    autoComplete="off"
+                  />
+                  <label className="sg-label">{t.aiModel}</label>
+                  <select
+                    className="sg-input sg-input--sm"
+                    value={settings.ai.geminiModel}
+                    onChange={(e) => onUpdateSettings({ ai: { ...settings.ai, geminiModel: e.target.value } })}
+                  >
+                    {GEMINI_MODELS.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="sg-settings__row sg-settings__row--mt">
+                    <button
+                      className="sg-btn sg-btn--sm sg-btn--ghost"
+                      onClick={handleAiTest}
+                      disabled={aiTestStatus === 'testing' || !settings.ai.geminiApiKey}
+                    >
+                      {aiTestStatus === 'testing' ? <Icon name="spinner" size={14} /> : <Icon name="link" size={14} />}{' '}
+                      {aiTestStatus === 'testing' ? t.testing : t.connectionTest}
+                    </button>
+                  </div>
+                  {aiTestStatus === 'ok' && (
+                    <p className="sg-settings__status sg-settings__status--ok"><Icon name="check-circle" size={14} /> {t.connectionOk}</p>
+                  )}
+                  {aiTestStatus === 'error' && (
+                    <p className="sg-settings__status sg-settings__status--err">
+                      <Icon name="x-circle" size={14} /> {t.connectionFailed}
+                      {aiTestError ? `: ${aiTestError}` : ''}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
             <hr className="sg-settings__divider" />
