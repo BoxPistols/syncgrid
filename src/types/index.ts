@@ -97,24 +97,69 @@ export interface AISettings {
   geminiModel: string
 }
 
+// 出典: developers.openai.com/api/docs/models（2026-09-07確認）。
+// 1ティア1モデル。gpt-5.4系は2026-08に廃止され、gpt-5系も1世代前になっている。
+// 素のgpt-5.6はsol（フラッグシップ課金）へルーティングされるので、ティアまでピン留めする。
 export const OPENAI_MODELS = [
-  { id: 'gpt-5.4-nano', label: 'GPT-5.4 Nano' },
-  { id: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
-  { id: 'gpt-5-nano', label: 'GPT-5 Nano' },
-  { id: 'gpt-5-mini', label: 'GPT-5 Mini' },
+  { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' },
+  { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra' },
 ] as const
 
+/**
+ * セレクタから外したモデルIDの移行先。
+ * 保存済み設定がOPENAI_MODELSに無いIDのままだと、selectの表示と実際の送信先がずれる。
+ * gpt-5.4系は廃止済みなので、残っているとAPIが404を返す。
+ */
+export const OPENAI_MODEL_MIGRATION: Record<string, string> = {
+  'gpt-5.4-nano': 'gpt-5.6-luna',
+  'gpt-5.4-mini': 'gpt-5.6-luna',
+  'gpt-5-nano': 'gpt-5.6-luna',
+  'gpt-5-mini': 'gpt-5.6-luna',
+  'gpt-4.1-nano': 'gpt-5.6-luna',
+  'gpt-4o-mini': 'gpt-5.6-luna',
+}
+
+// 出典: ai.google.dev/gemini-api/docs/latest-model?hl=ja（2026-09-06確認）。
+//
+// 1ティアにつき1モデルだけ載せる。同じティアに世代違いを並べると、
+// 選ぶと損をするだけの選択肢が増える。
+// 無料枠は1日20回でプロジェクトとモデルごとに別勘定なので2モデル置けば回数は倍になるが
+// （429のquotaIdがGenerateRequestsPerDayPerProjectPerModel-FreeTier、quotaValueが20）、
+// それが効くのはアプリ自身のキーで無料枠を消費する場合だけ。
+// この拡張は利用者が自分のキーを入力する方式なので当てはまらない。
+//
+// Flashの現行は3.8（2026-09-03にGAとして発表。latest-modelページに
+// 「一般提供（GA）されており、本番環境で使用できます」と明記があり、
+// gemini-flash-latestの解決先でもある。latestを叩いた429の本文が
+// model: gemini-3.8-flashと名指しした, 2026-09-06実測）。
+// 3.8世代にProは無く、Pro相当の最新は3.1-pro-preview。preview扱いだが
+// GAの2.5-proは1世代前なので併記しない。
+//
+// モデル一覧ページ（docs/models?hl=ja）は翻訳が遅れていて3.7/3.8が未掲載。
+// そちらだけを見て古いIDへ戻さないこと。versionが"3.0"なのも異常ではなく、
+// GA済みのNano Banana系（gemini-3-pro-image等）も同じ値を返す。
 export const GEMINI_MODELS = [
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+  { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
+  { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
 ] as const
+
+/**
+ * セレクタから外したモデルIDの移行先。
+ * 保存済み設定がGEMINI_MODELSに無いIDのままだと、selectの表示と実際の送信先がずれる。
+ * モデルを撤去したら必ずここに1行足す。これが古いIDを消す唯一の経路になる。
+ */
+export const GEMINI_MODEL_MIGRATION: Record<string, string> = {
+  'gemini-3.6-flash': 'gemini-3.8-flash',
+  'gemini-2.5-flash': 'gemini-3.8-flash',
+  'gemini-2.5-pro': 'gemini-3.1-pro-preview',
+}
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
   provider: 'none',
   openaiApiKey: '',
-  openaiModel: 'gpt-5.4-nano',
+  openaiModel: 'gpt-5.6-luna',
   geminiApiKey: '',
-  geminiModel: 'gemini-2.5-flash',
+  geminiModel: 'gemini-3.8-flash',
 }
 
 /** アプリ設定 */

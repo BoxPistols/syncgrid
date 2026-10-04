@@ -2,10 +2,13 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_AI_SETTINGS,
   DEFAULT_SHORTCUTS,
+  GEMINI_MODEL_MIGRATION,
+  OPENAI_MODEL_MIGRATION,
   type SyncGridSettings,
   type BookmarkMeta,
   type LayoutMode,
   type SortMode,
+  type AISettings,
 } from '../types'
 
 import type { ShortcutConfig } from '../types'
@@ -48,11 +51,21 @@ export async function loadSettings(): Promise<SyncGridSettings> {
   return {
     ...DEFAULT_SETTINGS,
     ...s,
-    ai: { ...DEFAULT_AI_SETTINGS, ...(s.ai ?? {}) },
+    ai: migrateAiSettings(s.ai),
     layout: VALID_LAYOUTS.includes(s.layout as LayoutMode) ? (s.layout as LayoutMode) : DEFAULT_SETTINGS.layout,
     sort: VALID_SORTS.includes(s.sort as SortMode) ? (s.sort as SortMode) : DEFAULT_SETTINGS.sort,
     shortcuts: migrateShortcuts(s.shortcuts),
   }
+}
+
+/** AI設定のマイグレーション（セレクタから外れたモデルIDを移行先に寄せる） */
+function migrateAiSettings(stored: Partial<AISettings> | undefined): AISettings {
+  const merged = { ...DEFAULT_AI_SETTINGS, ...(stored ?? {}) }
+  const movedGemini = GEMINI_MODEL_MIGRATION[merged.geminiModel]
+  if (movedGemini) merged.geminiModel = movedGemini
+  const movedOpenai = OPENAI_MODEL_MIGRATION[merged.openaiModel]
+  if (movedOpenai) merged.openaiModel = movedOpenai
+  return merged
 }
 
 /** ショートカット設定のマイグレーション（旧compact→magazine） */

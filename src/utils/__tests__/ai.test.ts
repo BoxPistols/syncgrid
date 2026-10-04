@@ -18,14 +18,14 @@ const openaiSettings: AISettings = {
   ...DEFAULT_AI_SETTINGS,
   provider: 'openai',
   openaiApiKey: 'sk-test-key',
-  openaiModel: 'gpt-4.1-nano',
+  openaiModel: 'gpt-5.6-luna',
 }
 
 const geminiSettings: AISettings = {
   ...DEFAULT_AI_SETTINGS,
   provider: 'gemini',
   geminiApiKey: 'test-gemini-key',
-  geminiModel: 'gemini-2.5-flash',
+  geminiModel: 'gemini-3.8-flash',
 }
 
 // パーミッション未付与のため fetchPageTitle は自動的にスキップされる
@@ -91,7 +91,7 @@ describe('generateTitle', () => {
     expect(opts.method).toBe('POST')
     expect(opts.headers['Authorization']).toBe('Bearer sk-test-key')
     const body = JSON.parse(opts.body)
-    expect(body.model).toBe('gpt-4.1-nano')
+    expect(body.model).toBe('gpt-5.6-luna')
     // max_tokensは新モデルで400エラーになる → max_completion_tokensを使う
     expect(body).not.toHaveProperty('max_tokens')
     expect(body.max_completion_tokens).toBeGreaterThanOrEqual(1024)
@@ -113,7 +113,7 @@ describe('generateTitle', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
     const [url] = mockFetch.mock.calls[0]
     expect(url).toContain('generativelanguage.googleapis.com')
-    expect(url).toContain('gemini-2.5-flash')
+    expect(url).toContain('gemini-3.8-flash')
     expect(url).toContain('key=test-gemini-key')
   })
 
